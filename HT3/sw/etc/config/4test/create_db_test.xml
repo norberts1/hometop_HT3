@@ -1,0 +1,339 @@
+<?xml version="1.0" ?>
+<HT3_db_test>
+<!--
+ ##
+ #   #################################################################
+ ## Copyright (c) 2013 Norbert S. <junky-zs@gmx.de>
+ #
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+ # the Free Software Foundation, either version 3 of the License, or
+ # (at your option) any later version.
+ #
+ # This program is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ # GNU General Public License for more details.
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with this program. If not, see <http://www.gnu.org/licenses/>.
+ #
+ #################################################################
+ # Ver:0.1.5  / Datum 25.05.2014
+ #################################################################
+ #
+ #  Configuration-file for 'HT3_heater'-datalogging to databases.
+ #  Values are used for: sqlite- and rrdtool  - databases
+ #
+ ## Naming conventions (only for readability, not for rrdtool) ##
+ # T := Temperatur
+ # V := Value
+ # C := Counter
+ ##
+ # 'systempart'-name should match to the available systemcomponent.
+ #   Upper- and lower-case with or without 'underline'-chars are allowed.
+ #   The sqlite 'database-tables' are created with this names.
+ #
+ # 'shortname'-name is used as "nickname" in system and must have unique naming
+ #   for the first three chars. Upper- and lower-case is allowed.
+ #   This shortname (nickname) is used for internally mapping to the 
+ #   real  'systempart'-name.
+ #
+ # 'logitem'-name is used as GAUGE-value name for viewing and database-storing.
+ #   Upper- and lower-case with or without 'underline'-chars are allowed.
+ #   !!! namelength must be 1 to max 18 chars at least !!!
+ #   The sqlite   'database-columns' and
+ #   the rrdtool 'database-columns' are created with this names.
+ ##
+-->
+
+    <item>HT3_database_testconfiguration</item>
+    <!-- sql-database -->
+    <dbname_sqlite>/tmp/db_test.sqlite</dbname_sqlite>
+    <sql-db>
+      <enable>1</enable>
+    </sql-db>
+
+    <dbname_rrd>/tmp/db_test_rrd</dbname_rrd>
+    <!-- 'dbname_rrd' without suffix, is used only as leading path & name
+              and to create rrdtool db-files for any 'systempart' with there
+              own name and suffix
+    -->
+    <rrdtool-db>
+      <enable>on</enable>
+      <step_seconds>60</step_seconds>
+      <starttime_utc>1344000000</starttime_utc>
+    </rrdtool-db>
+
+    <!-- global configuration-values -->
+    <anzahl_heizkreise>4</anzahl_heizkreise>
+
+    <systempart name="heizgeraet">
+        <shortname name="HG"/>
+        <hardwaretype>CSWxy</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <logitem name="T_vorlauf_soll">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100</maxvalue>
+            <default>11</default>
+            <unit>Grad</unit>
+            <displayname>T-Soll (Regelung)</displayname>
+        </logitem>
+        <logitem name="T_vorlauf_ist">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>12</default>
+            <unit>Grad</unit>
+            <displayname>T-Ist (Vorlauf)</displayname>
+        </logitem>
+        <logitem name="T_ruecklauf">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>13</default>
+            <unit>Grad</unit>
+            <displayname>T-Ruecklauf</displayname>
+        </logitem>
+        <logitem name="T_aussen">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>UNKNOWN</maxvalue>
+            <default>21</default>
+            <unit>Grad</unit>
+            <displayname>T-Aussen</displayname>
+        </logitem>
+        <logitem name="C_brenner_heizung">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>UNKNOWN</maxvalue>
+            <default>0</default>
+            <unit>Aus;An</unit>
+            <displayname>Brenner Heizung Ein</displayname>
+        </logitem>
+        <logitem name="hexdump">
+            <datatype>TEXT</datatype>
+            <datause>dump</datause>
+            <maxvalue>255</maxvalue>
+            <default>""</default>
+            <unit></unit>
+            <displayname></displayname>
+        </logitem>
+    </systempart>
+
+    <systempart name="heizkreis1">
+        <shortname name="HK1"/>
+        <hardwaretype>CSWxy mit FB10</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <unmixed>True</unmixed>   <!-- True/False -->
+        <buscodierung>1</buscodierung>   <!-- 1,2,3,4 -->
+        <logitem name="T_soll_HK">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>12</default>
+            <unit>Grad</unit>
+            <displayname>T-Soll (gewünscht)</displayname>
+        </logitem>
+        <logitem name="T_ist_HK">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+           <default>13</default>
+            <unit>Grad</unit>
+            <displayname>T-Ist  (Regler/Wand)</displayname>
+        </logitem>
+        <logitem name="T_steuer_FB">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>1.0</default>
+            <unit>Grad</unit>
+            <displayname>T-Raum (FB10/FB100)</displayname>
+        </logitem>
+    </systempart>
+
+    <systempart name="heizkreis2">
+        <shortname name="HK2"/>
+        <hardwaretype>IPM2-Modul</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <unmixed>False</unmixed>   <!-- True/False -->
+        <buscodierung>4</buscodierung>   <!-- 1,2,3,4 -->
+        <logitem name="T_soll_HK">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>22</default>
+            <unit>Grad</unit>
+            <displayname>T-Soll (gewünscht)</displayname>
+        </logitem>
+        <logitem name="T_ist_HK">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+           <default>23</default>
+            <unit>Grad</unit>
+            <displayname>T-Ist  (Regler/Wand)</displayname>
+        </logitem>
+        <logitem name="T_steuer_FB">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>2.0</default>
+            <unit>Grad</unit>
+            <displayname>T-Raum (FB10/FB100)</displayname>
+        </logitem>
+    </systempart>
+
+    <systempart name="heizkreis3">
+        <shortname name="HK3"/>
+        <hardwaretype>IPM2-Modul</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <unmixed>False</unmixed>   <!-- True/False -->
+        <buscodierung>2</buscodierung>   <!-- 1,2,3,4 -->
+        <logitem name="T_soll_HK">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>32</default>
+            <unit>Grad</unit>
+            <displayname>T-Soll (gewünscht)</displayname>
+        </logitem>
+        <logitem name="T_ist_HK">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+           <default>33</default>
+            <unit>Grad</unit>
+            <displayname>T-Ist  (Regler/Wand)</displayname>
+        </logitem>
+        <logitem name="T_steuer_FB">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>3.0</default>
+            <unit>Grad</unit>
+            <displayname>T-Raum (FB10/FB100)</displayname>
+        </logitem>
+    </systempart>
+
+    <systempart name="heizkreis4">
+        <shortname name="HK4"/>
+        <hardwaretype>IPM2-Modul</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <unmixed>True</unmixed>   <!-- True/False -->
+        <buscodierung>3</buscodierung>   <!-- 1,2,3,4 -->
+        <logitem name="T_soll_HK">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>42</default>
+            <unit>Grad</unit>
+            <displayname>T-Soll (gewünscht)</displayname>
+        </logitem>
+        <logitem name="T_ist_HK">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+           <default>43</default>
+            <unit>Grad</unit>
+            <displayname>T-Ist  (Regler/Wand)</displayname>
+        </logitem>
+        <logitem name="T_steuer_FB">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>4.0</default>
+            <unit>Grad</unit>
+            <displayname>T-Raum (FB10/FB100)</displayname>
+        </logitem>
+    </systempart>
+
+    <systempart name="warmwasser">
+        <shortname name="WW"/>
+        <hardwaretype>CSWxy</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <load_pump>False</load_pump>   <!-- True/False , Lade-Pumpe fuer separaten WarmWasser-Speicher -->
+                                       <!--              angesteuert durch Modul IPM2 -->
+        <logitem name="T_soll">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>UNKNOWN</maxvalue>
+            <default>31</default>
+            <unit>Grad</unit>
+            <displayname>T-Soll</displayname>
+        </logitem>
+        <logitem name="T_ist">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>UNKNOWN</maxvalue>
+            <default>32</default>
+            <unit>Grad</unit>
+            <displayname>T-Ist</displayname>
+        </logitem>
+        <logitem name="T_speicher">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>33</default>
+            <unit>Grad</unit>
+            <displayname>T-Speicher</displayname>
+        </logitem>
+    </systempart>
+
+    <systempart name="solar">
+        <shortname name="SO"/>
+        <hardwaretype>ISM1</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <second_heater>False</second_heater>   <!-- True/False , additional heater -->
+        <second_buffer>False</second_buffer>   <!-- True/False , additional buffer for second-heater -->
+        <logitem name="T_Kollektor">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>UNKNOWN</maxvalue>
+            <default>41</default>
+            <unit>Grad</unit>
+            <displayname>T-Kollektor</displayname>
+        </logitem>
+        <logitem name="T_speicher_unten">
+            <datatype>REAL</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>100.0</maxvalue>
+            <default>42</default>
+            <unit>Grad</unit>
+            <displayname>T-Speicher unten</displayname>
+        </logitem>
+        <logitem name="V_ertrag_stunde">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>UNKNOWN</maxvalue>
+            <default>43</default>
+            <unit>Wh</unit>
+            <displayname>Ertrag letzte Stunde</displayname>
+        </logitem>
+    </systempart>
+
+    <systempart name="sysdatetime">
+        <shortname name="DT"/>
+        <hardwaretype>CSWxy</hardwaretype>
+        <logitem name="Date">
+            <datatype>TEXT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>255</maxvalue>
+            <default>""</default>
+            <unit></unit>
+            <displayname>System-Datum</displayname>
+        </logitem>
+        <logitem name="Time">
+            <datatype>TEXT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>255</maxvalue>
+            <default>""</default>
+            <unit></unit>
+            <displayname>System-Zeit</displayname>
+        </logitem>
+        <logitem name="hexdump">
+            <datatype>TEXT</datatype>
+            <datause>dump</datause>
+            <maxvalue>255</maxvalue>
+            <default>""</default>
+            <unit></unit>
+            <displayname></displayname>
+        </logitem>
+    </systempart>
+</HT3_db_test>
+
