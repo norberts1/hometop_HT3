@@ -1,0 +1,5 @@
+#call script: rrdtool_draw.pl every 5 minutes and use:   DB_folder     PNG-Targetfolder  with 4 (number of heating-circuits)
+#                                                           |                   |         |
+#                                                           v                   v         v
+*/5  * * * *   zs /usr/bin/perl -S rrdtool_draw.pl /home/zs/mydatabase  /home/zs/etc/html 4
+#
