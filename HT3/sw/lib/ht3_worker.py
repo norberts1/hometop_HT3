@@ -18,6 +18,8 @@
 #
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.1.6  / Datum 10.01.2015 'reading configuration changed'
+#            'constructor without <serialdevice> and <inputfile>'
 #################################################################
 
 import sys, serial, _thread, sqlite3
@@ -26,18 +28,28 @@ import data, ht3_dispatch, gui_worker, db_sqlite
 class ht3_cworker(object):
     # setup static data-struct
     __gdata=data.cdata()
-    def __init__(self, configurationfilename, serialdevice="/dev/ttyUSB0", hexdump_window=True, gui_active=True, inputfile=""):
+    def __init__(self, configurationfilename, hexdump_window=True, gui_active=True):
         try:
             if not (isinstance(hexdump_window,int) or isinstance(hexdump_window,bool)):
                 raise TypeError("hexdump_window")
             self.__cfgfilename =str(configurationfilename)
             self.__hexdump_window=bool(hexdump_window)
             self.__gui_active    =bool(gui_active)
-            self.__serialdevice  =str(serialdevice)
+            
+            # read configurationfile and setup default data
+            try:
+                ht3_cworker.__gdata.read_db_config(self.__cfgfilename)
+            except:
+                print('ht3_cworker();Error;could not get configuration-values')
+                raise e
+
+            self.__serialdevice  =str(ht3_cworker.__gdata.AsyncSerialdevice())
+            self.__baudrate      =ht3_cworker.__gdata.AsyncBaudrate()
+            self.__inputfile     =ht3_cworker.__gdata.inputtestfilepath()
+            if len(self.__inputfile)<5: self.__inputfile=""
+            
             self.__port=None
             self.__filehandle=None
-            self.__inputfile=inputfile
-
             self.__threadrun=True
 
         except (TypeError) as e:
@@ -50,7 +62,7 @@ class ht3_cworker(object):
             self.__port.close()
 
     def run(self):
-        if self.__inputfile!="":
+        if ((self.__inputfile!=None) and (len(self.__inputfile)>0)):
             #open input-file in readonly-binary mode for analysing binary HT3-data
             try:
                 self.__filehandle=open(self.__inputfile,"rb")
@@ -60,7 +72,7 @@ class ht3_cworker(object):
         else:
             #open serial port for reading HT3-data
             try:
-                self.__port = serial.Serial(self.__serialdevice, 9600 )
+                self.__port = serial.Serial(self.__serialdevice, self.__baudrate )
                 self.__port.setInterCharTimeout(0.1) #VTIME; set to 0.1*1sec
             except:
                 print("ht3_cworker();Error;couldn't open requested device:{0}".format(self.__serialdevice))
@@ -89,9 +101,6 @@ class ht3_cworker(object):
                 db.createdb_sqlite()
                 db.close()
                 
-            # read configurationfile and setup default data
-            ht3_cworker.__gdata.read_db_config(self.__cfgfilename)
-
             # start thread for dispatching
             _thread.start_new_thread(self.__DispatchThread, (0,))
 
@@ -121,14 +130,8 @@ class ht3_cworker(object):
 ### Runs only for test ###########
 if __name__ == "__main__":
     configurationfilename='./../etc/config/4test/HT3_4dispatcher_test.xml'
-    ##### activate the valid devicename for the HT3-Port
-    #
-    # deviceport="/dev/ttyAMA0"
-    deviceport="/dev/ttyUSB0"
-    # deviceport="/dev/ttyUSB1"
-    #####
-
-    HT3_Worker=ht3_cworker(configurationfilename, deviceport)
+      #### reconfiguration has to be done in configuration-file ####
+    HT3_Worker=ht3_cworker(configurationfilename)
     HT3_Worker.run()
 
     

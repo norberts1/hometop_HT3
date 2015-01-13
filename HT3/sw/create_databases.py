@@ -22,7 +22,7 @@
 #
 """ Module 'create_databases.py' creats databases 'sqlite' and 'rrdtool'
 
-    All necessary informations are take from xml-configurationfile.
+    All necessary informations are taken from xml-configurationfile.
     
     Database 'sqlite' is created if not yet available.
       If available, it will not be overwritten.

@@ -17,15 +17,20 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
-# Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.1.5.1  / Datum 12.06.2014
+# Ver:0.1.6  / Datum 10.01.2015 'main testconfiguration changed'
+#                               'updated telegramm-handling WW'
+#                               'modem-telegramms added (draft)'
 #################################################################
 
 import serial
 import ht3_decode, data, db_sqlite
-import db_info
+import db_info, ht_utils
 
-class cht3_dispatch(object):
+class cht3_dispatch(ht_utils.cht_utils):
     def __init__(self, port, commondata, database, debug=0, filehandle=None):
+        ht_utils.cht_utils.__init__(self)
+        
         try:
             #check at first the parameters
             if filehandle==None:
@@ -112,6 +117,13 @@ class cht3_dispatch(object):
                         for x in range (4, length):
                             self.buffer[x] = self.__read()
                         value=self.decode.WarmwasserMsg(self.buffer, length)
+                        if value==None:
+                            # read additonal 2bytes from port (new message-length 25 Bytes) and check again
+                            #  see description on: https://www.mikrocontroller.net/topic/317004#3684428
+                            length=25
+                            for x in range (23, length):
+                                self.buffer[x] = self.__read()
+                                value=self.decode.WarmwasserMsg(self.buffer, length)
                         if not value == None:
                             if self.debug:
                                 print("'{0}':{1}\n".format(nickname, value))
@@ -128,6 +140,119 @@ class cht3_dispatch(object):
                         self.decode.RequestMsg(self.buffer, length)
                         # nothing to do for database
 
+            ## Telegram: Modem ##
+            ### still under development ###
+            #
+            if firstbyte == 0x8d:
+                self.buffer[0] = firstbyte
+                for x in range (1,4):
+                    self.buffer[x] = self.__read()
+                    
+                if (self.buffer[1]==0x10 and self.buffer[2]==0xff and self.buffer[3]==0x11):
+                    nickname="MO1"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_1(self.buffer, length)
+
+                elif (self.buffer[1]==0x10 and self.buffer[2]==0xff and self.buffer[3]==0x07):
+                    nickname="MO2"
+                    length=9
+                    # check first with 9 bytes (Netcom100), if byte[7]=0 take 11 Bytes
+                    # for MB-Lan
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    # take the rest for MB-lan
+                    if self.buffer[7] == 0:
+                        length=11
+                        for x in range (9, length):
+                            self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_2(self.buffer, length)
+
+                elif (self.buffer[1]==0x18 and self.buffer[2]==0xff and self.buffer[3]==0x11):
+                    nickname="MO3"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_3(self.buffer, length)
+                        
+                    
+                elif (self.buffer[1]==0x18 and self.buffer[2]==0xff and self.buffer[3]==0x07):
+                    nickname="MO4"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_4(self.buffer, length)
+                        
+                    
+                elif (self.buffer[1]==0x90 and self.buffer[2]==0xff and self.buffer[3]==0x11):
+                    nickname="MO5"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_5(self.buffer, length)
+                        
+                elif (self.buffer[1]==0x90 and self.buffer[2]==0xff and self.buffer[3]==0x07):
+                    nickname="MO6"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_6(self.buffer, length)
+                    
+                elif (self.buffer[1]==0x10 and self.buffer[2]==0xff and self.buffer[3]==0x0e):
+                    nickname="MO7"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_7(self.buffer, length)
+
+                elif (self.buffer[1]==0x18 and self.buffer[2]==0xff and self.buffer[3]==0x0e):
+                    nickname="MO8"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_8(self.buffer, length)
+
+                elif (self.buffer[1]==0x90 and self.buffer[2]==0xff and self.buffer[3]==0x0e):
+                    nickname="MO9"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_9(self.buffer, length)
+
+                #MB-lan messages
+                elif (self.buffer[1]==0x90 and self.buffer[2]==0xff and self.buffer[3]==0x06):
+                    nickname="MB1"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_MB_1(self.buffer, length)
+                    
+                elif (self.buffer[1]==0x90 and self.buffer[2]==0xff and self.buffer[3]==0x0a):
+                    nickname="MB2"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_MB_2(self.buffer, length)
+
+                 #### Spar-mode ???                    
+                elif (self.buffer[1]==0x10 and self.buffer[2]==0xff and self.buffer[3]==0x06):
+                    nickname="MB3"
+                    length=9
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_MB_3(self.buffer, length)
+                        
+                 #### Frost-mode ???                    
+                elif (self.buffer[1]==0x10 and self.buffer[2]==0xff and self.buffer[3]==0x00):
+                    nickname="MB4"
+                    length=8
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    value   =self.decode.Modem_MB_4(self.buffer, length)
+                        
+                       
+                    
             ## Telegram: HK / Datum ##
             if firstbyte == 0x90:
                 self.buffer[0] = firstbyte
@@ -137,12 +262,31 @@ class cht3_dispatch(object):
                     ## Telegram: Heizkreis Msg (9000FF00) ##
                     if (self.buffer[2] == 0xff and self.buffer[3] == 0):
                         nickname="HK1"
-                        length=17
+                        #1. Message with 9 Byte length
+                        #  see: https://www.mikrocontroller.net/topic/317004#3693015
+                        length=9
                         for x in range (4, length):
                             self.buffer[x] = self.__read()
-                        value   =self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
-                        nickname=self.decode.CurrentHK_Nickname()
+                        if (ht_utils.cht_utils.crc_testen(self, self.buffer, length)) :
+                            value   =self.decode.HeizkreisMsg_FW100_200Msg_9byte(self.buffer, length)
+                        else:
+                            #2. load rest of byte until length=11
+                            # see: https://www.mikrocontroller.net/topic/317004#3687762
+                            length=11
+                            for x in range (9, length):
+                                self.buffer[x] = self.__read()
+                             #check for 11 byte message
+                            if (ht_utils.cht_utils.crc_testen(self, self.buffer, length) and self.buffer[5]==0xd3) :
+                                value   =self.decode.HeizkreisMsg_FW100_200_11byte(self.buffer, length)
+                            else:
+                                #load rest of 6 bytes for length=17
+                                length=17
+                                for x in range (11, length):
+                                    self.buffer[x] = self.__read()
+                                value   =self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
+                                
                         if not value == None:
+                            nickname=self.decode.CurrentHK_Nickname()
                             if self.debug:
                                 print("'{0}':{1}\n".format(nickname, value))
                             if self.database.is_sql_db_enabled():
@@ -254,25 +398,25 @@ class cht3_dispatch(object):
 if __name__ == "__main__":
     import serial, sys, os
     import data, db_sqlite
-
-##################### configure as required ####
-    serialdevice="/dev/ttyUSB0"
-#    serialdevice="/dev/ttyUSB1"
-###########################
+    
     configurationfilename='./../etc/config/4test/HT3_4dispatcher_test.xml'
-
-
+    testdata=data.cdata()
+    testdata.read_db_config(configurationfilename)
+    #### reconfiguration has to be done in configuration-file ####
+    serialdevice=testdata.AsyncSerialdevice()
+    baudrate=testdata.AsyncBaudrate()
+    
     print("----- do some real checks -----")
     print(" used device       :<{0}>".format(serialdevice))
     print(" used configuration:<{0}>".format(configurationfilename))
     print()    
     print("For this test it is required to have:")
     print(" 1. Hardware connected to the above serial-device.")
-    print("    If not, change the name in this file and start again.")
-    print(" 2. Hardware connected to the Heater HT3-bus")
+    print("    If not, change the name in config-file and start again.")
+    print(" 2. Hardware connected to the Heater HT-bus")
     print("As result it is:")
     try:
-        port = serial.Serial(serialdevice, 9600 )
+        port = serial.Serial(serialdevice, baudrate )
     except:
         print()
         print("couldn't open requested device: <{0}>".format(serialdevice))
@@ -296,9 +440,6 @@ if __name__ == "__main__":
         print("--> Database disabled in config-file, no creation done")
     
     print("--> Intercepted data written to stdout")
-    
-    testdata=data.cdata()
-    testdata.read_db_config(configurationfilename)
     
     debug=1
     HT3=cht3_dispatch(port, testdata, db, debug)

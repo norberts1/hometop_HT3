@@ -17,7 +17,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
-# Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.1.6  / Datum 10.01.2015
 #################################################################
 #
 """ Class 'gui_cworker' for creating HT3 - Graphical User Interface (GUI)
@@ -53,12 +53,12 @@ class gui_cworker(object):
             self.__fr1 = tkinter.Frame(self.__main, relief="sunken", bd=5)
             self.__fr1.pack(side="top")
             if self.__hexdump_window :
-                self.__main.title('Heatronic3 Analyser (Rev:0.1.5)')
+                self.__main.title('Heatronic3 Analyser (Rev:0.1.6)')
                 self.__main.geometry("1000x800+330+230")
                 self.__fr2 = tkinter.Frame(self.__fr1, relief="sunken", bd=2)
                 self.__fr2.pack(side="left")
             else:
-                self.__main.title('Heatronic3 Systemstatus (Rev:0.1.5)')
+                self.__main.title('Heatronic3 Systemstatus (Rev:0.1.6)')
                 self.__main.geometry("550x750+330+230")
                 self.__fr2 = None
                 

@@ -18,6 +18,7 @@
 #
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.1.6  / Datum 10.01.2015 'reading configuration changed'
 #################################################################
 
 import sys, time
@@ -25,14 +26,8 @@ sys.path.append('lib')
 import ht3_worker
 
 configurationfilename='./etc/config/HT3_db_cfg.xml'
-##### activate the valid devicename for the HT3-Port
-#
-deviceport="/dev/ttyAMA0"
-# deviceport="/dev/ttyUSB0"
-# deviceport="/dev/ttyUSB1"
-#####
-
-HT3_logger=ht3_worker.ht3_cworker(configurationfilename, deviceport, False, False)
+      #### reconfiguration has to be done in configuration-file ####
+HT3_logger=ht3_worker.ht3_cworker(configurationfilename, False, False)
 HT3_logger.run()
 while True:
     time.sleep(2)

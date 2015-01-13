@@ -20,6 +20,7 @@
  #
  #################################################################
  # Ver:0.1.5  / Datum 25.05.2014
+ # Ver:0.1.6  / Datum 10.01.2015 'data_interface' added
  #################################################################
  #
  #  Configuration-file for 'HT3_heater'-datalogging to databases.
@@ -47,14 +48,14 @@
  ##
 -->
     <item>HT3_database_testconfiguration</item>
-	<!-- sql-database -->
+    <!-- sql-database -->
     <dbname_sqlite>./../var/databases/HT3_db.sqlite</dbname_sqlite>
     <sql-db>
       <enable>on</enable>
     </sql-db>
 
 
-	<!-- rrdtool-database -->
+    <!-- rrdtool-database -->
     <dbname_rrd>./../var/databases/HT3_db_rrd</dbname_rrd>
     <!-- 'dbname_rrd' without suffix, is used only as leading path & name
               and to create rrdtool db-files for any 'systempart' with there
@@ -66,8 +67,28 @@
       <starttime_utc>1344000000</starttime_utc>
     </rrdtool-db>
 
-	<!-- global configuration-values -->
-	<anzahl_heizkreise>4</anzahl_heizkreise>
+    <!-- global configuration-values -->
+    <data_interface>
+      <comm_type>ASYNC</comm_type> <!-- communication-types are: 
+                                            ASYNC:=tty/comport; SOCKET:=TBD -->
+      <proto_type>RAW</proto_type>  <!-- protocoll-types     are: 
+                                            RAW:=transparent  ; TRX   :=TBD (transceiver-messages with header) -->
+      <parameter name="ASYNC">
+        <serialdevice>/dev/ttyUSB0</serialdevice>
+        <inputtestfilepath></inputtestfilepath>
+        <baudrate>19200</baudrate>
+        <config>"8N1"</config>  <!-- only 8N1 available -->
+      </parameter>
+      <parameter name="SOCKET">
+        <!-- !! not yet implemented !! -->
+        <!-- client-definitions -->
+        <serveradress>"192.168.???.???"</serveradress>
+        <servername>"funny_dummy"</servername>
+        <portnumber>8088</portnumber>
+      </parameter>
+    </data_interface>
+
+    <anzahl_heizkreise>4</anzahl_heizkreise>
 
     <systempart name="heizgeraet">
         <shortname name="HG"/>
@@ -163,7 +184,7 @@
         <logitem name="T_aussen">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Aussen</displayname>
@@ -199,6 +220,22 @@
             <default>0</default>
             <unit>Zaehler</unit>
             <displayname>Brenner Heizung Ein</displayname>
+        </logitem>
+        <logitem name="V_spare_1">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue></maxvalue>
+            <default></default>
+            <unit></unit>
+            <displayname></displayname>
+        </logitem>
+        <logitem name="V_spare_2">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue></maxvalue>
+            <default></default>
+            <unit></unit>
+            <displayname></displayname>
         </logitem>
         <logitem name="hexdump">
             <datatype>TEXT</datatype>
@@ -533,7 +570,7 @@
         <logitem name="T_soll">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>100</maxvalue>
             <default>0</default>
             <unit>Grad</unit>
             <displayname>T-Soll</displayname>
@@ -541,7 +578,7 @@
         <logitem name="T_ist">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Ist</displayname>
@@ -660,7 +697,7 @@
         <logitem name="T_kollektor">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>300.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Kollektor</displayname>
@@ -724,7 +761,7 @@
         <logitem name="T_hybrid_buffer">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Zusatzspeicher</displayname>
@@ -732,7 +769,7 @@
         <logitem name="T_hybrid_sysinput">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Hydraulische Weiche</displayname>

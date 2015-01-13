@@ -2,7 +2,7 @@
 <HT3_db_cfg>
 <!--
  ##
- #   #################################################################
+ # #################################################################
  ## Copyright (c) 2013 Norbert S. <junky-zs@gmx.de>
  #
  # This program is free software: you can redistribute it and/or modify
@@ -20,6 +20,7 @@
  #
  #################################################################
  # Ver:0.1.5  / Datum 25.05.2014
+ # Ver:0.1.6  / Datum 10.01.2015 'data_interface' added
  #################################################################
  #
  #  Configuration-file for 'HT3_heater'-datalogging to databases.
@@ -67,8 +68,31 @@
     </rrdtool-db>
 
     <!-- global configuration-values -->
+    <data_interface>
+      <comm_type>ASYNC</comm_type> <!-- communication-types are: 
+                                            ASYNC:=tty/comport; SOCKET:=TBD -->
+      <proto_type>RAW</proto_type>  <!-- protocoll-types     are: 
+                                            RAW:=transparent  ; TRX   :=TBD (transceiver-messages with header) -->
+      <parameter name="ASYNC">
+        <serialdevice>/dev/ttyAMA0</serialdevice>
+        <!-- <serialdevice>/dev/ttyUSB0</serialdevice> -->
+        <inputtestfilepath></inputtestfilepath>
+        <baudrate>9600</baudrate>
+        <!-- <baudrate>19200</baudrate> -->
+        <config>"8N1"</config>  <!-- only 8N1 available -->
+      </parameter>
+      <parameter name="SOCKET">
+        <!-- !! not yet implemented !! -->
+        <!-- client-definitions -->
+        <serveradress>"192.168.???.???"</serveradress>
+        <servername>"funny_dummy"</servername>
+        <portnumber>8088</portnumber>
+      </parameter>
+    </data_interface>
+
     <anzahl_heizkreise>1</anzahl_heizkreise>
 
+    <!-- systempart definitions -->
     <systempart name="heizgeraet">
         <shortname name="HG"/>
         <hardwaretype>CSW</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
@@ -163,7 +187,7 @@
         <logitem name="T_aussen">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Aussen</displayname>
@@ -550,7 +574,7 @@
         <logitem name="T_soll">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>100</maxvalue>
             <default>0</default>
             <unit>Grad</unit>
             <displayname>T-Soll</displayname>
@@ -558,7 +582,7 @@
         <logitem name="T_ist">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Ist</displayname>
@@ -677,7 +701,7 @@
         <logitem name="T_kollektor">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>300.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Kollektor</displayname>
@@ -749,7 +773,7 @@
         <logitem name="T_hybrid_sysinput">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
-            <maxvalue>UNKNOWN</maxvalue>
+            <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Hydraulische Weiche</displayname>

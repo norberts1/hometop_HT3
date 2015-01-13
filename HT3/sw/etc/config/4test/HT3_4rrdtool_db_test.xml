@@ -20,6 +20,7 @@
  #
  #################################################################
  # Ver:0.1.5  / Datum 25.05.2014
+ # Ver:0.1.6  / Datum 10.01.2015 'data_interface' added
  #################################################################
  #
  #  Configuration-file for 'HT3_heater'-datalogging to databases.
@@ -67,6 +68,26 @@
     </rrdtool-db>
 
     <!-- global configuration-values -->
+    <data_interface>
+      <comm_type>ASYNC</comm_type> <!-- communication-types are: 
+                                            ASYNC:=tty/comport; SOCKET:=TBD -->
+      <proto_type>RAW</proto_type>  <!-- protocoll-types     are: 
+                                            RAW:=transparent  ; TRX   :=TBD (transceiver-messages with header) -->
+      <parameter name="ASYNC">
+        <serialdevice>/dev/ttyUSB0</serialdevice>
+        <inputtestfilepath></inputtestfilepath>
+        <baudrate>9600</baudrate>
+        <config>"8N1"</config>  <!-- only 8N1 available -->
+      </parameter>
+      <parameter name="SOCKET">
+        <!-- !! not yet implemented !! -->
+        <!-- client-definitions -->
+        <serveradress>"192.168.???.???"</serveradress>
+        <servername>"funny_dummy"</servername>
+        <portnumber>8088</portnumber>
+      </parameter>
+    </data_interface>
+
     <anzahl_heizkreise>1</anzahl_heizkreise>
 
     <systempart name="heizgeraet">
