@@ -19,6 +19,8 @@
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
 # Ver:0.1.6  / Datum 10.01.2015 'reading configuration changed'
+# Ver:0.1.7.1/ Datum 04.03.2015 'socket option' activated
+#                               logging from ht_utils added
 #################################################################
 
 import sys, time
@@ -26,8 +28,9 @@ sys.path.append('lib')
 import ht3_worker
 
 configurationfilename='./etc/config/HT3_db_cfg.xml'
+logfilename="ht_logger.log"
       #### reconfiguration has to be done in configuration-file ####
-HT3_logger=ht3_worker.ht3_cworker(configurationfilename, False, False)
+HT3_logger=ht3_worker.ht3_cworker(configurationfilename, hexdump_window=False, gui_active=False, logfilename_in=logfilename)
 HT3_logger.run()
 while True:
     time.sleep(2)

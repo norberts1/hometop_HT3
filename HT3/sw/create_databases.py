@@ -18,6 +18,7 @@
 #
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.1.7.1/ Datum 04.03.2015 logging from ht_utils added
 #################################################################
 #
 """ Module 'create_databases.py' creats databases 'sqlite' and 'rrdtool'
@@ -36,31 +37,82 @@ import sys, os
 sys.path.append('lib')
 import db_sqlite
 import db_rrdtool
+import ht_utils
 
+####################################
+## create logfile
+filepathname="./var/log/create_databases.log"
+ # if folder isn't available it will be created
+abslogpath=os.path.normcase(os.path.abspath(os.path.dirname(filepathname)))
+if not os.path.exists(abslogpath):
+    try:
+        os.mkdir(abslogpath)
+    except:
+        # couldn't create folder, so
+        #  upper folders not available?, try again with makedirs
+        try:
+            os.makedirs(abslogpath)
+        except:
+            errorstr="create_databases();Error;Can't create folder:{0}".format(abslogpath)
+            print(errorstr)
+            raise
+else:
+    #zs#test#   print("Folder already available:{0}".format(abslogpath))
+    pass
+    
+logfilepathname=os.path.join(abslogpath, os.path.basename(filepathname))
+try:
+    logobj=ht_utils.clog()
+    logging=logobj.create_logfile(logfilepathname, loggertag="create_db")
+except:
+    errorstr="create_databases();Error;Can't create logfile:{0}".format(logfilepathname)
+    print(errorstr)
+    raise
+
+####################################
+## set configuration-filename and create sqlite-db
 configurationfilename='./etc/config/HT3_db_cfg.xml'
-sqlitedb=db_sqlite.cdb_sqlite(configurationfilename)
+sqlitedb=db_sqlite.cdb_sqlite(configurationfilename, logger=logging)
 sqlitedb.connect()
-print("------------------------")
-print("Create: sqlite -database")
+infostr="------------------------------------------------"
+logging.info(infostr)
+print(infostr)
+infostr="Create: sqlite -database"
+logging.info(infostr)
+print(infostr)
 sqlitedb.createdb_sqlite()
 #check created sqlite-database for read/write access
 databasename=sqlitedb.db_sqlite_filename()
 if os.access(databasename,os.W_OK and os.R_OK):
-    print("sqlite-database:'{0}' created and access possible".format(databasename))
+    infostr="sqlite-database:'{0}' created and access possible".format(databasename)
 else:
-    print("sqlite-database:'{0}' not available".format(databasename))
+    infostr="sqlite-database:'{0}' not available".format(databasename)
+print(infostr)
+logging.info(infostr)
 
 sqlitedb.close()
 
-print("------------------------------------------------")
-print("Create: rrdtool-database (if request is enabled)")
-rrdtool=db_rrdtool.cdb_rrdtool(configurationfilename)
+infostr="------------------------------------------------"
+logging.info(infostr)
+print(infostr)
+infostr="Create: rrdtool-database (if request is enabled)"
+logging.info(infostr)
+print(infostr)
+rrdtool=db_rrdtool.cdb_rrdtool(configurationfilename, logger=logging)
 if not rrdtool.is_rrdtool_db_enabled():
-    print("rrdtool-database will not be created")
-    print("  enable-flag is set to 'False' in configuration")
+    infostr="rrdtool-database will not be created"
+    logging.info(infostr)
+    print(infostr)
+    infostr="  enable-flag is set to 'False' in configuration"
+    logging.info(infostr)
+    print(infostr)
 else:    
     rrdtool.createdb_rrdtool()
     if rrdtool.is_rrdtool_db_available():
-        print("rrdtool-databases:'{0}' created and access possible".format(rrdtool.db_rrdtool_filename()))
+        infostr="rrdtool-databases:'{0}' created and access possible".format(rrdtool.db_rrdtool_filename())
     else:
-        print("rrdtool-databases:'{0}' not available".format(rrdtool.db_rrdtool_filename()))
+        infostr="rrdtool-databases:'{0}' not available".format(rrdtool.db_rrdtool_filename())
+
+logging.info(infostr)
+print(infostr)
+
