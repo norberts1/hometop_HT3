@@ -1,0 +1,103 @@
+<?xml version="1.0" ?>
+<ht_proxy_cfg_test>
+<!--
+ ##
+ #   #################################################################
+ ## Copyright (c) 2015 Norbert S. <junky-zs@gmx.de>
+ #
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+ # the Free Software Foundation, either version 3 of the License, or
+ # (at your option) any later version.
+ #
+ # This program is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ # GNU General Public License for more details.
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with this program. If not, see <http://www.gnu.org/licenses/>.
+ #
+ #################################################################
+ # Ver:0.1.7  / Datum 25.02.2015 first release
+ #################################################################
+ #
+ #  Configuration-file for 'ht_proxy'-daemon and attached clients.
+ #
+ #  The ht_proxy-daemon is used for data-exchange between ht_transceiver-
+ #  boards (connected as com-port/tty-port) and any heater TCP/IP-clients.
+ #
+ #  For 'devicetype':= 'MODEM' it is possible to receive and also
+ #  transmit telegrams from/to the heaterbus. This function is only
+ #  available, if a 'ht_transceiver'-board (ht_piduino or ht_pitiny)
+ #  is connected to the com-/tty-port.
+ #
+ #  For any other devicetype it's only possible to receive heaterbus-
+ #  telegrams: 'devicetype':= RX.
+ #
+ ##
+-->
+
+  <item>ht_proxy_cfg_testconfiguration</item>
+
+  <!-- global configuration-values -->
+
+    <!-- currently only ONE com-/tty-port with devicetype:='MODEM' is supported -->
+    <!-- set the value: -->
+    <!--  '<transceiver_numbers>' to '0' -->
+    <!-- if there isn't connected any ht_transceiver -->
+    <!-- Then the parameters at <ht_transceiver_if devicename="None"> are used 
+  -->
+  <transceiver_numbers>1</transceiver_numbers>
+
+  <!-- proxy-server configuration-values -->
+  <proxy_server>
+    <serveraddress></serveraddress>
+    <servername></servername>
+    <portnumber>8088</portnumber>
+    <logfilepath>./../var/log/ht_proxy.log</logfilepath>
+    <ht_transceiver_if devicename="RX">
+      <!-- used, if no ht_transceiver is connected, transceiver_numbers:=0 -->
+      <parameter>
+        <serialdevice>/dev/ttyUSB0</serialdevice>
+        <baudrate>9600</baudrate>
+        <config>"8N1"</config>  <!-- only 8N1 available -->
+      </parameter>
+      <devicetype>RX</devicetype>
+    </ht_transceiver_if>
+    <ht_transceiver_if devicename="MODEM">
+      <!-- used, if ht_transceiver is connected, transceiver_numbers:=1 -->
+      <parameter>
+        <serialdevice>/dev/ttyUSB0</serialdevice>
+        <baudrate>19200</baudrate>
+        <config>"8N1"</config>  <!-- only 8N1 available -->
+      </parameter>
+      <devicetype>MODEM</devicetype>
+      <deviceaddress_hex>0D</deviceaddress_hex> <!-- currently unused value -->
+    </ht_transceiver_if>
+  </proxy_server>
+
+  <!-- proxy-client(s) configuration-values -->
+    <!-- devicetypes of client(s) currently supported: 'MODEM' or 'RX'  -->
+    <!-- type 'MODEM' can be used in parallel but must not -->
+    <!--   send parallel at the same time and has to wait for -->
+    <!--   the end of any other transmission -->
+    <!-- anyway type 'RX' can be used x-times as client 
+  -->
+  <proxy_client devicename="RX">      
+    <serveraddress>localhost</serveraddress>
+    <servername></servername>
+    <portnumber>8088</portnumber>
+    <logfilepath>./../var/log/ht_client_rx.log</logfilepath>
+    <devicetype>RX</devicetype>
+  </proxy_client>
+
+  <proxy_client devicename="MODEM">      
+    <serveraddress>localhost</serveraddress>
+    <servername></servername>
+    <portnumber>8088</portnumber>
+    <logfilepath>./../var/log/ht_client_modem.log</logfilepath>
+    <devicetype>MODEM</devicetype>
+  </proxy_client>
+</ht_proxy_cfg_test>
+
