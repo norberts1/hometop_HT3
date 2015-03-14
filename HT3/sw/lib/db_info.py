@@ -18,6 +18,9 @@
 #
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.1.7.1/ Datum 04.03.2015 testvalues 'warmwasser' and 'heizkreis1'
+#                               updated
+#                               logging from ht_utils added
 #################################################################
 #
 """ Class 'crrdtool_info' for creating and updating rrdtool-database with sql-database informations
@@ -34,23 +37,34 @@ rrdtool_update          -- return of used rrdtool-db  filename.
 
 import time, sqlite3
 import db_rrdtool, db_sqlite
+import ht_utils, logging
 
 
-class crrdtool_info(db_rrdtool.cdb_rrdtool):
+class crrdtool_info(db_rrdtool.cdb_rrdtool, ht_utils.clog):
     # static values for sqlite-database
     __rrdtooltable     ='rrdtool_infos'
     __updatecolumnname ='rrdtool_timestamp'
     __commentcolumnname='comment'
     __errorcolumnname  ='errors'
     
-    def __init__(self, sql_db_obj):
+    def __init__(self, sql_db_obj, logger=None):
 
         try:
-            if not isinstance(sql_db_obj, db_sqlite.cdb_sqlite): raise TypeError("crrdtool_info.__init__();Error; Parameter 'sql_db_obj' has wrong type")
+            # init/setup logging-file
+            if logger == None:
+                ht_utils.clog.__init__(self)
+                self._logging=ht_utils.clog.create_logfile(self, logfilepath="./crrdtool_info.log", loggertag="crrdtool_info")
+            else:
+                self._logging=logger
+                
+            if not isinstance(sql_db_obj, db_sqlite.cdb_sqlite):
+                errorstr="crrdtool_info.__init__();Error; Parameter 'sql_db_obj' has wrong type"
+                self._logging.critical(errorstr)
+                raise TypeError(errorstr)
             
             self.__sql_db         = sql_db_obj
             self.__cfgfilename    = sql_db_obj.configurationfilename()
-            db_rrdtool.cdb_rrdtool.__init__(self, self.__cfgfilename)
+            db_rrdtool.cdb_rrdtool.__init__(self, self.__cfgfilename, logger=self._logging)
             self.__rrdtool_active = bool(db_rrdtool.cdb_rrdtool.is_rrdtool_db_enabled(self))
             self.__step_seconds   = int(db_rrdtool.cdb_rrdtool.db_rrdtool_stepseconds(self))
             
@@ -64,7 +78,8 @@ class crrdtool_info(db_rrdtool.cdb_rrdtool):
                 self.__prepare()
 
         except (OSError, EnvironmentError, TypeError, NameError) as e:
-            print("""crrdtool_info();Error;<{0}>""".format(str(e.args)))
+            errorstr="""crrdtool_info();Error;<{0}>""".format(str(e.args))
+            self._logging.critical(errorstr)
             raise e
             
     def __del__(self):
@@ -79,7 +94,9 @@ class crrdtool_info(db_rrdtool.cdb_rrdtool):
         if self.__rrdtool_active:
             try:
                 if not self.__sql_db.is_sqlite_db_available():
-                    raise EnvironmentError("db_info.__addtable();Error;sqlite-db not available")
+                    errorstr="db_info.__addtable();Error;sqlite-db not available"
+                    self._logging.critical(errorstr)
+                    raise EnvironmentError(errorstr)
                 else:
                     # first of all (before table-creation) set pragma auto_vacuum
                     self.__sql_db.setpragma("auto_vacuum","= full")
@@ -90,9 +107,10 @@ class crrdtool_info(db_rrdtool.cdb_rrdtool):
                     self.__sql_db.addcolumn(crrdtool_info.__rrdtooltable, crrdtool_info.__commentcolumnname ,'TEXT')
                     self.__sql_db.addcolumn(crrdtool_info.__rrdtooltable, crrdtool_info.__errorcolumnname   ,'TEXT')
             except (sqlite3.OperationalError) as e:
-                print("""db_info.__addtable();Error;<{0}>;database<{1}>""".format(
+                errorstr="""db_info.__addtable();Error;<{0}>;database<{1}>""".format(
                         e.args[0],
-                        self.__sql_db.db_sqlite_filename()))
+                        self.__sql_db.db_sqlite_filename())
+                print(errorstr)
                 raise e
                 
 
@@ -279,7 +297,8 @@ class crrdtool_info(db_rrdtool.cdb_rrdtool):
                     self.__runstate=0
 
             except (sqlite3.OperationalError) as e:
-                print('crrdtool_info.__rrdtool_update();Error;<{0}>'.format(e.args[0]))
+                errorstr='crrdtool_info.__rrdtool_update();Error;<{0}>'.format(e.args[0])
+                self._logging.critical(errorstr)
                 self.__runstate = 0
                 
 
@@ -330,7 +349,7 @@ if __name__ == "__main__":
         time.sleep(3)
         print("main:   now insert the first value")
         tablename="warmwasser"
-        values=[16.1,21.5,20.7,1234,'WW: test start']
+        values=[16.1,21.5,20.7,1234,0,1,2,3,4,5,6,7,8,9,'WW: test start']
         HT3_db.insert(tablename,values);
         time.sleep(1)
         HT3_db.commit()
@@ -348,13 +367,13 @@ if __name__ == "__main__":
             print("main:   now insert new values, Loop{0}".format(counter+1))
             tablename="warmwasser"
             comment="{0}: test:{1}".format(tablename, int(time.time()))
-            values=[16.3,21.6,20.8,1235,comment]
+            values=[16.3,21.6,20.8,1235,0,1,2,3,4,5,6,7,8,9,comment]
             HT3_db.insert(tablename,values);
             HT3_db.commit()
             time.sleep(1)
             tablename="heizkreis1"
             comment="{0}: test:{1}".format(tablename, int(time.time()))
-            values=[17.1,21.9,21.8,1236,1,2,comment]
+            values=[17.1,21.9,21.8,1236,1,2,3,4,comment]
             HT3_db.insert(tablename,values);
             time.sleep(1)
             HT3_db.commit()

@@ -18,6 +18,7 @@
 #
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.1.7.1/ Datum 04.03.2015 logging from ht_utils added
 #################################################################
 #
 """ Class 'cdb_sqlite' for creating, reading and writing data from/to sqlite-database
@@ -72,14 +73,24 @@ vacuum                  -- execute command 'vaccum' on database using sql-comman
 
 import sqlite3, time, os
 import xml.etree.ElementTree as ET
+import ht_utils, logging
 
 dbNotConnectedError = ValueError('Attempting to use "db_sqlite" that is not connected')
 
-class cdb_sqlite(object):
-    def __init__(self, configurationfilename):
+class cdb_sqlite(ht_utils.clog):
+    def __init__(self, configurationfilename, logger=None):
         try:
+            # init/setup logging-file
+            if logger == None:
+                ht_utils.clog.__init__(self)
+                self._logging=ht_utils.clog.create_logfile(self, "./cdb_sqlite.log", loggertag="cdb_sqlite")
+            else:
+                self._logging=logger
+            
             if not isinstance(configurationfilename, str):
-                raise TypeError("Parameter: configurationfilename")
+                errorstr="cdb_sqlite;Error;Parameter: configurationfilename"
+                self._logging.critical(errorstr)
+                raise TypeError(errorstr)
 
             self.__cfgfilename=configurationfilename
             #get database-name from configuration
@@ -87,7 +98,9 @@ class cdb_sqlite(object):
             self.__root  = tree.getroot()
             self.__dbname=self.__root.find('dbname_sqlite').text
             if not len(self.__dbname):
-                raise NameError("'dbname_sqlite' not found in configuration")
+                errorstr="cdb_sqlite;Error;'dbname_sqlite' not found in configuration"
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             
             self.__path    = os.path.dirname (self.__dbname)
             self.__basename= os.path.basename(self.__dbname)
@@ -109,13 +122,17 @@ class cdb_sqlite(object):
                     self.__sql_enable=False
                     
         except (OSError, EnvironmentError, TypeError, NameError) as e:
-            print("""cdb_sqlite();Error;<{0}>""".format(str(e.args)))
+            errorstr="""cdb_sqlite();Error;<{0}>""".format(str(e.args))
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
         except (sqlite3.OperationalError) as e:
-            print("""cdb_sqlite.__init__();Error;<{0}>;database<{1}>""".format(
+            errorstr="""cdb_sqlite.__init__();Error;<{0}>;database<{1}>""".format(
                     e.args[0],
-                    self.__dbname,))
+                    self.__dbname,)
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
     def __del__(self):
@@ -125,6 +142,7 @@ class cdb_sqlite(object):
     def addcolumn(self, tablename, columnname, columntype):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.addcolumn();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 # check first is column available, if not create the column
@@ -137,10 +155,12 @@ class cdb_sqlite(object):
                     try:
                         self.__cursor.execute(str_alter)
                     except (sqlite3.OperationalError) as e:
-                        print("""cdb_sqlite.addcolumn();Error;<{0}>;Table<{1}>;Column<{2}>""".format(
+                        errorstr="""cdb_sqlite.addcolumn();Error;<{0}>;Table<{1}>;Column<{2}>""".format(
                                 e.args[0],
                                 tablename,
-                                columnname))
+                                columnname)
+                        self._logging.critical(errorstr)
+                        print(errorstr)
 
     def close(self):
         if self.__sql_enable==True:
@@ -151,7 +171,9 @@ class cdb_sqlite(object):
                     self.__cursor=None
                     self.__connection=None
             except:
-                print("cdb_sqlite.close();Error;couldn't close sql-database")
+                errorstr="cdb_sqlite.close();Error;couldn't close sql-database"
+                self._logging.critical(errorstr)
+                print(errorstr)
 
     def connect(self):
         if self.__sql_enable==True:
@@ -160,56 +182,71 @@ class cdb_sqlite(object):
                     self.__connection=sqlite3.connect(self.__dbname)
                     self.__cursor=self.__connection.cursor()
             except:
-                print("cdb_sqlite.connect();Error;couldn't connect to sql-database")
+                errorstr="cdb_sqlite.connect();Error;couldn't connect to sql-database"
+                self._logging.critical(errorstr)
+                print(errorstr)
             
 
     def commit(self):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.commit();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 try:
                     if not self.__connection==None:
                         self.__connection.commit()
                 except (sqlite3.OperationalError) as e:
-                    print('cdb_sqlite.commit();Error;<{0}>'.format(e.args[0]))
+                    errorstr='cdb_sqlite.commit();Error;<{0}>'.format(e.args[0])
+                    self._logging.critical(errorstr)
+                    print(errorstr)
 
     def createindex(self, tablename, indexname, columnname):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.createindex();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 strcmd="CREATE INDEX IF NOT EXISTS "+indexname+" ON "+tablename+"("+columnname+");"
                 try:
                     self.__cursor.execute(strcmd)
                 except (sqlite3.OperationalError) as e:
-                    print('cdb_sqlite.createindex();Error;<{0}>;Table<{1}>'.format(e.args[0],tablename))
+                    errorstr='cdb_sqlite.createindex();Error;<{0}>;Table<{1}>'.format(e.args[0],tablename)
+                    self._logging.critical(errorstr)
+                    print(errorstr)
 
     def createtable(self, tablename):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.createtable();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 strcmd="CREATE TABLE IF NOT EXISTS "+tablename+" (Local_date_time CURRENT_TIMESTAMP, UTC INT);"
                 try:
                     self.__cursor.execute(strcmd)
                 except (sqlite3.OperationalError) as e:
-                    print('cdb_sqlite.createtable();Error;<{0}>;Table<{1}>'.format(e.args[0],tablename))
+                    errorstr='cdb_sqlite.createtable();Error;<{0}>;Table<{1}>'.format(e.args[0],tablename)
+                    self._logging.critical(errorstr)
+                    print(errorstr)
 
     def delete(self, tablename, columnname, contentvalue, exp='='):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.delete();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 try:
                     strcmd="DELETE FROM "+tablename+" WHERE "+columnname+exp+contentvalue
                     self.__cursor.execute(strcmd)
                 except (sqlite3.OperationalError) as e:
-                    print('cdb_sqlite.delete();Error;<{0}>'.format(e.args[0]))
+                    errorstr='cdb_sqlite.delete();Error;<{0}>'.format(e.args[0])
+                    self._logging.critical(errorstr)
+                    print(errorstr)
             
     def insert(self, tablename, values, timestamp=None):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.insert();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 if timestamp==None:
@@ -233,7 +270,9 @@ class cdb_sqlite(object):
                 try:
                     self.__cursor.execute(strcmd)
                 except (sqlite3.OperationalError) as e:
-                    print('cdb_sqlite.insert();Error;<{0}>'.format(e.args[0]))
+                    errorstr='cdb_sqlite.insert();Error;<{0}>'.format(e.args[0])
+                    self._logging.critical(errorstr)
+                    print(errorstr)
 
     def is_sql_db_enabled(self):
         return self.__sql_enable
@@ -241,6 +280,7 @@ class cdb_sqlite(object):
     def selectwhere(self, tablename, columnname, searchvalue, exp='=', what='*'):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.selectwhere();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 # function returns the a list of values or empty list on none match
@@ -248,48 +288,60 @@ class cdb_sqlite(object):
                     strcmd="SELECT "+what+" FROM "+tablename+" WHERE "+columnname+" "+exp+" "+searchvalue+";"
                     return list(self.__cursor.execute(strcmd))
                 except (sqlite3.OperationalError) as e:
-                    print('cdb_sqlite.selectwhere();Error;<{0}>'.format(e.args[0]))
+                    errorstr='cdb_sqlite.selectwhere();Error;<{0}>'.format(e.args[0])
+                    self._logging.critical(errorstr)
+                    print(errorstr)
         else:
             return list()
 
     def setpragma(self, pragmaname, pragmavalue):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.setpragma();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 try:
                     strcmd="PRAGMA "+pragmaname+" "+pragmavalue
                     self.__cursor.execute(strcmd)
                 except (sqlite3.OperationalError) as e:
-                    print('cdb_sqlite.setpragma();Error;<{0}>'.format(e.args[0]))
+                    errorstr='cdb_sqlite.setpragma();Error;<{0}>'.format(e.args[0])
+                    self._logging.critical(errorstr)
+                    print(errorstr)
         
     def gettableinfo(self, tablename):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.gettableinfo();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 try:
                     strcmd="PRAGMA table_info ({0})".format(tablename)
                     return self.__cursor.execute(strcmd)
                 except (sqlite3.OperationalError) as e:
-                    print('cdb_sqlite.gettableinfo();Error;<{0}>'.format(e.args[0]))
+                    errorstr='cdb_sqlite.gettableinfo();Error;<{0}>'.format(e.args[0])
+                    self._logging.critical(errorstr)
+                    print(errorstr)
         else:
             return list()
         
     def vacuum(self):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.vacuum();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 try:
                     self.__cursor.execute("VACUUM")
                 except (sqlite3.OperationalError) as e:
-                    print('cdb_sqlite.vacuum();Error;<{0}>'.format(e.args[0]))
+                    errorstr='cdb_sqlite.vacuum();Error;<{0}>'.format(e.args[0])
+                    self._logging.critical(errorstr)
+                    print(errorstr)
 
     #---------------------
     def createdb_sqlite(self):
         if self.__sql_enable==True:
             if self.__connection==None:
+                self._logging.critical("cdb_sqlite.createdb_sqlite();Error;database not connected")
                 raise dbNotConnectedError
             else:
                 try:
@@ -314,7 +366,9 @@ class cdb_sqlite(object):
                             self.addcolumn(syspartname,name,datatype.upper())
                     self.commit()
                 except (sqlite3.OperationalError, EnvironmentError) as e:
-                    print('create_db.sqlite();Error;<{0}>'.format(e.args[0]))
+                    errorstr='create_db.sqlite();Error;<{0}>'.format(e.args[0])
+                    self._logging.critical(errorstr)
+                    print(errorstr)
                     raise e
 
     def configurationfilename(self):

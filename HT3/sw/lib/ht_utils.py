@@ -18,7 +18,13 @@
 #
 #################################################################
 # Ver:0.1.6  / Datum 10.01.2015 first release
+# Ver:0.1.7.1/ Datum 04.03.2015 'crc_check' added
+#                               'make_crc' buffer-length corrected
+#                               logging-class added
 #################################################################
+
+import os
+import logging, logging.handlers
 
 class cht_utils(object):
     def __init__(self):
@@ -43,6 +49,10 @@ class cht_utils(object):
             0xA3, 0xA5, 0xA7, 0xD9, 0xDB, 0xDD, 0xDF, 0xD1, 0xD3, 0xD5, 0xD7, 0xC9, 0xCB,
             0xCD, 0xCF, 0xC1, 0xC3, 0xC5, 0xC7, 0xF9, 0xFB, 0xFD, 0xFF, 0xF1, 0xF3, 0xF5,
             0xF7, 0xE9, 0xEB, 0xED, 0xEF, 0xE1, 0xE3, 0xE5, 0xE7]
+
+    def crc_check(self, buffer, bufferlength):
+        return self.crc_testen(buffer, bufferlength)
+
         
     def crc_testen(self, buffer, bufferlength):
         crc = 0
@@ -64,7 +74,7 @@ class cht_utils(object):
         crc = 0
         if bufferlength<3: return False
         try:
-            for i in range(0, bufferlength-2):
+            for i in range(0, bufferlength):
                 crc = self.__crc_table[crc] 
                 crc ^= buffer[i]
             return crc
@@ -77,10 +87,100 @@ class cht_utils(object):
         return True if (float(tempvalue)<maxvalue and float(tempvalue)>minvalue) else False
 
 #--- class cht_utils end ---#
+
+class clog(object):
+    def __init__(self):
+        self._created      = False
+        self._loglevel     = logging.INFO
+
+    def create_logfile(self, logfilepath="./default_logfile.log", loglevel=logging.INFO, loggertag="default"):
+        self._logfilepath  = logfilepath
+        self._loglevel     = loglevel
+        self._loggertag    = loggertag
+        self._pathonly     = ""
+        self._fileonly     = ""
+        (path,filename)    = os.path.split(logfilepath)
+        if len(path) > 0:
+            self._pathonly = os.path.normcase(path)
+        if len(filename) > 0:
+            self._fileonly = filename
+
+        try:
+            self._handler=logging.handlers.RotatingFileHandler(self._logfilepath, maxBytes=1000000)
+            _frm = logging.Formatter("%(asctime)s %(levelname)s: %(message)s", "%d.%m.%Y %H:%M:%S")
+            self._handler.setFormatter(_frm)
+            self._logger        = logging.getLogger(self._loggertag)
+            self._logger.addHandler(self._handler)
+            self._logger.setLevel(self._loglevel)
+            self._created       = True
+            return self._logger
+        except:
+            raise EnvironmentError("clog.create_logfile();Error; could not create logging")
+
+    def critical(self, logmessage):
+        if not self._created: raise EnvironmentError("clog.critical();Error; logging not created, call clog.create_logfile() at first")
+        self._logger.critical(logmessage)
+        
+    def error(self, logmessage):
+        if not self._created: raise EnvironmentError("clog.error();Error; logging not created, call clog.create_logfile() at first")
+        self._logger.error(logmessage)
+        
+    def warning(self, logmessage):
+        if not self._created: raise EnvironmentError("clog.warning();Error; logging not created, call clog.create_logfile() at first")
+        self._logger.warning(logmessage)
+        
+    def info(self, logmessage):
+        if not self._created: raise EnvironmentError("clog.info();Error; logging not created, call clog.create_logfile() at first")
+        self._logger.info(logmessage)
+        
+    def debug(self, logmessage):
+        if not self._created: raise EnvironmentError("clog.debug();Error; logging not created, call clog.create_logfile() at first")
+        self._logger.debug(logmessage)
+
+    def logfilepathname(self, logfilepath=None):
+        if logfilepath != None:
+            self._logfilepath = logfilepath
+        return self._logfilepath
+
+    def logfilename(self, logfilename=None):
+        if logfilename != None:
+            self._fileonly    = logfilename
+            self._logfilepath = os.path.normcase(os.path.join(self._pathonly, self._fileonly))
+        return self._fileonly
+
+    def logpathname(self, logpathname=None):
+        if logpathname != None:
+            self._pathonly    = logpathname
+            self._logfilepath = os.path.normcase(os.path.join(self._pathonly, self._fileonly))
+        return self._pathonly
+
+    def loglevel(self, loglevel=None):
+        if loglevel != None:
+            tmp_loglevel=loglevel.upper()
+            #check first possible parameters
+            if tmp_loglevel in ('CRITICAL','ERROR','WARNING','INFO','DEBUG'):
+                if tmp_loglevel in ('CRITICAL'):
+                    loglevel=logging.CRITICAL
+                if tmp_loglevel in ('ERROR'):
+                    loglevel=logging.ERROR
+                if tmp_loglevel in ('WARNING'):
+                    loglevel=logging.WARNING
+                if tmp_loglevel in ('INFO'):
+                    loglevel=logging.INFO
+                if tmp_loglevel in ('DEBUG'):
+                    loglevel=logging.DEBUG
+                self._loglevel = loglevel
+            else:
+                self._loglevel = logging.INFO
+            #zs#test# print("loglevel:{0}".format(logging.getLevelName(self._loglevel)))                
+        return self._loglevel
+    
+#--- class clogging end ---#
+        
 ################################################
 
 if __name__ == "__main__":
-    print("----- do some CRC-checks -----")
+    print("-------------------- do some CRC-checks ----------------------------------------")
     utils=cht_utils()
     
     print("-- check with valid 'heizgeraet' Message 1 --")
@@ -119,9 +219,44 @@ if __name__ == "__main__":
     crc_ok=utils.crc_testen(heizkreistestbuffer, length)
     print("+-> OK") if crc_ok else print("+-> Error")
 
-    print("-------------------- check with wrong values -----------------------------------")
+    print(" --  -- check with wrong values --  --")
     
-    print("-- check with wrong bufferlength on 'heizgeraet' Message --")
+    print(" -- check with wrong bufferlength on 'heizgeraet' Message --")
     length=30
     crc_ok=utils.crc_testen(heizgeraettestbuffer2, length)
     print("+-> OK") if crc_ok else print("+-> Error seen and so it's OK")
+
+    import os, time
+    
+    print("-------------------- do some logging-checks ------------------------------------")
+    #first default logging
+    log=clog()
+    log.create_logfile()
+    if not os.path.exists(log.logfilepathname()):
+        print(" could not create logfile:{0}".format(log.logfilepathname()))
+        raise
+    else:
+        print(" OK; logfile:'{0}' created".format(log.logfilepathname()))
+    log.critical("Is critical")
+    log.error("Is error")
+    log.warning("Is warning")
+    log.info("Is info")
+    log.debug("debug must not be logged")
+    
+    #second debug logging
+    logdebug=clog()
+    logdebug.create_logfile(logfilepath="./debug_logfile.log",loglevel=logging.DEBUG, loggertag="debug_me")
+    if not os.path.exists(logdebug.logfilepathname()):
+        print(" could not create logfile:{0}".format(logdebug.logfilepathname()))
+        raise
+    else:
+        print(" OK; logfile:'{0}' created".format(logdebug.logfilepathname()))
+    logdebug.critical("Is critical")
+    logdebug.error("Is error")
+    logdebug.warning("Is warning")
+    logdebug.info("Is info")
+    logdebug.debug("Is debug-level")
+
+    print("Please check the content of:")
+    print(" default-file:{0}".format(log.logfilepathname()))
+    print(" debug  -file:{0}".format(logdebug.logfilepathname()))

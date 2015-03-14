@@ -17,42 +17,70 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
-# Ver:0.1.5.1  / Datum 12.06.2014
+# Ver:0.1.5.1/ Datum 12.06.2014
 # Ver:0.1.6  / Datum 10.01.2015 'main testconfiguration changed'
 #                               'updated telegramm-handling WW'
 #                               'modem-telegramms added (draft)'
+# Ver:0.1.7.1/ Datum 04.03.2015 'socket interface added'
+#                               logging from ht_utils added
 #################################################################
 
 import serial
 import ht3_decode, data, db_sqlite
 import db_info, ht_utils
+import ht_proxy_if
 
-class cht3_dispatch(ht_utils.cht_utils):
-    def __init__(self, port, commondata, database, debug=0, filehandle=None):
+class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
+    def __init__(self, port, commondata, database, debug=0, filehandle=None, logger=None):
         ht_utils.cht_utils.__init__(self)
+        try:
+            # init/setup logging-file
+            if logger == None:
+                ht_utils.clog.__init__(self)
+                self._logging=ht_utils.clog.create_logfile(self, logfilepath="./cht3_dispatch.log", loggertag="cht3_dispatch")
+            else:
+                self._logging=logger
+        except:
+            errorstr="""cht3_dispatch();Error;could not create logfile"""
+            print(errorstr)
+            raise EnvironmentError(errorstr)
         
         try:
             #check at first the parameters
             if filehandle==None:
-                if not isinstance(port, serial.serialposix.Serial): raise TypeError("port")
-            if not isinstance(commondata, data.cdata)  : raise TypeError("commondata")
-            if not isinstance(database, db_sqlite.cdb_sqlite): raise TypeError("database")
+                if not (isinstance(port, serial.serialposix.Serial) or isinstance(port, ht_proxy_if.cht_socket_client)):
+                    errorstr="cht3_dispatch();TypeError;port"
+                    self._logging.critical(errorstr)
+                    raise TypeError(errorstr)
+            
+            if not isinstance(commondata, data.cdata)  :
+                errorstr="cht3_dispatch();TypeError;commondata"
+                self._logging.critical(errorstr)
+                raise TypeError(errorstr)
+            if not isinstance(database, db_sqlite.cdb_sqlite):
+                errorstr="cht3_dispatch();TypeError;database"
+                self._logging.critical(errorstr)
+                raise TypeError(errorstr)
         except (TypeError) as e:
-            print('cht3_dispatch();Error;Parameter:<{0}> has wrong type'.format(e.args[0]))
+            errorstr='cht3_dispatch();Error;Parameter:<{0}> has wrong type'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
         self.port=port
         self.filehandle=filehandle
         self.data=commondata
-        self.decode=ht3_decode.cht3_decode(self.data)
+        self.decode=ht3_decode.cht3_decode(self.data, logger=self._logging)
         self.database=database
         self.buffer=[0 for x in range(100)]
         self.debug=debug
 
         try:
-            self.__rrdtool_info=db_info.crrdtool_info(database)
+            self.__rrdtool_info=db_info.crrdtool_info(database, self._logging)
         except (OSError, EnvironmentError, TypeError, NameError) as e:
-            print('cht3_dispatch();Error;{0}; rrdtool_info init failed'.format(e.args[0]))
+            errorstr='cht3_dispatch();Error;{0}; rrdtool_info init failed'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             self.__rrdtool_info=None
             raise e
 
@@ -143,11 +171,10 @@ class cht3_dispatch(ht_utils.cht_utils):
             ## Telegram: Modem ##
             ### still under development ###
             #
-            if firstbyte == 0x8d:
+            if (firstbyte == 0x8d or firstbyte == 0x8a):
                 self.buffer[0] = firstbyte
                 for x in range (1,4):
                     self.buffer[x] = self.__read()
-                    
                 if (self.buffer[1]==0x10 and self.buffer[2]==0xff and self.buffer[3]==0x11):
                     nickname="MO1"
                     length=9
@@ -267,7 +294,7 @@ class cht3_dispatch(ht_utils.cht_utils):
                         length=9
                         for x in range (4, length):
                             self.buffer[x] = self.__read()
-                        if (ht_utils.cht_utils.crc_testen(self, self.buffer, length)) :
+                        if (self.crc_testen(self.buffer, length)) :
                             value   =self.decode.HeizkreisMsg_FW100_200Msg_9byte(self.buffer, length)
                         else:
                             #2. load rest of byte until length=11
@@ -276,7 +303,7 @@ class cht3_dispatch(ht_utils.cht_utils):
                             for x in range (9, length):
                                 self.buffer[x] = self.__read()
                              #check for 11 byte message
-                            if (ht_utils.cht_utils.crc_testen(self, self.buffer, length) and self.buffer[5]==0xd3) :
+                            if (self.crc_testen(self.buffer, length) and self.buffer[5]==0xd3) :
                                 value   =self.decode.HeizkreisMsg_FW100_200_11byte(self.buffer, length)
                             else:
                                 #load rest of 6 bytes for length=17
@@ -392,7 +419,10 @@ class cht3_dispatch(ht_utils.cht_utils):
                     self.__rrdtool_info.rrdtool_update()
             
         except (LookupError, IndexError, KeyError, TypeError, IOError, UnboundLocalError) as e:
-            print('cht3_dispatch.dispatcher();Error;<{0}>'.format(e.args[0]))
+            errorstr='cht3_dispatch.dispatcher();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
+
             
 ################################################
 if __name__ == "__main__":

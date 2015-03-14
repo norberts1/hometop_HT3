@@ -20,6 +20,8 @@
 # Ver:0.1.5  / Datum 25.05.2014
 # Ver:0.1.6  / Datum 10.01.2015 'data_interface' handling added
 #                               'max- and default-values' added
+# Ver:0.1.7.1/ Datum 04.03.2015 'socket option' activated
+#                               logging from ht_utils added
 #################################################################
 
 """ Class 'cdata' for reading xml-configfile and generating dependent datastructur
@@ -80,12 +82,7 @@ AyncBaudrate             -- returns the currently defined Baudrate for async-mod
                             Value is set in configuration-file.
 AyncConfig               -- returns the currently defined Parameter for async-mode (fixed to 8N1).
                             Value is set in configuration-file.
-Serveradress             -- returns the currently defined 'serveradresse' for socket-mode.
-                            Value is set in configuration-file.
-Servername               -- returns the currently defined 'servername' for socket-mode.
-                            Value is set in configuration-file.
-Serverport               -- returns the currently defined 'serverport' for socket-mode.
-                            Value is set in configuration-file.
+client_cfg_file          -- returns the currently defined 'client configuration file' for socket-purposes.
 IsAnyUpdate              -- returns True/False if any update was set
 UpdateRead               -- resets status of new-update flag
 IsSyspartUpdate          -- returns True/False for parameter 'nickname' if new data is
@@ -100,14 +97,19 @@ IsSecondHeater_SO        -- returns True, if second heater in system is availabl
                             Value is set in configuration-file.
 IsSecondBuffer_SO        -- returns True, if extra water-buffer for second heater is available, else False.
                             Value is set in configuration-file.
-
+logpathname              -- returns the currently defined 'logpath'. Value is set in configuration-file.
+logfilename              -- returns the currently defined 'logfilename'. Value is set in configuration-file.
+logfilepathname          -- returns the currently defined 'logfilename joined with 'logpath'. Values are set in configuration-file.
+loglevel                 -- returns the currently defined 'loglevel' as defined in logging.py. Value is set in configuration-file.
 """
 
 import xml.etree.ElementTree as ET
-import sys, _thread
+import sys, os, _thread
+import ht_utils, logging
 
-class cdata(object):
+class cdata(ht_utils.clog):
     def __init__(self):
+        ht_utils.clog.__init__(self)
         self.__nickname={}
         self.__logitemHG={}
         self.__HKcount=1
@@ -216,17 +218,32 @@ class cdata(object):
         self.AsyncSerialdevice("/dev/ttyAMA0")
         self.AsyncBaudrate(9600)
         self.AsyncConfig("8N1")
-        self.Serveradress("192.168.2.1")
-        self.Servername("dummy")
-        self.Serverport(8088)
-        
+        self.client_cfg_file("./etc/config/ht_proxy_cfg.xml")
+        self._logging=None
 
-    def read_db_config(self,xmlconfigpathname):
+    def setlogger(self, logger):
+        self._logging=logger
+        
+    def read_db_config(self,xmlconfigpathname, logger=None):
+        # init/setup logging-file if not already forced from external call
+        if self._logging == None:
+            try:
+                if logger == None:
+                    ht_utils.clog.__init__(self)
+                    self._logging=ht_utils.clog.create_logfile(self, logfilepath="./cdata.log", loggertag="cdata")
+                else:
+                    self._logging=logger
+            except:
+                errorstr="data.read_db_config();could not create logger-file"
+                print(errorstr)
+                raise EnvironmentError(errorstr)
         try:
             self.__configfilename=xmlconfigpathname
             self.__tree = ET.parse(xmlconfigpathname)
         except (NameError, EnvironmentError) as e:
-            print("data.read_db_config();Error;{0} on file:'{1}'".format(e.args[0], xmlconfigpathname))
+            errorstr="data.read_db_config();Error;{0} on file:'{1}'".format(e.args[0], xmlconfigpathname)
+            self._logging.critical(errorstr)
+            print(errorstr)
             sys.exit(1)
         else:            
             try:
@@ -263,11 +280,10 @@ class cdata(object):
                 for data_if in self.__root.findall('data_interface'):
                     commtype = data_if.find('comm_type').text.upper()[0:3]
                     if commtype in ("SOC"):
-                        # force value 'SOCKET' currently to "ASCNC"
-                        self._SetDataIf_async()
-                        # TBD ## self._SetDataIf_socket()
+                        # if "SOCKET" set socket-active
+                        self._SetDataIf_socket()
                     else:
-                        # else set value to "ASCNC"
+                        # else set async-active
                         self._SetDataIf_async()
                     
                     prototype = data_if.find('proto_type').text.upper()[0:3]
@@ -289,14 +305,27 @@ class cdata(object):
                             self.__dataif_param_config    = str(param.find('config').text)
 
                         if param.attrib["name"].upper()[0:3] in ("SOC"):
-                            self.__dataif_param_serveradr  = str(param.find('serveradress').text)
-                            self.__dataif_param_servername = str(param.find('servername').text)
-                            self.__dataif_param_portnumber = int(param.find('portnumber').text)
+                            self.__dataif_param_proxy_cfg_file  = str(param.find('proxy_config_file').text)
+
+                #find logging -entries
+                for logging_param in self.__root.findall('logging'):
+                    path             = logging_param.find('path').text
+                    default_filename = logging_param.find('default_filename').text
+                    self.logpathname(path)
+                    self.logfilename(default_filename)
+                    #join both 'path' and 'default_filename' an save it
+                    logfilepathname=os.path.normcase(os.path.join(path, default_filename))
+                    self.logfilepathname(logfilepathname)
+                    #get and save loglevel
+                    self.loglevel(logging_param.find('loglevel').text.upper())
+
                             
                 #find amount of heizkreise -entries
                 self.__HKcount=int(self.__root.find('anzahl_heizkreise').text)
                 if self.__HKcount>4 or self.__HKcount<1:
-                    raise IndexError("amount of:'anzahl_heizkreise' out of range (1...4)")
+                    errorstr="data.read_db_config();Error;amount of:'anzahl_heizkreise' out of range (1...4)"
+                    self._logging.critical(errorstr)
+                    raise IndexError(errorstr)
 
                 syspart=""
                 for syspart in self.__root.findall('systempart'):
@@ -317,7 +346,9 @@ class cdata(object):
                                 self.__SecondHeaterSO=True if syspart.find('second_heater').text.upper()=="TRUE" else False
                                 self.__SecondBufferSO=True if syspart.find('second_buffer').text.upper()=="TRUE" else False
                         except (KeyError, IndexError, AttributeError) as e:
-                            print("data.read_db_config();Error on xml-tag:",e.args[0])
+                            errorstr="data.read_db_config();Error on xml-tag:{0}".format(e.args[0])
+                            self._logging.critical(errorstr)
+                            print(errorstr)
 
                     hardwaretype = syspart.find('hardwaretype').text
                             
@@ -338,15 +369,23 @@ class cdata(object):
                         # add itemname and values to table
                         self.update(shortname,name,default,displayname,unit,hardwaretype,maxvalue,default)
                     else:
-                        if not len(logitem): raise AttributeError("logitem")
+                        if not len(logitem):
+                            errorstr="data.read_db_config();Error;AttributeError(’logitem’)"
+                            self._logging.critical(errorstr)
+                            raise AttributeError(errorstr)
                 else:
-                    if not len(syspart): raise AttributeError("syspart")
+                    if not len(syspart):
+                        errorstr="data.read_db_config();Error;AttributeError(’syspart’)"
+                        self._logging.critical(errorstr)
+                        raise AttributeError(errorstr)
                 
             except (KeyError, IndexError, AttributeError) as e:
                 if not type(e) == AttributeError:
-                    print("data.read_db_config();Error on xml-tag:",e.args[0])
+                    errorstr="data.read_db_config();Error on xml-tag:{0}".format(e.args[0])
                 else:
-                    print("data.read_db_config();Error on xml-tag")                        
+                    errorstr="data.read_db_config();Error on xml-tag"
+                print(errorstr)
+                self._logging.critical(errorstr)
                 sys.exit(1)
             
     def configfilename(self, xmlconfigpathname=""):
@@ -384,8 +423,14 @@ class cdata(object):
     def _setnickname(self,shortname,longname):
         shortname=shortname.upper()[0:3]
         try:
-            if not len(shortname): raise NameError("shortname undefined")
-            if not len(longname) : raise NameError("longname undefined")
+            if not len(shortname):
+                errorstr="data._setnickname();Error; shortname undefined')"
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if not len(longname) :
+                errorstr="data._setnickname();Error; longname undefined')"
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             self.__nickname.update({shortname:longname})
             if   "HG" in shortname:
                 self.__data.update({"HG":[self.__logitemHG,
@@ -486,14 +531,19 @@ class cdata(object):
                                           
             
         except (NameError, AttributeError) as e:
-            print("data._setnickname();Error;{0}".format(e.args[0]))
+            errorstr="data._setnickname();Error;{0}".format(e.args[0])
+            print(errorstr)
+            self._logging.critical(errorstr)
+
 
             
     def getlongname(self,shortname):
         try:
             return self.__nickname[shortname.upper()[0:3]]
         except (KeyError, IndexError, AttributeError) as e:
-            print("data.getlongname();Error;longname'{0}' not found".format(e.args[0]))
+            errorstr="data.getlongname();Error;longname'{0}' not found".format(e.args[0])
+            print(errorstr)
+            self._logging.critical(errorstr)
             return None
 
     ############################
@@ -511,8 +561,14 @@ class cdata(object):
         nickname=nickname.upper()[0:3]
         itemname=logitem.replace("_","").lower()
         try:
-            if not len(nickname): raise NameError("nickname undefined")
-            if not len(itemname): raise NameError("itemname undefined")
+            if not len(nickname):
+                errorstr="data.update();Error;nickname: '{0}' undefined".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if not len(itemname):
+                errorstr="data.update();Error;itemname:'{0}' undefined".format(logitem)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             if nickname in self.__nickname:
                 if itemname in self.__data[nickname][0]:
                     # update value, get index first from dir{itemname:index}
@@ -550,13 +606,18 @@ class cdata(object):
                     self.__data[nickname][8]=hwtype
                         
             else:
-                raise NameError("nickname:'{0}' not found".format(nickname))
+                errorstr="data.update();Error;nickname:'{0}' not found".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            
             self.__thread_lock.acquire()
             self.__newdata_available=True
             self.__thread_lock.release()
             
         except (KeyError, NameError, AttributeError) as e:
-            print("data.update();Error;{0}".format(e.args[0]))
+            errorstr="data.update();Error;{0}".format(e.args[0])
+            print(errorstr)
+            self._logging.critical(errorstr)
             self.__thread_lock.acquire()
             self.__newdata_available=False
             self.__thread_lock.release()
@@ -566,20 +627,28 @@ class cdata(object):
         itemname=logitem.replace("_","").lower()
         try:
             self.__thread_lock.acquire()
-            if not len(nickname): raise NameError("nickname undefined")
+            if not len(nickname):
+                errorstr="data.values();Error;nickname: '{0}' undefined".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             if nickname in self.__nickname:
                 if len(itemname):
                     if itemname in self.__data[nickname][0]:
                         index=int(self.__data[nickname][0][itemname])
                         return self.__data[nickname][1][index]
                     else:
-                        raise NameError("itemname:'{0}' not found".format(logitem))
+                        errorstr="data.values();Error;itemname:'{0}' not found".format(logitem)
+                        self._logging.critical(errorstr)
+                        raise NameError(errorstr)
                 else:
                     return self.__data[nickname][1]
             else:
-                raise NameError("nickname:'{0}' not found".format(nickname))
+                errorstr="data.values();Error;nickname:'{0}' not found".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            print("data.values();Error;{0}".format(e.args[0]))
+            errorstr="data.values();Error;{0}".format(e.args[0])
+            self._logging.critical(errorstr)
 
         finally:
             self.__thread_lock.release()
@@ -589,40 +658,70 @@ class cdata(object):
         nickname=nickname.upper()[0:3]
         itemname=logitem.replace("_","").lower()
         try:
-            if not len(nickname): raise NameError("nickname undefined")
-            if not len(logitem) : raise NameError("logitem undefined")
+            if not len(nickname):
+                errorstr="data.displayname();Error;nickname: '{0}' undefined".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if not len(logitem) :
+                errorstr="data.displayname();Error;logitem: '{0}' undefined".format(logitem)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             if nickname in self.__nickname:
                 if itemname in self.__data[nickname][0]:
                     return str(self.__data[nickname][4][itemname])
                 else:
-                    raise NameError("itemname:'{0}' in nickname:'{1}' not found".format(logitem, nickname))
+                    errorstr="data.displayname();Error;itemname:'{0}' not found in nicknames:'{1}'".format(logitem, nickname)
+                    self._logging.critical(errorstr)
+                    raise NameError(errorstr)
             else:
-                raise NameError("nickname:'{0}' not found".format(nickname))
+                errorstr="data.displayname();Error;nickname:'{0}' not found".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            print("data.displayname();Error;{0}".format(e.args[0]))
+            errorstr="data.displayname();Error;{0}".format(e.args[0])
+            print(errorstr)
+            self._logging.critical(errorstr)
 
     def displayunit(self, nickname, logitem):
         nickname=nickname.upper()[0:3]
         itemname=logitem.replace("_","").lower()
         try:
-            if not len(nickname): raise NameError("nickname undefined")
-            if not len(logitem) : raise NameError("logitem undefined")
+            if not len(nickname):
+                errorstr="data.displayunit();Error;nickname: '{0}' undefined".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if not len(logitem) :
+                errorstr="data.displayunit();Error;logitem: '{0}' undefined".format(logitem)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             if nickname in self.__nickname:
                 if itemname in self.__data[nickname][0]:
                     return self.__data[nickname][5][itemname]
                 else:
-                    raise NameError("itemname:'{0}' not found".format(logitem))
+                    errorstr="data.displayunit();Error;itemname:'{0}' not found".format(logitem)
+                    self._logging.critical(errorstr)
+                    raise NameError(errorstr)
             else:
-                raise NameError("nickname:'{0}' not found".format(nickname))
+                errorstr="data.displayunit();Error;nickname:'{0}' not found".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            print("data.displayname();Error;{0}".format(e.args[0]))
-
+            errorstr="data.displayunit();Error;displayname();Error;{0}".format(e.args[0])
+            print(errorstr)
+            self._logging.critical(errorstr)
+            
     def maxvalue(self, nickname, logitem):
         nickname=nickname.upper()[0:3]
         itemname=logitem.replace("_","").lower()
         try:
-            if not len(nickname): raise NameError("nickname undefined")
-            if not len(logitem) : raise NameError("logitem undefined")
+            if not len(nickname):
+                errorstr="data.maxvalue();Error;nickname: '{0}' undefined".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if not len(logitem) :
+                errorstr="data.maxvalue();Error;logitem: '{0}' undefined".format(logitem)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             if nickname in self.__nickname:
                 if itemname in self.__data[nickname][0]:
                     #check for float- or int-value and return the correct type
@@ -631,18 +730,31 @@ class cdata(object):
                     else:
                         return int(self.__data[nickname][6][itemname])
                 else:
-                    raise NameError("itemname:'{0}' not found".format(logitem))
+                    errorstr="data.maxvalue();Error;itemname:'{0}' not found".format(logitem)
+                    self._logging.critical(errorstr)
+                    raise NameError(errorstr)
             else:
-                raise NameError("nickname:'{0}' not found".format(nickname))
+                errorstr="data.maxvalue();Error;nickname:'{0}' not found".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            print("data.maxvalue();Error;{0}".format(e.args[0]))
+            errorstr="data.maxvalue();Error;{0}".format(e.args[0])
+            print(errorstr)
+            self._logging.critical(errorstr)
+            
 
     def defaultvalue(self, nickname, logitem):
         nickname=nickname.upper()[0:3]
         itemname=logitem.replace("_","").lower()
         try:
-            if not len(nickname): raise NameError("nickname undefined")
-            if not len(logitem) : raise NameError("logitem undefined")
+            if not len(nickname):
+                errorstr="data.defaultvalue();Error;nickname: '{0}' undefined".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if not len(logitem) :
+                errorstr="data.defaultvalue();Error;logitem: '{0}' undefined".format(logitem)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             if nickname in self.__nickname:
                 if itemname in self.__data[nickname][0]:
                     #check for float- or int-value and return the correct type
@@ -651,22 +763,35 @@ class cdata(object):
                     else:
                         return int(self.__data[nickname][7][itemname])
                 else:
-                    raise NameError("itemname:'{0}' not found".format(logitem))
+                    errorstr="data.defaultvalue();Error;itemname:'{0}' not found".format(logitem)
+                    self._logging.critical(errorstr)
+                    raise NameError(errorstr)
             else:
-                raise NameError("nickname:'{0}' not found".format(nickname))
+                errorstr="data.defaultvalue();Error;nickname:'{0}' not found".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            print("data.defaultvalue();Error;{0}".format(e.args[0]))
+            errorstr="data.defaultvalue();Error;{0}".format(e.args[0])
+            print(errorstr)
+            self._logging.critical(errorstr)
 
     def hardwaretype(self, nickname):
         nickname=nickname.upper()[0:3]
         try:
-            if not len(nickname): raise NameError("nickname undefined")
+            if not len(nickname):
+                errorstr="data.hardwaretype();Error;nickname: '{0}' undefined".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             if nickname in self.__nickname:
                 return str(self.__data[nickname][8])
             else:
-                raise NameError("nickname:'{0}' not found".format(nickname))
+                errorstr="data.hardwaretype();Error;nickname:'{0}' not found".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            print("data.hardwaretype();Error;{0}".format(e.args[0]))
+            errorstr="data.hardwaretype();Error;{0}".format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
 
     def _SetDataIf_async(self):
         self.__dataif_commtype = 1
@@ -729,21 +854,11 @@ class cdata(object):
             self.__dataif_param_testfilepath=testfilepath
         return self.__dataif_param_testfilepath
 
-    def Serveradress(self, serveradress=None):
-        if serveradress != None:
-            self.__dataif_param_serveradr=serveradress
-        return self.__dataif_param_serveradr
-
-    def Servername(self, servername=None):
-        if servername != None:
-            self.__dataif_param_servername=servername
-        return self.__dataif_param_servername
-
-    def Serverport(self, serverport=None):
-        if serverport != None:
-            self.__dataif_param_portnumber=serverport
-        return self.__dataif_param_portnumber
-
+    def client_cfg_file(self, client_cfg_file=None):
+        if client_cfg_file != None:
+            self.__dataif_param_proxy_cfg_file = client_cfg_file
+        return self.__dataif_param_proxy_cfg_file
+    
     def IsAnyUpdate(self):
         return self.__newdata_available
 
@@ -871,7 +986,6 @@ if __name__ == "__main__":
         print("{0} {1}".format(data.values("DT","Date"),data.values("DT","Time")))
     else:
         #---------------- testtype=1 -------------------
-        import os
         print("current path   :'{0}'".format(os.getcwd()))
 
         data=cdata()
@@ -886,17 +1000,19 @@ if __name__ == "__main__":
         print("rrdtool db_starttime  :{0}".format(data.db_rrdtool_starttime_utc()))
         print("dataif  comm_type     :{0}".format(data.dataif_comm_type_str()))
         if data.IsDataIf_async():
-            print(" device      :{0}".format(data.AsyncSerialdevice()))
-            print(" Baudrate    :{0}".format(data.AsyncBaudrate()))
-            print(" Config      :{0}".format(data.AsyncConfig()))
-            print(" Testfilepath:{0}".format(data.inputtestfilepath()))
+            print(" device                :{0}".format(data.AsyncSerialdevice()))
+            print(" Baudrate              :{0}".format(data.AsyncBaudrate()))
+            print(" Config                :{0}".format(data.AsyncConfig()))
+            print(" Testfilepath          :{0}".format(data.inputtestfilepath()))
             
         if data.IsDataIf_socket():
-            print(" Serveradress:{0}".format(data.Serveradress()))
-            print(" Servername  :{0}".format(data.Servername()))
-            print(" Serverport  :{0}".format(data.Serverport()))
+            print(" Client-cfg-file       :{0}".format(data.client_cfg_file()))
 
         print("dataif  protocoll_type:{0}".format(data.dataif_protocoll_type_str()))
+        print("logging-path          :{0}".format(data.logpathname()))
+        print("logging-filename      :{0}".format(data.logfilename()))
+        print("logging-filepathname  :{0}".format(data.logfilepathname()))
+        print("logging-level         :{0}".format(logging.getLevelName(data.loglevel())))
         
         print("Heatercircuits_amount :{0}".format(data.heatercircuits_amount()))
         

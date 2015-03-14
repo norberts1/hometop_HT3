@@ -21,21 +21,41 @@
 # Ver:0.1.6  / Datum 10.01.2015 'max- and default-values' added
 #                                crc-checkfkt moved to ht_utils.py
 #                                fkt added for FW100_200 msg's
+# Ver:0.1.7.1/ Datum 04.03.2015 'heizungspumpenleistung' added
+#              https://www.mikrocontroller.net/topic/324673#3970615
+#              logging from ht_utils added
 #################################################################
 
 import data, time, ht_utils
+import ht_utils
 
 class cht3_decode(ht_utils.cht_utils):
-    def __init__(self, gdata):
+    def __init__(self, gdata, logger=None):
+        ht_utils.cht_utils.__init__(self)
+        try:
+            # init/setup logging-file
+            if logger == None:
+                ht_utils.clog.__init__(self)
+                self._logging=ht_utils.clog.create_logfile(self, logfilepath="./cht3_decode.log", loggertag="cht3_decode")
+            else:
+                self._logging=logger
+        except:
+            errorstr="""cht3_decode();Error;could not create logfile"""
+            print(errorstr)
+            raise EnvironmentError(errorstr)
+        
         #check first the parameter
         if not isinstance(gdata, data.cdata):
-            raise TypeError('cht3_decode();Error;Parameter "gdata" has wrong type')
+            errorstr='cht3_decode();TypeError;Parameter "gdata" has wrong type'
+            self._logging.critical(errorstr)
+            raise TypeError(errorstr)
 
-        ht_utils.cht_utils.__init__(self)
-        
         self.__info_datum="--.--.----"
         self.__info_zeit="--:--:--"
+        # save data-object
         self.__gdata=gdata
+        # setup data to already available logging-object
+        self.__gdata.setlogger(self._logging)
         # set default-values HG
         self.__currentHK_nickname="HG"
         self.__gdata.update(self.__currentHK_nickname,"Tvorlauf_soll",0)
@@ -82,9 +102,12 @@ class cht3_decode(ht_utils.cht_utils):
         return True if (float(tempvalue)<maxvalue and float(tempvalue)>minvalue) else False
 
     def __Check4MaxValue(self, nickname, item, value):
-        #zs test#print("maxvalue:{0};type:{1}".format(self.__gdata.maxvalue(nickname, item), type(self.__gdata.maxvalue(nickname, item))))
-        if value > self.__gdata.maxvalue(nickname, item):
-            return self.__gdata.defaultvalue(nickname, item)
+        #zs# print("maxvalue:{0};type:{1}".format(self.__gdata.maxvalue(nickname, item), type(self.__gdata.maxvalue(nickname, item))))
+        if self.__gdata.maxvalue(nickname, item) != None:
+            if value > self.__gdata.maxvalue(nickname, item):
+                return self.__gdata.defaultvalue(nickname, item)
+            else:
+                return value
         else:
             return value
  
@@ -92,7 +115,7 @@ class cht3_decode(ht_utils.cht_utils):
     def DatumUhrzeitMsg(self, buffer, length):
         nickname="DT"
 
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             iyear      = int(buffer[4]+2000)
             imonth     = int(buffer[5])
             ihour      = int(buffer[6])
@@ -123,7 +146,7 @@ class cht3_decode(ht_utils.cht_utils):
     def HeizgeraetMsg(self, buffer, length):
         nickname="HG"
 
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             # default value for CSW-typed heater
             Heatertype=0x8000
             if (buffer[15]==0x80 and buffer[16]==0x00):
@@ -194,7 +217,7 @@ class cht3_decode(ht_utils.cht_utils):
             self.__gdata.update(nickname,"Vheizungs_pumpe",b_heizungspumpe)
             self.__gdata.update(nickname,"Vspeicher_pumpe",b_speicherladepumpe)
             self.__gdata.update(nickname,"Vzirkula_pumpe",b_zirkulationspumpe)
-            self.__gdata.update(nickname,"V_spare1",0)
+            ## only deactivation, is used now in 'HeizgeraetMsg2' self.__gdata.update(nickname,"V_spare1",0)
             self.__gdata.update(nickname,"V_spare2",0)
             temptext=nickname+" :"
             for x in range (0,length):
@@ -209,7 +232,7 @@ class cht3_decode(ht_utils.cht_utils):
     def HeizgeraetMsg2(self, buffer, length):
         nickname="HG"
 
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             if buffer[4] != 255:
                 f_tAussen=float(buffer[4]*256+buffer[5])/10
             else:
@@ -225,7 +248,9 @@ class cht3_decode(ht_utils.cht_utils):
             self.__gdata.update(nickname,"Cbetrieb_heizung",i_betriebheizung_minuten)
             self.__gdata.update(nickname,"Cbrenner_gesamt",i_brenner_gesamt_ein)
             self.__gdata.update(nickname,"Cbrenner_heizung",i_brenner_heizung_ein)
-            self.__gdata.update(nickname,"V_spare1",0)
+            # Rev.: 0.1.7 https://www.mikrocontroller.net/topic/324673#3970615
+            i_pumpenleistung   =int(buffer[13])
+            self.__gdata.update(nickname,"V_spare1",i_pumpenleistung)
             self.__gdata.update(nickname,"V_spare2",0)
             temptext=nickname+" :"
             for x in range (0,length):
@@ -272,13 +297,13 @@ class cht3_decode(ht_utils.cht_utils):
     ### Heizkreismessage 11 byte ##            
     def HeizkreisMsg_FW100_200_11byte(self, buffer, length):
         nickname="HK1"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+" "+format(buffer[x],"02x")
 #zs not yet decoded #                
-            zeit= time.strftime("%H:%M:%S")
-            print("HK_11B;zeit:{0};hex:{1}".format(zeit, temptext))
+            debugstr="cht3_decode.HeizkreisMsg_FW100_200_11byte();HK_11B;hex:{0}".format(temptext)
+            self._logging.debug(debugstr)
             return None
         else:
             return None
@@ -287,7 +312,7 @@ class cht3_decode(ht_utils.cht_utils):
     ### Heizkreismessage 17 byte ##            
     def HeizkreisMsg_FW100_200Msg(self, buffer, length):
         nickname="HK1"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             i_betriebsart   =int(buffer[6])
             f_Soll_HK   =float(buffer[8]*256+ buffer[9])/10
             f_Ist_HK    =float(buffer[10]*256+ buffer[11])/10
@@ -335,7 +360,7 @@ class cht3_decode(ht_utils.cht_utils):
 
     def HeizkreisMsg_FW100_200Msg_9byte(self, buffer, length):
         nickname="HK1"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             i_betriebsart   =int(buffer[6])
             nickname="HK1"
             self.__currentHK_nickname=nickname
@@ -383,7 +408,7 @@ class cht3_decode(ht_utils.cht_utils):
         else:
             nickname="HK1"
             
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             i_IPM_Byte6  =int(buffer[6])
             i_IPM_Byte7  =int(buffer[7])
             i_IPM_Mischerstellung =int(buffer[8])
@@ -409,15 +434,16 @@ class cht3_decode(ht_utils.cht_utils):
     def HeizkreisMsg_FB1xyMsg(self, buffer, length):
         nickname="HK1"
         
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             f_Steuer_FB =float(buffer[6]*256+ buffer[7])/10 # T-Raum
             f_Soll_HK   =float(buffer[8]/2)                 # Wert * 0.5 Grad
             i_T_warmkalt_abgleich=int(buffer[9])
             f_T_warmkalt_ableich_HK = float(i_T_warmkalt_abgleich/2)
             if i_T_warmkalt_abgleich > 0xf5:
                 f_T_warmkalt_ableich_HK = -1*float((256 - i_T_warmkalt_abgleich)/2)
-# enable only for test ->
-            #print("FB1xyMsg; T-Raum:{0}; T-Soll:{1}; V-Ableich:{2}".format(f_Steuer_FB,f_Soll_HK,f_T_warmkalt_ableich_HK))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.HeizkreisMsg_FB1xyMsg();FB1xyMsg; T-Raum:{0}; T-Soll:{1}; V-Ableich:{2}".format(f_Steuer_FB,f_Soll_HK,f_T_warmkalt_ableich_HK)
+            self._logging.debug(debugstr)
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+" "+format(buffer[x],"02x")
@@ -429,7 +455,7 @@ class cht3_decode(ht_utils.cht_utils):
 
     def IPM_LastschaltmodulWWModeMsg(self, buffer, length):
         nickname="WW"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             i_Soll=int(buffer[4])
             f_Ist              = float(buffer[5]*256+ buffer[6])/10
             f_WWSpeicherextern = float(buffer[7]*256+ buffer[8])/10
@@ -456,7 +482,7 @@ class cht3_decode(ht_utils.cht_utils):
     def WarmwasserMsg(self, buffer, length):
         nickname="WW"
         
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             # Art der Warmwasserzeugung durch Brenner;
             #  0 :=> hat keine eigene WW-Erzeugung/Umschaltung, siehe Doku
             if buffer[12] == 0:
@@ -519,7 +545,7 @@ class cht3_decode(ht_utils.cht_utils):
     def SolarMsg(self, buffer, length):
         nickname="SO"
 
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             f_kollektor    =0.0
             f_speicherunten=0.0
             i_ertrag_letztestunde=0
@@ -570,7 +596,9 @@ class cht3_decode(ht_utils.cht_utils):
             if buffer[5] == 4:
                 f_t41 =float(buffer[6]*256+ buffer[7])/10
                 f_t42 =float(buffer[8]*256+ buffer[9])/10
-##                print("SO : T41:{0}, T42:{1}".format(f_t41, f_t42))
+                # enable 'debug'-logging for test ->
+                debugstr="cht3_decode.SolarMsg();SO : T41:{0}, T42:{1}".format(f_t41, f_t42)
+                self._logging.debug(debugstr)
                 # update values
                 self.__gdata.update(nickname,"Thybrid_buffer",f_t41)
                 self.__gdata.update(nickname,"Thybrid_sysinput",f_t42)
@@ -594,133 +622,145 @@ class cht3_decode(ht_utils.cht_utils):
     ### Modem message 1 ##            
     def Modem_1(self, buffer, length):
         nickname="MO1"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};F#xy !;T-setup:{2};mode:{3:02X};value:{4:02X}".format(zeit, temptext, float(buffer[6]/2),buffer[3],buffer[5]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_1();{0};F#xy !;T-setup:{1};mode:{2:02X};value:{3:02X}".format(temptext, float(buffer[6]/2),buffer[3],buffer[5])
+            self._logging.debug(debugstr)
             return None
 
     ### Modem message 2 ##            
     def Modem_2(self, buffer, length):
         nickname="MO2"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};F#xy !;T-setup:{2};mode:{3:02X};value:{4:02X};Auto-Mode".format(zeit, temptext, float(buffer[6]/2),buffer[3],buffer[5]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_2();{0};F#xy !;T-setup:{1};mode:{2:02X};value:{3:02X};Auto-Mode".format(temptext, float(buffer[6]/2),buffer[3],buffer[5])
+            self._logging.debug(debugstr)
             return None
         
     ### Modem message 3 ##            
     def Modem_3(self, buffer, length):
         nickname="MO3"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
             
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};FBxy !;T-setup:{2};mode:{3:02X};value:{4:02X}".format(zeit, temptext, float(buffer[6]/2),buffer[3],buffer[5]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_3();{0};FBxy !;T-setup:{1};mode:{2:02X};value:{3:02X}".format(temptext, float(buffer[6]/2),buffer[3],buffer[5])
+            self._logging.debug(debugstr)
             return None
 
     ### Modem message 4 ##            
     def Modem_4(self, buffer, length):
         nickname="MO4"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};FBxy !;T-setup:{2};mode:{3:02X};value:{4:02X}".format(zeit, temptext, float(buffer[6]/2),buffer[3],buffer[5]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_4();{0};FBxy !;T-setup:{1};mode:{2:02X};value:{3:02X}".format(temptext, float(buffer[6]/2),buffer[3],buffer[5])
+            self._logging.debug(debugstr)
             return None
 
     ### Modem message 5 ##            
     def Modem_5(self, buffer, length):
         nickname="MO5"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};F#xy ?;Question:{2}  ;mode:{3:02X};value:{4:02X}".format(zeit, temptext, buffer[4],buffer[3],buffer[6]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_5();{0};F#xy ?;Question:{1}  ;mode:{2:02X};value:{3:02X}".format(temptext, buffer[4],buffer[3],buffer[6])
+            self._logging.debug(debugstr)
             return None
 
     ### Modem message 6 ##            
     def Modem_6(self, buffer, length):
         nickname="MO6"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};F#xy ?;Question:{2}  ;mode:{3:02X};value:{4:02X}".format(zeit, temptext, buffer[4],buffer[3],buffer[6]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_6();{0};F#xy ?;Question:{1}  ;mode:{2:02X};value:{3:02X}".format(temptext, buffer[4],buffer[3],buffer[6])
+            self._logging.debug(debugstr)
             return None
                       
     ### Modem message 7 ##            
     def Modem_7(self, buffer, length):
         nickname="MO7"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};F#xy !;V1:{2}  V2:{5}  ;mode:{3:02X};value:{4:02X}".format(zeit, temptext, buffer[4],buffer[3],buffer[5],buffer[6]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_7();{0};F#xy !;V1:{1}  V2:{4}  ;mode:{2:02X};value:{3:02X}".format(temptext, buffer[4],buffer[3],buffer[5],buffer[6])
+            self._logging.debug(debugstr)
             return None
                       
     ### Modem message 8 ##            
     def Modem_8(self, buffer, length):
         nickname="MO8"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};F#xy !;V1:{2}  V2:{5}  ;mode:{3:02X};value:{4:02X}".format(zeit, temptext, buffer[4],buffer[3],buffer[5],buffer[6]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_8();{0};F#xy !;V1:{1}  V2:{4}  ;mode:{2:02X};value:{3:02X}".format(temptext, buffer[4],buffer[3],buffer[5],buffer[6])
+            self._logging.debug(debugstr)
             return None
                       
     ### Modem message 9 ##            
     def Modem_9(self, buffer, length):
         nickname="MO9"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};F#xy ?;Question:{2}  ;mode:{3:02X};value:{4:02X}".format(zeit, temptext, buffer[4],buffer[3],buffer[6]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_8();{0};F#xy ?;Question:{1}  ;mode:{2:02X};value:{3:02X}".format(temptext, buffer[4],buffer[3],buffer[6])
+            self._logging.debug(debugstr)
             return None
 
     ### Modem MB-Lan message 1 ##            
     def Modem_MB_1(self, buffer, length):
         nickname="MB1"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};F#xy ?;Question:{2}  ;mode:{3:02X};value:{4:02X}".format(zeit, temptext, buffer[4],buffer[3],buffer[6]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_MB_1();{0};F#xy ?;Question:{1}  ;mode:{2:02X};value:{3:02X}".format(temptext, buffer[4],buffer[3],buffer[6])
+            self._logging.debug(debugstr)
             return None
 
     def Modem_MB_2(self, buffer, length):
         nickname="MB2"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
-            print("{0};{1};F#xy ?;Question:{2}  ;mode:{3:02X};value:{4:02X}".format(zeit, temptext, buffer[4],buffer[3],buffer[6]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_MB_2();{0};F#xy ?;Question:{1}  ;mode:{2:02X};value:{3:02X}".format(temptext, buffer[4],buffer[3],buffer[6])
+            self._logging.debug(debugstr)
             return None
 
     def Modem_MB_3(self, buffer, length):
         nickname="MB3"
-        if ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
 #            print("{0};{1};F#xy ?;Question:{2}  ;mode:{3:02X};value:{4:02X}".format(zeit, temptext, buffer[4],buffer[3],buffer[6]))
-            print("{0};{1};FBxy !;T-setup:{2};mode:{3:02X};Spar-Mode".format(zeit, temptext, float(buffer[6]/2),buffer[3]))
+            # enable 'debug'-logging for test ->
+            debugstr="cht3_decode.Modem_MB_3();{0};FBxy !;T-setup:{1};mode:{2:02X};Spar-Mode".format(temptext, float(buffer[6]/2),buffer[3])
+            self._logging.debug(debugstr)
             return None
 
     def Modem_MB_4(self, buffer, length):
@@ -728,16 +768,18 @@ class cht3_decode(ht_utils.cht_utils):
 ##        print("{0};CRC calculated:{1:02X}".format(nickname,self.__make_crc(buffer, length)))
 ##ZS    ## CRC check hier immer falsch ???? obwohl laenge mit 8 zeichen richtig ist
         ## deshalb CRC-check deaktiviert
-        if True or ht_utils.cht_utils.crc_testen(self,buffer, length) == True:
+        if True or self.crc_testen(buffer, length) == True:
             temptext=nickname+":"
             for x in range (0,length):
                 temptext = temptext+";"+format(buffer[x],"02x")
-            zeit= time.strftime("%H:%M:%S")
             # check valid range for temperatur
             if (buffer[5] > 20 and buffer[5] < 80):
-                print("{0};{1};FBxy !;T-setup:{2};mode:{3:02X};Frost-Mode".format(zeit, temptext, float(buffer[5]/2),buffer[3]))
+                debugstr="cht3_decode.Modem_MB_4();{0};FBxy !;T-setup:{1};mode:{2:02X};Frost-Mode".format(temptext, float(buffer[5]/2),buffer[3])
             else:
-                print("{0};{1};FBxy !;           ;mode:{2:02X};Frost-Mode".format(zeit, temptext, buffer[3]))
+                debugstr="cht3_decode.Modem_MB_4();{0};FBxy !;           ;mode:{1:02X};Frost-Mode".format(temptext, buffer[3])
+
+            # enable 'debug'-logging for test ->
+            self._logging.debug(debugstr)
             return None
 
 

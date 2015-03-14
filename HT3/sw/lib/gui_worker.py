@@ -18,6 +18,9 @@
 #
 #################################################################
 # Ver:0.1.6  / Datum 10.01.2015
+# Ver:0.1.7.1/ Datum 04.03.2015 'heizungspumpenleistung' added
+#              https://www.mikrocontroller.net/topic/324673#3970615
+#              logging from ht_utils added
 #################################################################
 #
 """ Class 'gui_cworker' for creating HT3 - Graphical User Interface (GUI)
@@ -33,14 +36,31 @@ run                     -- main loop to start GUI endless
 import sys, tkinter, time
 import _thread, os
 import data
+import ht_utils, logging
 
-class gui_cworker(object):
-    def __init__(self, gdata, hexdump_window=True):
+__author__  = "Norbert S <junky-zs@gmx.de>"
+__status__  = "draft"
+__version__ = "0.1.7.1"
+__date__    = "4 Maerz 2015"
+
+class gui_cworker(ht_utils.clog):
+    def __init__(self, gdata, hexdump_window=True, titel_input="ASYNC", logger=None):
         try:
+            # init/setup logging-file
+            if logger == None:
+                ht_utils.clog.__init__(self)
+                self._logging=ht_utils.clog.create_logfile(self, logfilepath="./gui_cworker.log", loggertag="gui_cworker")
+            else:
+                self._logging=logger
+            
             if not isinstance(gdata, data.cdata):
-                raise TypeError("gdata")
+                errorstr="gui_cworker;Error;TypeError:gdata"
+                self._logging.critical(errorstr)
+                raise TypeError(errorstr)
             if not (isinstance(hexdump_window, int) or isinstance(hexdump_window, bool)):
-                raise TypeError("hexdump_window")
+                errorstr="gui_cworker;Error;TypeError:hexdump_window"
+                self._logging.critical(errorstr)
+                raise TypeError(errorstr)
             self.__gdata  = gdata
             self.__current_display="system"
             self.__hexdump_window =hexdump_window
@@ -48,17 +68,18 @@ class gui_cworker(object):
             self.__info_calledfirsttime=True
 
             self.__main = tkinter.Tk()
+            self.__gui_titel_input = titel_input
 
             # Frame 1,2,3 with Buttons 
             self.__fr1 = tkinter.Frame(self.__main, relief="sunken", bd=5)
             self.__fr1.pack(side="top")
             if self.__hexdump_window :
-                self.__main.title('Heatronic3 Analyser (Rev:0.1.6)')
+                self.__main.title('Heatronic Analyser Rev:{0} (Input:{1})'.format(__version__, self.__gui_titel_input))
                 self.__main.geometry("1000x800+330+230")
                 self.__fr2 = tkinter.Frame(self.__fr1, relief="sunken", bd=2)
                 self.__fr2.pack(side="left")
             else:
-                self.__main.title('Heatronic3 Systemstatus (Rev:0.1.6)')
+                self.__main.title('Heatronic Systemstatus Rev:{0} (Input:{1})'.format(__version__, self.__gui_titel_input))
                 self.__main.geometry("550x750+330+230")
                 self.__fr2 = None
                 
@@ -129,8 +150,9 @@ class gui_cworker(object):
             self.__search4browser()
         
         except (TypeError) as e:
-            print('gui_cworker();Error;Parameter:<{0}> has wrong type'.format(e.args[0]))
-            raise TypeError
+            errorstr='gui_cworker();Error;Parameter:<{0}> has wrong type'.format(e.args[0])
+            self._logging.critical(errorstr)
+            raise TypeError(errorstr)
         
     def __del__(self):
         pass
@@ -207,8 +229,10 @@ class gui_cworker(object):
                 Column=""
                 
         except:
-            print("""gui_cworker.__DisplayColumn();Error;display-name/unit are not available
-                       for nickname:{0};itemname:{1}""".format(nickname,itemname))
+            errorstr="""gui_cworker.__DisplayColumn();Error;display-name/unit are not available
+                       for nickname:{0};itemname:{1}""".format(nickname,itemname)
+            print(errorstr)
+            self._logging.critical(errorstr)
             
         return Column
             
@@ -219,7 +243,7 @@ class gui_cworker(object):
 
         
     def __System(self):
-        temptext="{0:13.13}: {1}\n".format("Systemstatus","Junkers Heatronic3")
+        temptext="{0:13.13}: {1}\n".format("Systemstatus","Junkers Heatronic")
         self.__text.insert("end", temptext,"b_ye")
         self.__Info()
         self.__Heizgeraet()
@@ -348,6 +372,11 @@ class gui_cworker(object):
         
         tempvalue=format(int(self.__gdata.values(nickname,"Cbrenner_heizung")),"d")
         temptext =self.__DisplayColumn(nickname,"Cbrenner_heizung",tempvalue)
+        if len(temptext)>0: self.__text.insert("end",temptext)
+        
+        # Rev.: 0.1.7 https://www.mikrocontroller.net/topic/324673#3970615
+        tempvalue=format(int(self.__gdata.values(nickname,"Vspare1")))
+        temptext =self.__DisplayColumn(nickname,"Vspare1",tempvalue)
         if len(temptext)>0: self.__text.insert("end",temptext)
 
         if (self.__gdata.IsSyspartUpdate(nickname) and self.__hexdump_window):

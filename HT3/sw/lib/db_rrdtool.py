@@ -18,6 +18,7 @@
 #
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.1.7.1/ Datum 04.03.2015 logging from ht_utils added
 #################################################################
 #
 """ Class 'cdb_rrdtool' for creating and writing data to rrdtool-database
@@ -60,12 +61,20 @@ db_rrdtool_starttime_utc-- returns value 'starttime_utc' for rrdtool-db
 import os, tempfile
 import xml.etree.ElementTree as ET
 import time
+import ht_utils, logging
 
 
-class cdb_rrdtool(object):
+class cdb_rrdtool(ht_utils.clog):
     __rrdtool_syspartnames   ={}
     __rrdtool_dbname_mapping ={}
-    def __init__(self, configurationfilename, PerlIF=True):
+    def __init__(self, configurationfilename, PerlIF=True, logger=None):
+        # init/setup logging-file
+        if logger == None:
+            ht_utils.clog.__init__(self)
+            self._logging=ht_utils.clog.create_logfile(self, logfilepath="./cdb_rrdtool.log", loggertag="cdb_rrdtool")
+        else:
+            self._logging=logger
+                
         self.__databasefiles=[]
         self.__rrdtoolh=None   #used as rrdtool-handle
         self.__rrdfileh=None
@@ -78,14 +87,18 @@ class cdb_rrdtool(object):
         self.__PerlIF=PerlIF
         try:
             if not isinstance(configurationfilename, str):
-                raise TypeError("Parameter: configurationfilename")
+                errorstr="cdb_rrdtool();TypeError;Parameter: configurationfilename"
+                self._logging.critical(errorstr)
+                raise TypeError(errorstr)
             
             #get database-name from configuration
             tree  = ET.parse(configurationfilename)
             self.__root  = tree.getroot()
             self.__dbname=self.__root.find('dbname_rrd').text
             if not len(self.__dbname):
-                raise NameError("'dbname_rrd' not found in configuration")
+                errorstr="cdb_rrdtool();NameError;'dbname_rrd' not found in configuration"
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
             
             self.__path    = os.path.dirname (self.__dbname)
             self.__basename= os.path.basename(self.__dbname)
@@ -114,7 +127,9 @@ class cdb_rrdtool(object):
                     self.__rrdtool_starttime_utc=1344000000
 
         except (OSError, EnvironmentError, TypeError, NameError) as e:
-            print("""cdb_rrdtool();Error;<{0}>""".format(str(e.args)))
+            errorstr="""cdb_rrdtool();Error;<{0}>""".format(str(e.args))
+            print(errorstr)
+            self._logging.critical(errorstr)
             raise e
             
     def __del__(self):
@@ -153,7 +168,10 @@ class cdb_rrdtool(object):
     def update(self, syspartname, values, timestamp=None):
         rtn=0
         try:
-            if not self.isavailable(): raise EnvironmentError("database not yet created")
+            if not self.isavailable():
+                errorstr="db_rrdtool.update();Error;database not yet created"
+                self._logging.critical(errorstr)
+                raise EnvironmentError(errorstr)
             
             if timestamp==None:
                 itimestamp=int(time.time())
@@ -179,8 +197,9 @@ class cdb_rrdtool(object):
                                                                                    itimestamp))
                 self.__rrdfileh.flush()
                 self.__rrdfileh.close()
-                raise ValueError("""script failed, syspart:{0}, timestamp:{1}""".format(syspartname,
-                                                                                        itimestamp))
+                errorstr="db_rrdtool.update();ValueError;script failed, syspart:{0}, timestamp:{1}".format(syspartname,itimestamp)
+                self._logging.critical(errorstr)
+                raise ValueError(errorstr)
             else:
                 os.remove(filename)
 
@@ -188,7 +207,9 @@ class cdb_rrdtool(object):
             
         except (ValueError, EnvironmentError, NameError, TypeError) as e:
             if not self.__rrdfileh==None: self.__rrdfileh.close()
-            print('cdb_rrdtool.update();Error;<{0}>'.format(e.args[0]))
+            errorstr='cdb_rrdtool.update();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             return True
 
     def __define_rrd_update_fileheader(self):
@@ -196,7 +217,9 @@ class cdb_rrdtool(object):
             self.__rrdfileh.write("#!/usr/bin/perl\n#\nuse strict;\nuse warnings;\nuse RRDTool::OO;\n\n")
             self.__rrdfileh.flush()                                          
         except (EnvironmentError) as e:
-            print('cdb_rrdtool.update();Error;<{0}>'.format(e.args[0]))
+            errorstr='cdb_rrdtool.__define_rrd_update_fileheader();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
     def __define_rrd_update_filehandle(self,syspartname, timestamp):
@@ -210,31 +233,44 @@ class cdb_rrdtool(object):
             self.__rrdfileh.write('  values => {\n')
             self.__rrdfileh.flush()                                          
         except (EnvironmentError) as e:
-            print('cdb_rrdtool.update();Error;<{0}>'.format(e.args[0]))
+            errorstr='cdb_rrdtool.__define_rrd_update_filehandle();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
     def __define_rrd_update_details(self, syspartname, values):
         try:
             if not (isinstance(values, list) and isinstance(values[0], tuple)):
-                raise TypeError("only a list of tuples allowed for 'values'")
+                errorstr="cdb_rrdtool.__define_rrd_update_details;TypeError;only a list of tuples allowed for 'values'"
+                self._logging.critical(errorstr)
+                raise TypeError(errorstr)
             for (logitem, value) in values:
-                if len(str(logitem)) > 18: raise TypeError("logitem-length must be less then 19 chars")
+                if len(str(logitem)) > 18:
+                    errorstr="cdb_rrdtool.__define_rrd_update_details;Error;logitem-length must be less then 19 chars"
+                    self._logging.critical(errorstr)
+                    raise TypeError(errorstr)
                 self.__rrdfileh.write('   {0}=>{1},\n'.format(logitem, value))
             self.__rrdfileh.write('   }\n')
             self.__rrdfileh.write(');\n')
             self.__rrdfileh.flush()                                          
                 
         except (EnvironmentError) as e:
-            print('cdb_rrdtool.update();Error;<{0}>'.format(e.args[0]))
+            errorstr='cdb_rrdtool.update();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
     
     def createdb_rrdtool(self, timestamp=None, step_seconds=None):
         if self.is_rrdtool_db_available():
-            print("cdb_rrdtool.createdb_rrdtool();INFO;Database:'{0}' already created".format(self.__dbname))
+            infostr="cdb_rrdtool.createdb_rrdtool();INFO;Database:'{0}' already created".format(self.__dbname)
+            print(infostr)
+            self._logging.info(infostr)
         else:
             if not self.__PerlIF:
-               raise EnvironmentError("rrdtool database-creation is done with perl-scripts")
+                errorstr="cdb_rrdtool.createdb_rrdtool();Error;rrdtool database-creation must be done with perl-scripts"
+                self._logging.critical(errorstr)
+                raise EnvironmentError(errorstr)
             try:
                 # set starttime and step-seconds for rrdtool-db
                 if timestamp==None:
@@ -285,11 +321,15 @@ class cdb_rrdtool(object):
 
                 #check rrdtool-db for availability, if not raise exception
                 if not self.is_rrdtool_db_available():
-                   raise EnvironmentError("rrdtool-database:'{0}' not created".format(self.__dbname))
+                    errorstr="db_rrdtool.createdb_rrdtool();Error;rrdtool-database:'{0}' not created".format(self.__dbname)
+                    self._logging.critical(errorstr)
+                    raise EnvironmentError(errorstr)
             
             except (EnvironmentError, TypeError) as e:
                 if not self.__rrdtoolh==None: self.__rrdtoolh.close()
-                print('db_rrdtool.createdb_rrdtool();Error;<{0}>'.format(e.args[0]))
+                errorstr='db_rrdtool.createdb_rrdtool();Error;<{0}>'.format(e.args[0])
+                self._logging.critical(errorstr)
+                print(errorstr)
 
     def __define_rrd_fileheader(self):
         try:
@@ -297,7 +337,9 @@ class cdb_rrdtool(object):
             self.__rrdtoolh.write('my $rc = 0;\n')
             self.__rrdtoolh.flush()                                          
         except (EnvironmentError) as e:
-            print('db_rrdtool.createdb_rrdtool();Error;<{0}>'.format(e.args[0]))
+            errorstr='db_rrdtool.__define_rrd_fileheader();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
     def __define_rrd_filehandle(self,syspartname):
@@ -307,7 +349,9 @@ class cdb_rrdtool(object):
             self.__rrdtoolh.write('my ${0}_rrdh = RRDTool::OO->new(file => $DB_{0});\n'.format(syspartname))
             self.__rrdtoolh.flush()                                          
         except (EnvironmentError) as e:
-            print('db_rrdtool.createdb_rrdtool();Error;<{0}>'.format(e.args[0]))
+            errorstr='db_rrdtool.__define_rrd_filehandle();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
     def __define_rrd_starttime(self, starttime=None, iterations="100"):
@@ -335,7 +379,9 @@ class cdb_rrdtool(object):
             self.__rrdtoolh.write('# \n')
             self.__rrdtoolh.flush()                                          
         except (EnvironmentError) as e:
-            print('db_rrdtool.createdb_rrdtool();Error;<{0}>'.format(e.args[0]))
+            errorstr='db_rrdtool.__define_rrd_starttime();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
     def __define_rrd_details(self,syspartname, logitem, datause, default, heading=False, tail=False):
@@ -377,7 +423,9 @@ class cdb_rrdtool(object):
             self.__rrdtoolh.flush()                                          
         except (EnvironmentError) as e:
             self.__rrdtoolh.flush()                                          
-            print('db_rrdtool.createdb_rrdtool();Error;<{0}>'.format(e.args[0]))
+            errorstr='db_rrdtool.__define_rrd_details();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             raise e
 
     def is_rrdtool_db_available(self, dbname=""):
@@ -403,7 +451,9 @@ class cdb_rrdtool(object):
 
             return rtnvalue
         except (EnvironmentError) as e:
-            print('create_db.__is_rrdtool_db_available();Error;<{0}>'.format(e.args[0]))
+            errorstr='create_db.__is_rrdtool_db_available();Error;<{0}>'.format(e.args[0])
+            self._logging.critical(errorstr)
+            print(errorstr)
             return False
 
     def db_rrdtool_filename(self):
