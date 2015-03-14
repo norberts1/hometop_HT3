@@ -18,6 +18,8 @@
 #
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.1.7  / Datum xy.zw.2015 'heizungspumpenleistung' added
+#              https://www.mikrocontroller.net/topic/324673#3970615
 #################################################################
 
 #
@@ -161,17 +163,26 @@ $rc = $heizgeraet_rrdh->graph(
 		legend	=> 'Zirkulations-Pumpe\l',
 		cdef	=> "zirkula_pumpe,10,*"
 	},
+#Rev.:0.1.7 ######### deaktiviert
+#	draw           => {
+#		dsname => 'V_heizungs_pumpe',
+#		type	=> "hidden",
+#		name	=> 'Heizungspumpe',
+#	},
+#Rev.:0.1.7 ######### neu
 	draw           => {
-		dsname => 'V_heizungs_pumpe',
-		type	=> "hidden",
-		name	=> 'Heizungspumpe',
-	},
-	draw		=> {
+		dsname => 'V_spare_1',
 		color	=> '008d00',
-		type	=> "area",
-		legend => 'Heizungspumpe\l',
-		cdef	=> "Heizungspumpe,5,*"
+		legend => 'Heizungspumpenleistung (%)\l',
+		name	=> 'Heizungspumpenleistung',
 	},
+#Rev.:0.1.7 ######### deaktiviert
+#	draw		=> {
+#		color	=> '008d00',
+#		type	=> "area",
+#		legend => 'Heizungspumpe\l',
+#		cdef	=> "Heizungspumpe,5,*"
+#	},
 	draw		=> {
 		dsname	=> 'T_aussen',
 		name	=> 'Aussentemperatur',
