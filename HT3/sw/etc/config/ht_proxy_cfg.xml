@@ -1,0 +1,120 @@
+<?xml version="1.0" ?>
+<ht_proxy_cfg>
+<!--
+ ##
+ #   #################################################################
+ ## Copyright (c) 2015 Norbert S. <junky-zs@gmx.de>
+ #
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+ # the Free Software Foundation, either version 3 of the License, or
+ # (at your option) any later version.
+ #
+ # This program is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ # GNU General Public License for more details.
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with this program. If not, see <http://www.gnu.org/licenses/>.
+ #
+ #################################################################
+ # Ver:0.1.7  / Datum 25.02.2015 first release
+ #################################################################
+ #
+ #  Configuration-file for 'ht_proxy'-daemon and attached clients.
+ #
+ #  The ht_proxy-daemon is used for data-exchange between ht_transceiver-
+ #  boards (connected as com-port/tty-port) and any heater TCP/IP-clients.
+ #
+ #  For 'devicetype':= 'MODEM' it is possible to receive and also
+ #  transmit telegrams from/to the heaterbus. This function is only
+ #  available, if a 'ht_transceiver'-board (ht_piduino or ht_pitiny)
+ #  is connected to the com-/tty-port.
+ #
+ #  For any other devicetype it's only possible to receive heaterbus-
+ #  telegrams: 'devicetype':= RX.
+ #
+ ##
+ #  Importend:
+ #   If you are using the ht_proxy - Server, then the interface has
+ #   has to be set to: SOCKET
+ #    see config-file: HT3_db_cfg.xml 
+ #     and paramter  :<comm_type>SOCKET</comm_type>
+ #
+ #  required comport-configurations for 'proxy-server'
+ #   1. If you use a 'ht_transceiver'-board (ht_piduino or ht_pitiny)
+ #      you have to configure: 
+ #        <baudrate>19200</baudrate>
+ #        <serialdevice>/dev/ttyAMA0</serialdevice>   (for RaspberryPi UART)
+ #
+ #   2. If you use a 'HT3_miniAdapter'-board
+ #      you have to configure: 
+ #        <baudrate>9600</baudrate>
+ #        <serialdevice>/dev/ttyAMA0</serialdevice>   (for RaspberryPi UART)
+ #
+ #   3. If you use a 'HT3_microAdapter'-board with USB<->UART interface
+ #      you have to configure: 
+ #        <baudrate>9600</baudrate>
+ #        <serialdevice>/dev/ttyUSBx</serialdevice>   (for any USB-Port x)
+ #
+-->
+
+  <item>ht_proxy_configuration</item>
+
+  <!-- global configuration-values -->
+
+  <!-- currently only ONE com-/tty-port with devicetype:='MODEM' is supported -->
+  <transceiver_numbers>1</transceiver_numbers>
+
+  <!-- proxy-server configuration-values -->
+  <proxy_server>
+    <serveraddress></serveraddress>
+    <servername></servername>
+    <portnumber>8088</portnumber>
+    <logfilepath>./var/log/ht_proxy.log</logfilepath>
+    <ht_transceiver_if devicename="RX">
+      <parameter>
+        <serialdevice>/dev/ttyAMA0</serialdevice>
+        <baudrate>19200</baudrate>
+        <config>"8N1"</config>  <!-- only 8N1 available -->
+      </parameter>
+      <devicetype>RX</devicetype>
+    </ht_transceiver_if>
+    <ht_transceiver_if devicename="MODEM">
+      <parameter>
+        <serialdevice>/dev/ttyAMA0</serialdevice>
+        <baudrate>19200</baudrate>
+        <config>"8N1"</config>  <!-- only 8N1 available -->
+      </parameter>
+      <devicetype>MODEM</devicetype>
+      <deviceaddress_hex>0D</deviceaddress_hex> <!-- currently unused value -->
+    </ht_transceiver_if>
+  </proxy_server>
+
+  <!-- proxy-client(s) configuration-values
+   #   devicetypes of client(s) currently supported: 'MODEM' or 'RX'.
+   #   Type 'MODEM' can be used in parallel but must not send
+   #   parallel at the same time and has to wait for the end
+   #   of any other transmission.
+   #   anyway type 'RX' can be used x-times as client, this is only
+   #   limited by the used hardware (RaspberryPi). In this case only
+   #   2 Clients shoud be connected simultaneously (performance-reason).
+  -->
+  <proxy_client devicename="RX">      
+    <serveraddress>localhost</serveraddress>
+    <servername></servername>
+    <portnumber>8088</portnumber>
+    <logfilepath>./var/log/ht_client_rx.log</logfilepath>
+    <devicetype>RX</devicetype>
+  </proxy_client>
+
+  <proxy_client devicename="MODEM">      
+    <serveraddress>localhost</serveraddress>
+    <servername></servername>
+    <portnumber>8088</portnumber>
+    <logfilepath>./var/log/ht_client_modem.log</logfilepath>
+    <devicetype>MODEM</devicetype>
+  </proxy_client>
+</ht_proxy_cfg>
+
