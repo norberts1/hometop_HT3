@@ -21,6 +21,15 @@
  #################################################################
  # Ver:0.1.5  / Datum 25.05.2014
  # Ver:0.1.6  / Datum 10.01.2015 'data_interface' added
+ # Ver:0.1.7  / Datum 25.02.2015 'heizungspumpenleistung' added
+ #              https://www.mikrocontroller.net/topic/324673#3970615
+ #              Modified <parameter name='SOCKET'>
+ #               added   <proxy_config_file> 
+ #               removed <serveradress>
+ #               removed <servername>
+ #               removed <portnumber>
+ # Ver:0.1.7.1/ Datum 04.03.2015
+ #               added   <logging>
  #################################################################
  #
  #  Configuration-file for 'HT3_heater'-datalogging to databases.
@@ -70,7 +79,7 @@
     <!-- global configuration-values -->
     <data_interface>
       <comm_type>ASYNC</comm_type> <!-- communication-types are: 
-                                            ASYNC:=tty/comport; SOCKET:=TBD -->
+                                            ASYNC:=tty/comport; SOCKET:= socket-interface -->
       <proto_type>RAW</proto_type>  <!-- protocoll-types     are: 
                                             RAW:=transparent  ; TRX   :=TBD (transceiver-messages with header) -->
       <parameter name="ASYNC">
@@ -80,16 +89,25 @@
         <config>"8N1"</config>  <!-- only 8N1 available -->
       </parameter>
       <parameter name="SOCKET">
-        <!-- !! not yet implemented !! -->
-        <!-- client-definitions -->
-        <serveradress>"192.168.???.???"</serveradress>
-        <servername>"funny_dummy"</servername>
-        <portnumber>8088</portnumber>
+        <proxy_config_file>./ht_proxy_cfg_test.xml</proxy_config_file>
       </parameter>
     </data_interface>
 
+    <logging>
+      <path>/tmp</path>
+      <default_filename>ht_test.log</default_filename>
+      <loglevel>INFO</loglevel>   <!-- loglevel-types are (details see library: logging.py):
+                                        DEBUG    := Debug-Level
+                                        INFO     := Information-Level
+                                        WARNING  := Warning-Level
+                                        ERROR    := Error-Level
+                                        CRITICAL := Critical-Level
+                                  -->
+    </logging>
+
     <anzahl_heizkreise>4</anzahl_heizkreise>
 
+    <!-- systempart definitions -->
     <systempart name="heizgeraet">
         <shortname name="HG"/>
         <hardwaretype>CSWxy</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
@@ -224,10 +242,10 @@
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
-            <unit></unit>
-            <displayname></displayname>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
+            <unit>%</unit>
+            <displayname>Heizpumpenleistung</displayname>
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>

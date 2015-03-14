@@ -21,6 +21,15 @@
  #################################################################
  # Ver:0.1.5  / Datum 25.05.2014
  # Ver:0.1.6  / Datum 10.01.2015 'data_interface' added
+ # Ver:0.1.7  / Datum 25.02.2015 'heizungspumpenleistung' added
+ #              https://www.mikrocontroller.net/topic/324673#3970615
+ #              Modified <parameter name='SOCKET'>
+ #               added   <proxy_config_file> 
+ #               removed <serveradress>
+ #               removed <servername>
+ #               removed <portnumber>
+ # Ver:0.1.7.1/ Datum 04.03.2015
+ #               added   <logging>
  #################################################################
  #
  #  Configuration-file for 'HT3_heater'-datalogging to databases.
@@ -69,26 +78,34 @@
 
     <!-- global configuration-values -->
     <data_interface>
-      <comm_type>ASYNC</comm_type> <!-- communication-types are: 
-                                            ASYNC:=tty/comport; SOCKET:=TBD -->
+      <comm_type>SOCKET</comm_type> <!-- communication-types are: 
+                                            ASYNC:=tty/comport; SOCKET:= socket-interface
+                                            If daemon: 'ht_proxy' is used then <comm_type>SOCKET is required !
+                                    -->
       <proto_type>RAW</proto_type>  <!-- protocoll-types     are: 
                                             RAW:=transparent  ; TRX   :=TBD (transceiver-messages with header) -->
       <parameter name="ASYNC">
         <serialdevice>/dev/ttyAMA0</serialdevice>
-        <!-- <serialdevice>/dev/ttyUSB0</serialdevice> -->
         <inputtestfilepath></inputtestfilepath>
         <baudrate>9600</baudrate>
-        <!-- <baudrate>19200</baudrate> -->
         <config>"8N1"</config>  <!-- only 8N1 available -->
       </parameter>
       <parameter name="SOCKET">
-        <!-- !! not yet implemented !! -->
-        <!-- client-definitions -->
-        <serveradress>"192.168.???.???"</serveradress>
-        <servername>"funny_dummy"</servername>
-        <portnumber>8088</portnumber>
+        <proxy_config_file>./etc/config/ht_proxy_cfg.xml</proxy_config_file>
       </parameter>
     </data_interface>
+
+    <logging>
+      <path>./var/log</path>
+      <default_filename>ht_default.log</default_filename>
+      <loglevel>INFO</loglevel>   <!-- loglevel-types are (details see library: logging.py):
+                                        DEBUG    := Debug-Level
+                                        INFO     := Information-Level
+                                        WARNING  := Warning-Level
+                                        ERROR    := Error-Level
+                                        CRITICAL := Critical-Level
+                                  -->
+    </logging>
 
     <anzahl_heizkreise>1</anzahl_heizkreise>
 
@@ -227,10 +244,10 @@
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
-            <unit></unit>
-            <displayname></displayname>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
+            <unit>%</unit>
+            <displayname>Heizpumpenleistung</displayname>
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>
