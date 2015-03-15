@@ -19,12 +19,13 @@
 #################################################################
 #  script sets GPIO11 (rapsi-header Pin23) to output
 #
-#   please install at first the python setuptools with command:
-#        sudo apt-get install python-setuptools
+#   please install at first the python3 setuptools with command:
+#        sudo apt-get install python3-setuptools
 #
 #  you must be user: root to execute this script
 #
 #################################################################
+# Ver:0.1.7.1/ Datum 02.03.2015 Text modified to 'python3-setuptools'
 #
 import RPi.GPIO as GPIO
 
