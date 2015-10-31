@@ -20,6 +20,8 @@
 # Ver:0.1.7  / Datum 25.02.2015 first release
 # Ver:0.1.7.1/ Datum 04.03.2015 word:'Error;' removed from cportwrite()
 #              logging-handling added from ht_utils
+# Ver:0.1.7.2/ Datum 31.10.2015 __waitfor_client_register method changed
+#              for handling clients which not sending the devicetype
 #################################################################
 
 import socketserver, socket, serial
@@ -437,7 +439,7 @@ class cht_RequestHandler(socketserver.BaseRequestHandler):
             addrc, portc = self.client_address
             _ClientHandler.log_critical("Client-ID:{0}; {1} No connection possible".format(self._myownID, (addrc, portc)))
             raise
-        # wait for client registration    
+        # wait for client registration
         self.__waitfor_client_register()
         # add client and start threads
         _ClientHandler.add_client(self._myownID, self.request)
@@ -460,28 +462,26 @@ class cht_RequestHandler(socketserver.BaseRequestHandler):
 
 
     def __waitfor_client_register(self):
-        self.request.setblocking(False)
-        devicetypetmp=""
-        while True:
-            # wait until client-informations are received
-            try:
-                devicetypetmp=self.request.recv(20)
-                if len(devicetypetmp) > 1:
-                    break
-            except:
-                pass
+        self.request.settimeout(5)
         try:
+            devicetypetmp=self.request.recv(20)
             self._client_devicetype = devicetypetmp.decode('utf-8')
             _ClientHandler.log_info("Client-ID:{0}; register(); got devicetype:{1}".format(self._myownID,self._client_devicetype))
             #send client-ID to client
             sendtemp=str(self._myownID)
             self.request.sendall(sendtemp.encode("utf-8"))
-            
-        except:
-            _ClientHandler.log_critical("Client-ID:{0}; error on socket.send".format(self._myownID))
+        except socket.timeout:
+            _ClientHandler.log_critical("Client-ID:{0}; Timeout occured, no devicetype was send".format(self._myownID))
+            raise
+        except socket.error as e:
+            # Something else happened, handle error, exit, etc.
+            _ClientHandler.log_critical("Client-ID:{0}; error '{1}' on socket.recv or socket.send".format(self._myownID, e))
+            raise
+        except Exception as e:
+            _ClientHandler.log_critical("Client-ID:{0}; unkown error '{1}'".format(self._myownID,e))
             raise
         finally:
-            self.request.setblocking(True)
+            self.request.settimeout(None)
             
         
     def setup(self):
