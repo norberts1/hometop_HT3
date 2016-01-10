@@ -1,0 +1,222 @@
+displaycode;displaycode_text;causecode;causecode_text;bustype
+C3;C3 qs02_DisplayCode3_short;NULL;NULL;NULL
+A4;A4 qs02_DisplayCode1_short;NULL;NULL;NULL
+A7;A7 qs02_DisplayCode2_short;NULL;NULL;NULL
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;JUPII
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;EMS
+5L;Bussignal kann nicht verarbeitet werden;NULL;NULL;JUPII
+5L;Bussignal kann nicht verarbeitet werden;NULL;NULL;EMS
+4Y;Vorlauffühler defekt;NULL;NULL;JUPII
+4Y;Vorlauffühler defekt;NULL;NULL;EMS
+EC;Interner Fehler im Programmablauf;NULL;NULL;JUPII
+EC;Interner Fehler im Programmablauf;NULL;NULL;EMS
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;JUPII
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;EMS
+EC;Kein Signal vom Außenfühler vorhanden;NULL;NULL;JUPII
+EC;Kein Signal vom Außenfühler vorhanden;NULL;NULL;EMS
+4C;Sicherheitstemperaturbegrenzer hat ausgelöst;NULL;NULL;JUPII
+4C;Sicherheitstemperaturbegrenzer hat ausgelöst;NULL;NULL;EMS
+6C;Ionisationssignal nach Wärmeforderung;NULL;NULL;JUPII
+6C;Ionisationssignal nach Wärmeforderung;NULL;NULL;EMS
+CL;Warmwasser - NTC defekt;NULL;NULL;JUPII
+CL;Warmwasser - NTC defekt;NULL;NULL;EMS
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;JUPII
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;EMS
+9L;Regelventil an der Gasarmatur öffnet nicht;NULL;NULL;JUPII
+9L;Regelventil an der Gasarmatur öffnet nicht;NULL;NULL;EMS
+A01;Allgemeine EMS-Funktion;NULL;NULL;EMS
+A11;3091: Falsches Signal vom Raumtemperaturfühler für den Heizkreis 1 im Regler RC 300;3091;Raumtemperaturaufschaltung für den Heizkreis 1 ist aktiviert bei dem eingebauten Regler RC 300 im Basiscontroller BC 25 (GB 172);EMS
+6A;Nach Ablauf der Sicherheitszeit wurde kein Ionisationssignal gemeldet;NULL;NULL;JUPII
+6A;Nach Ablauf der Sicherheitszeit wurde kein Ionisationssignal gemeldet;NULL;NULL;EMS
+EC;Falsche Referenzspannung;NULL;NULL;JUPII
+EC;Falsche Referenzspannung;NULL;NULL;EMS
+6C;Fremdlicht an der Ionisationsüberwachung;NULL;NULL;JUPII
+6C;Fremdlicht an der Ionisationsüberwachung;NULL;NULL;EMS
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;JUPII
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;EMS
+1L;Abgasaustritt an der Brennkammer;NULL;NULL;EMS
+CP;Speicher - NTC defekt;NULL;NULL;JUPII
+CP;Speicher - NTC defekt;NULL;NULL;EMS
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;JUPII
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;EMS
+8Y;externer Temperaturwächter hat angesprochen;NULL;NULL;JUPII
+8Y;externer Temperaturwächter hat angesprochen;NULL;NULL;EMS
+CE;Weichenfühler defekt oder zwei Fühler angeschlossen;NULL;NULL;JUPII
+CE;Weichenfühler defekt oder zwei Fühler angeschlossen;NULL;NULL;EMS
+6A;Ionisationsstrom zu gering;NULL;NULL;JUPII
+6A;Ionisationsstrom zu gering;NULL;NULL;EMS
+EC;unbekannte Softwareversion für den Kodierstecker;NULL;NULL;JUPII
+EC;unbekannte Softwareversion für den Kodierstecker;NULL;NULL;EMS
+1H;Abgasaustritt an der Brennkammer;NULL;NULL;JUPII
+1H;Abgasaustritt an der Brennkammer;NULL;NULL;EMS
+1P;Abgastemperaturfühler an der Strömungssicherung defekt;NULL;NULL;JUPII
+1P;Abgastemperaturfühler an der Strömungssicherung defekt;NULL;NULL;EMS
+1C;Abgasaustritt an der Strömungssicherung;NULL;NULL;JUPII
+1C;Abgasaustritt an der Strömungssicherung;NULL;NULL;EMS
+EC;Kodierstecker defekt;NULL;NULL;JUPII
+EC;Kodierstecker defekt;NULL;NULL;EMS
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;JUPII
+EC;Datenfehler im EEPROM Speicher;NULL;NULL;EMS
+5L;Keine Kommunikation mit dem Modul LM 10;NULL;NULL;JUPII
+5L;Keine Kommunikation mit dem Modul LM 10;NULL;NULL;EMS
+1C;Abgasaustritt an der Strömungssicherung;NULL;NULL;JUPII
+1C;Abgasaustritt an der Strömungssicherung;NULL;NULL;EMS
+1P;Temperaturfühler an der Brennkammer defekt;NULL;NULL;JUPII
+1P;Temperaturfühler an der Brennkammer defekt;NULL;NULL;EMS
+2P;Zu schneller Anstieg der Vorlauftemperatur;NULL;NULL;JUPII
+2P;Zu schneller Anstieg der Vorlauftemperatur;NULL;NULL;EMS
+CL;Temperaturdifferenz zwischen Heizkreis und Warmwasserkreis zu hoch;NULL;NULL;JUPII
+CL;Temperaturdifferenz zwischen Heizkreis und Warmwasserkreis zu hoch;NULL;NULL;EMS
+3A;Differenzdruckschalter öffnet während des Betriebes;NULL;NULL;JUPII
+3A;Differenzdruckschalter öffnet während des Betriebes;NULL;NULL;EMS
+EL;Interner Fehler beim Test des Abgastemperaturfühlers an der Strömungssicherung;NULL;NULL;JUPII
+EL;Interner Fehler beim Test des Abgastemperaturfühlers an der Strömungssicherung;NULL;NULL;EMS
+5L;Kurzschluss im Anschlusskabel für den Regler;NULL;NULL;JUPII
+5L;Kurzschluss im Anschlusskabel für den Regler;NULL;NULL;EMS
+EP;Reset-Taste länger als 30 Sekunden gedrückt halten;NULL;NULL;JUPII
+EP;Reset-Taste länger als 30 Sekunden gedrückt halten;NULL;NULL;EMS
+H1;Mischer NTC liefert kein Signal;70;Kein Signal vom Mischertemperaturfühler;JUPII
+H1;Mischer NTC liefert kein Signal;70;Kein Signal vom Mischertemperaturfühler;EMS
+FC;Textdisplay nicht erkannt;NULL;NULL;NULL
+21;Neues IPM 1 entspricht nicht der Systemkonfiguration in der Fernbedienung FB 100;139;Neues IPM 1 entspricht nicht der Systemkonfiguration;EMS
+21;Neues IPM 2 entspricht nicht der Systemkonfiguration in der Fernbedienung FB 100;138;Neues IPM 2 entspricht nicht der Systemkonfiguration;EMS
+A11;1037: Vom Basiscontroller BC25 im Gerät GB 172 wird kein Signal des Aussentemperaturfühlers gemeldet;1037;Kein Aussentemperaturfühler am Basiscontroller BC 25 angeschlossen;EMS
+6L;Kein Ionisationssignal während des Betriebes;229;Gasströmungswächter hat ausgelöst;EMS
+1;Fernbedienung mit falscher Marke eingebaut;201;Modul oder Regler mit falscher Marke vorhanden;EMS
+1;Fernbedienung am falschen Regelsystem angeschlossen;200;Einbau in falsches Bussystem;EMS
+22;Buskommunikataion zur Fernbedienung FB 100 im Heizkreis 1 unterbrochen;175;Fernbedienung für Heizkreis 1 wird nicht erkannt;EMS
+27;Buskommunikation zwischen Fernbedienung und witterungsgeführten Regler unterbrochen;191;Buskabel zwischen Fernbedienung und witterungsgeführtem Regler unterbrochen;EMS
+4Y;Vorlauftemperaturfühler hat Unterbrechnung;223;Kein Signal vom Vorlauffühler (Unterbrechung);EMS
+4U;Vorlauftemperaturfühler hat Kurzschluss;350;Kein Signal vom Vorlauftemperaturfühler (Kurzschluss);EMS
+7L;Interner Fehler im Mikroprozessor;261;Internner Fehler im Mikroprozessor;EMS
+9L;Kein Rückmeldesignal beim Test der Gasarmatur;238;Anschlusskabel zu den Sicherheitsventilen an der Gasarmatur beschädigt;EMS
+9P;Interner Fehler beim Test der Gasarmatur;239;Anschlusskabel zu den Sicherheitsventilen an der Gasarmatur beschädigt;EMS
+1H;Abgastemperaturfühler an der Brennkammer defekt;NULL;NULL;JUPII
+1H;Abgastemperaturfühler an der Brennkammer defekt;NULL;NULL;EMS
+5L;Kurzschluss im Anschlusskabel für den Regler;NULL;NULL;JUPII
+5L;Kurzschluss im Anschlusskabel für den Regler;NULL;NULL;EMS
+23;Systemkonfiguration für den Heizkreis 1 an der Fernbedienung FB 100 stimmt nicht mit dem Anlagenaufbau überein;159;Systemkonfiguration für den Heizkreis 1 stimmt nicht mit dem Anlagenaufbau überein;EMS
+6C;Gasarmatur bleibt offen;228;Sicherheitsventil in der Gasarmatur schließt nicht vollständig nach der Regelabschaltung;EMS
+7L;Interner Fehler im Programmablauf;280;Interner Fehler im Programmablauf;EMS
+33;Keine Rückmeldspannung von der motorischen Abgasklappe innerhalb von 30 Sekunden;51;Keine Rückmeldespannung von der motorischen Abgasklappe innerhalb von 30 Sekunden;EMS
+12;Das IPM 1 für den gemischten Heizkreis am Raumtemperaturregler FR 10 wird nicht mehr erkannt;178;IPM 1 für Heizkreis 1 gemischt wird nicht erkannt;EMS
+11;Neues IPM 2 entspricht nicht der Systemkonfiguration im witterungsgefürhten Regler FW 500;138;Neues IPM 2 entspricht nicht der Systemkonfiguration;EMS
+6C;Gasarmatur bleibt nach Regelabschaltung offen;306;Sicherheitsventil in der Gasarmatur schließt nicht vollständig nach der Regelabschaltung;EMS
+22;Das IPM2 für den ungemischten Heizkreis an der Fernbedienung FB 100 wird nicht mehr erkannt;177;IPM 2 für ungemischten Heizkreis nicht erkannt;EMS
+22;Das IPM 1 für den gemischten Heizkreis an der Fernbedienung FB 100 wird nicht mehr erkannt;178;IPM 1 für Heizkreis 1 gemischt wird nicht erkannt;EMS
+22;Das IPM 1 für den ungemischten Heizkreis an der Fernbedienung FB 100 wird nicht mehr erkannt;179;IPM 1 für ungemischten Heizkreis 1 nicht erkannt;EMS
+23;Systemkonfiguration in der Fernbedienung FB 100 für den Heizkreis 2 weicht vom Anlagenaufbau ab;158;Systemkonfiguration für den Heizkreis 2 stimmt nicht mit dem Anlagenaufbau überein;EMS
+22;Das IPM 2 für den gemischten Heizkreis an der Fernbedienung FB 100 wird nicht mehr erkannt;176;IPM 2 für gemischten Heizkreis nicht erkannt;EMS
+49;Temperaturfühler TD am externen Wärmetauscher liefert kein Signal;120;Temperatufühler TD hat Unterbrechung;EMS
+52;Temperaturfühler T2 am Pufferspeicher und Temperaturfühler TD am Wärmetauscher wurden vertauscht;144;Temperaturfühler T2 falsch montiert;EMS
+21;Vorhandene Fernbedienung FB 100 für den Heizkreis 2 entspricht nicht der Systemkonfiguration;133;Vorhandene Fernbedienung für Heizkreis 2 entspricht nicht der Systemkonfiguration;EMS
+20;Ungültige Systemkonfiguration für den Heizkreis 1 an der Fernbedienung FB 100;193;Falsche Heizkreiskodierung für den Heizkreis 1 an der Fernbedienung;EMS
+20;Ungültige Systemkonfiguration für den Heizkreis an der Fernbedienung FB 100;192;Falsche Heizkreiskodierung für den Heizkreis an der Fernbedienung;EMS
+10;Falsche Systemkonfiguration für zwei ungemischte Heizkreise am FW 500;197;Ungemischter Heizkreis 1 mit IPM und ungemischter Heizkreis 2 ohne IPM vorhanden;EMS
+33;Am IPM 1 sind ein Speichertemperaturfühler und ein Vorlauftemperaturfühler für den gemischten Heizkreis angeschlossen;20;Am IPM 1 sind Speicherfühler und Mischerfühler angeschlossen;EMS
+1;Schaltmodul IPM 2 hat innerhalb von 5 Minuten keinen Sollwert vom Regler/ Fernbedienung erhalten;10;Schaltmodul hat keinen Sollwert innerhalb von 5 Minuten vom Regler/ Fernbedienung erhalten;EMS
+2;Kodierschalter II am IPM 2 ist nicht auf die korrekte Kennzahl eingestellt;42;Kodierschalter I ist nicht auf die korrekte Kennzahl eingestellt;EMS
+2;Position des Kodierschalters II am IPM 2 wurde während des Betriebes verändert;43;Kodierschalter II am IPM 2 während des Betriebes verändert;EMS
+34;Position des Kodierschalters II am IPM 2 und die eingestellte Betriebsart widersprechen sich;23;Angeschlossene Temperaturfühler im Schaltmodul IPM 1 entsprechen nicht der eingestellten Betriebsart am Regler/ Fernbedienung;EMS
+6L;Flammenabriss;512;6L 512 Flammenabriss innerhalb der Sicherheitszeit;EMS
+EL;Interner Fehler im Steuergerät;290;Interner Fehler im Steuergerät;EMS
+4U;Vorlauftemperaturfühler hat Kurzschluss;222;Kein Signal vom Vorlauffühler (Kurzschluss);EMS
+4Y;Vorlauftemperaturfühler hat Unterbrechung;351;Kein Signal vom Vorlauftemperaturfühler vorhanden (Unterbrechung);EMS
+21;Neues IPM 1 für ungemischten Heizkreis entspricht nicht der Systemkonfiguration in der Fernbedienung FB 100;137;Neues IPM 1 für ungemischten Heizkreis entspricht nicht der Systemkonfiguration;EMS
+21;Neues IPM 2 für ungemischten Heizkreis entspricht nicht der Systemkonfiguration in der Fernbedienung FB 100;136;Neues IPM 2 für ungemischten Heizkreis entspricht nicht der Systemkonfiguration;EMS
+2Y;Umwälzpumpe liefert kein Lastsignal;281;Anschlussstecker für die Drehzahlregelung an der Umwälzpumpe ist nicht aufgesteckt;EMS
+2P;Zu schneller Temperaturanstieg im Heizbetrieb;341;Wartungshähne geschlossen;EMS
+0Y;Temperatur am Vorlauffühler ist größer als 95°C;276;Abweichende Kennlinie des Vorlauftemperaturfühlers;EMS
+21;IPM 1 für die Warmwasserbereitung entspricht nicht der Systemkonfiguration in der Fernbedienung FB 100;135;IPM 1 entspricht nicht derSystemeinstellung für Warmwasserbereitung;EMS
+21;Vorhandene Fernbedienung FB 100 für den Heizkreis 1 entspricht nicht der Systemkonfiguration;134;Vorhandene Fernbedienung für Heizkreis 1 entspricht nicht der Systemkonfiguration;EMS
+EL;Interner Fehler bei der Fühlerauswertung im Steuergerät;259;Interner Fehler bei der Signalverarbeitung;EMS
+2;Bussignal kann intern nicht verarbeitet werden;255;Interne Störung in der Fernbedienung;EMS
+2;Bussignal kann intern nicht verarbeitet werden;255;Interne Störung im Raumtemperaturregler;EMS
+2;Bussignal kann intern nicht verarbeitet werden;255;Interne Störung im witterungsgeführten Regler;EMS
+3;Raumtemperaturfühlerunterbrechung in der Fernbedienung;20;Fühlerunterbrechung in der Fernbedienung;EMS
+3;Fühlerunterbrechung im Raumtemperaturregler;20;Fühlerunterbrechung in der Fernbedienung;EMS
+3;Kurzschluss des Raumtemperaturfühlers in der Fernbedienung;21;Fühlerkurzschluss im Regler;EMS
+2;Bussignal kann intern nicht verarbeitet werden;205;Parameter werden auf Werkseinstellung zurückgesetzt;EMS
+2;Bussignal kann intern nicht verarbeitet werden;205;Parameter werden auf Werkseinstellung zurückgesetzt;EMS
+9L;Kein Rückmeldesignal beim Test der Gasarmatur;234;Anschlusskabel zu den Sicherheitsventilen an der Gasarmatur beschädigt;EMS
+6A;Kein Ionisationsstrom vorhanden;227;Hauptabsperreinrichtung geschlossen;EMS
+3F;Gebläse und Brenner werden nach einem Dauerbetrieb von 24 Stunden kurzzeitig abgeschaltet;273;Brenner und Gebläse waren 24 Stunden im Dauerbetrieb;EMS
+4C;Sicherheitstemperaturbegrenzer hat ausgelöst;224;Keine Umlaufwassermengen vorhanden;EMS
+3;Kurzschluss des Raumtemperaturfühlers im witterungsgeführten Regler;21;Fühlerkurzschluss im Regler;EMS
+28;Fernbedienung in der Heatronic 3 eingebaut;155;Fernbedienung ist direkt bei der Heatronic 3 eingesteckt;EMS
+1;Schaltmodul IPM 1 hat innerhalb von 5 Minuten keinen Sollwert vom Regler/ Fernbedienung erhalten;10;Schaltmodul hat keinen Sollwert innerhalb von 5 Minuten vom Regler/ Fernbedienung erhalten;EMS
+59;Zu geringer Massenstrom im 1. Kollektorfeld;202;zu niedriger Massenstrom im Solarkreis des 1. Kollektorfeldes;EMS
+33;Brennerfreigabe gesperrt durch fehlende bauseitige Brücke im IUM 1;50;Bauseitige Brücke fehlt zwischen den Anschlussklemmen 4 und 10 im IUM 1;EMS
+33;Nach der Brennerabschlatung wird weiterhin eine Rückmeldespannung von der motorischen Abgasklappe gesendet;52;Motorische Abgasklappe ist mechanisch in der Offen - Stellung arretiert;EMS
+44;Kurzschluss am Temperaturfühler T5 im Solarspeicher;109;Temperaturfühler T5 oben am Solarspeicher hat Kurzschluss;EMS
+44;Temperaturfühler T5 am Solarspeicher sendet kein Signal;110;Temperaturfühler T5 hat Unterbrechung;EMS
+52;Speichertemperaturfühler und Temperaturfühler im 2. Kollektorfeld wurden vertauscht;129;Temperaturfühler TA und T2 vertauscht;EMS
+59;Zu geringer Massenstrom im 2. Kollektorkreis;204;zu niedriger Massenstrom im Solarkreis des 2. Kollektorfeldes;EMS
+53;Temperaturfühler TA im 2. Kollektorfeld am Eingang montiert;128;Kollektorfühler TA am Kollektorfeldeintritt eingebaut;EMS
+55;Solarsystem ist noch nicht in Betrieb genommen worden;146;Solarsystem ist noch nicht in Betrieb genommen worden;EMS
+1;Keine Buskommunikation mit dem Schaltmodul IPM 2 (falsche Marke);11;Schaltmodul IPM 2 mit falscher Marke angeschlossen;EMS
+2;Interner Fehler im Schaltmodul IPM 2 aufgrund falscher Werkskonfiguration;40;Das Modul ist werkseitig falsch konfiguriert;EMS
+13;Systemkonfiguration für den Heizkreis 1 entspricht nicht der vorhandenen Anlage;159;Systemkonfiguration für den Heizkreis 1 stimmt nicht mit dem Anlagenaufbau überein;EMS
+14;Neues IPM 1 entspricht nicht der Systemkonfiguration für die Warmwasserbereitung im Raumtemperaturregler FR 100/110;116;IPM für Warmwaserbereitung wird nicht unterstützt;EMS
+12;ISM 1 wird nicht mehr im System erkannt;171;ISM 1 fehlt;EMS
+2;Interner Fehler im Schaltmodul IPM 1;253;Interne Kommunikationsstörung im Schaltmodul;EMS
+2;Interner Fehler im Schaltmodul IPM 2;253;Interne Kommunikationsstörung im Schaltmodul;EMS
+2;Interner Fehler im Schaltmodul IPM 1 aufgrund falscher Werkskonfiguration;40;Das Modul ist werkseitig falsch konfiguriert;EMS
+2;Position des Kodierschalters I am IPM 1 wurde während des Betriebes verändert;43;Position des Kodierschalters I am Schaltmodul IPM wurde während des Betriebes verändert;EMS
+14;Warmwasser Konfiguration am Raumtemperaturregler falsch eingestellt;117;Warmwasser Konfiguration am Regler falsch eingestellt;EMS
+32;Am IPM 1 angeschlossener Speichertemperaturfühler liefert kein Signal;8;Anschlussstecker für den Speichertemperaturfühler fehlt im Schaltmodul IPM;EMS
+34;Position des Kodierschalter I am IPM1 und die eingestellte Betriebsart widersprechen sich;23;Angeschlossene Temperaturfühler im Schaltmodul IPM 1 entsprechen nicht der eingestellten Betriebsart am Regler/ Fernbedienung;EMS
+34;Position des Kodierschalters I am IPM 2 und die eingestellte Betriebsart widersprechen sich;23;Angeschlossene Temperaturfühler im Schaltmodul IPM 1 entsprechen nicht der eingestellten Betriebsart am Regler/ Fernbedienung;EMS
+98;Gerätestörung eins angeschlossenen Wärmeerzeugers mit 7-poligem Standardstecker am Brennerautomat beim IGM;91;Gerätestörung eines angeschlossenen Wärmeerzeugers mit 7-poligen Standardstecker am Brennerautomat;EMS
+E2;Kurzschluss am Temperaturfühler in der hydraulischen Weiche;222;Temperaturfühler an der hydraulischen Weiche hat Kurzschluss;EMS
+E2;Temperaturfühler an der hydraulischen Weiche sendet kein Signal;223;Anschlussstecker für Temperaturfühler an der hydraulischen Weiche fehlt;EMS
+35;Kein eindeutiges Anschlusssignal am Anschlussstecker J-C im Schaltmodul IEM;27;Schlechtes Eingangssignal am Eingang J-C;EMS
+92;Kurzschluss am Temperaturfühler oben im Pufferspeicher;84;Temperaturfühler oben im Pufferspeicher hat Kurzschluss;EMS
+30;LED am Kodierschalter II des IPM 2 blinkt: Vorlauftemperaturfühler für den gemischten Kreis lierfert kein Signal;7;Fühler für gemischten Kreis nicht angeschlossen;EMS
+14;Neues IPM 2 entspricht nicht der Systemkonfiguration für die Warmwasserbereitung im Raumtemperaturregler FR 100/110;116;IPM für Warmwaserbereitung wird nicht unterstützt;EMS
+12;Buskommunikation zur Fernbedienung FB 100 unterbrochen;175;Fernbedienung FB 100 fehlt;EMS
+12;Buskommunikation zum IPM 2 für den ungemischten Heizkreis unterbrochen;177;IPM 2 für ungemischten Heizkreis nicht erkannt;EMS
+1;Keine Buskommunikation mit dem Schaltmodul IPM 1 (falsche Marke);11;Schaltmodul IPM 1 mit falscher Marke angeschlossen;EMS
+11;Neues IPM 2 für den ungemischten Heizkreis entspricht nicht der Systemkonfiguration im FW 200;136;Neues IPM 2 für ungemischten Heizkreis entspricht nicht der Systemkonfiguration;EMS
+11;Vorhandene Fernbedienung für den Heizkreis 1 entspricht nicht der Systemkonfiguration im witterungsgeführten Regler FW 100;134;Vorhandene Fernbedienung für Heizkreis 1 entspricht nicht der Systemkonfiguration;EMS
+12;Das IPM 1 für den ungemischten Heizkreis am witterungsgeführten Regler FW 100 wird nicht mehr erkannt;179;IPM 1 für ungemischten Heizkreis 1 nicht erkannt;EMS
+12;Das IPM 1 für den ungemischten Heizkreis am witterungsgeführten Regler FW 500 wird nicht mehr erkannt;179;IPM 1 für ungemischten Heizkreis 1 nicht erkannt;EMS
+2;Kodierschalter I am IPM 2 ist nicht auf die korrekte Kennzahl eingestellt;42;Kodierschalter I ist nicht auf die korrekte Kennzahl eingestellt;EMS
+2;Position des Kodierschalters I am IPM 2 wurde während des Betriebes verändert;43;Position des Kodierschalters I am Schaltmodul IPM wurde während des Betriebes verändert;EMS
+12;Vorhandenes IPM 1 für den Warmwasserspeicher nach der hydraulischen Weiche wird nicht mehr erkannt;172;Vorhandenes IPM 1 für Speicher nach der hydraulischen Weiche wird nicht erkannt;EMS
+1;Störung in der Buskommunikation durch Falschanschluss des Raumtemperaturreglers FR 50;200;Spannungsversorgung von 24 VDC auf die Anschlußklemmen B und B angeschlossen;EMS
+2;Bussignal zum ISM 1 unterbrochen;100;Buskommunikation zum ISM unterbrochen;EMS
+40;Temperaturfühler T1 im 1. Kollektorfeld defekt;101;Kollektorfühler für das 1. Kollektorfeld hat Kurzschluss;EMS
+40;Temperaturfühler T1 im 1. Kollektorfeld sendet kein Signal;102;Anschlusskabel für den Kollektorfühler T1 ist nicht am ISM angeschlossen;EMS
+41;Kurzschluss am Temperaturfühler T2 im Solarspeicher;103;Temperaturfühler T2 am Solarspeicher hat Kurzschluss;EMS
+33;LED am Kodierschalter II blinkt: Am IPM 2 sind ein Speichertemperaturfühler und ein Vorlauftemperaturfühler für den gemischten Heizkreis angeschlossen;20;Am IPM 1 sind Speicherfühler und Mischerfühler angeschlossen;EMS
+33;Am IPM 2 sind zwei gemeinsame Vorlauftemperaturfühler angeschlossen;21;Am Schaltmodul IPM 2 ist der gemeinsame Vorlauftemperaturfühler (VF) an den Anschlussklemmen 7 und 8 angeschlossen;EMS
+1;Keine Buskommunikation mit dem Schaltmodul IPM 2 (falsche Marke);11;Schaltmodul IPM 2 mit falscher Marke angeschlossen;EMS
+2;Interner Fehler im Schaltmodul IPM 1 aufgrund falscher Werkskonfiguration;40;Das Modul ist werkseitig falsch konfiguriert;EMS
+46;Temperaturfühler TA im 2. Kollektorfeld liefert kein Signal;114;Temperaturfühler TA am 2. Kollektorfeld hat Unterbrechung;EMS
+11;IPM 1 entspricht nicht der Systemeinstellung für die Warmwassebereitung am witterungsgeführten Regler FW 500;135;IPM 1 entspricht nicht derSystemeinstellung für Warmwasserbereitung;EMS
+12;Buskommunikation zur Fernbedienung FB 10 für den zweiten Heizkreis unterbrochen;174;Fernbedienung FB 10 für den Heizkreis 2 fehlt;EMS
+33;Kodierbrücken wurden während des Betriebes verändert und der Brenner gesperrt;24;Kodierbrücken wurden während des Betriebes verändert;EMS
+19;Systemkonfiguration weicht von den eingestellten Parametern im Raumtemperaturregler ab;202;Sytemkonfiguration weicht von den eingestellten Parametern ab;EMS
+56;Sekundärkreispumpe PD wird im manuellen Betriebsmodus angesteuert;153;Sekundärkreispumpe für Solaranlagen mit externem Wärmetauscher im manuellen Betrieb;EMS
+12;Das IPM 1 für den ungemischten Heizkreis am witterungsgeführten Regler FW 200 wird nicht mehr erkannt;179;IPM 1 für ungemischten Heizkreis 1 nicht erkannt;EMS
+10;Falsches Bussystem am Raumtemperaturregler FR 100 eingestellt;190;Falsche Anschlussart am FR 100 für den HT Bus eingestellt;EMS
+11;IPM 1 entspricht nicht der Systemeinstellung für die Warmwassebereitung am witterungsgeführten Regler FW 100;135;IPM 1 entspricht nicht derSystemeinstellung für Warmwasserbereitung;EMS
+A8;Keine Datenübertragung zwischen Busmodul und CAN - Busregler;61;Verbindungskabel zwischen CAN - Busregler und Busmodul BM 10/20 unterbrochen;JUPII
+A8;Keine Datenübertragung zwischen Busmodul und CAN - Busregler;61;Verbindungskabel zwischen CAN - Busregler und Busmodul BM 10/20 unterbrochen;EMS
+12;Buskommunikation zum IPM 1 für den gemischten Heizkreis unterbrochen;178;IPM 1 für Heizkreis 1 gemischt wird nicht erkannt;EMS
+12;Buskommunikation zum IPM 1 für den Speicher nach der hydraulischen Weiche unterbrochen;173;IPM für Speicher nach der hydraulischen Weiche wird nicht erkannt;EMS
+11;Neues IPM 1 entspricht nicht der Systemkonfiguration im witterungsgeführten Regler FW 100;139;Neues IPM 1 entspricht nicht der Systemkonfiguration;EMS
+12;Buskommunikation zur Fernbedienung FB 10 unterbrochen;175;Fernbedienung FB 10 fehlt;EMS
+19;Systemkonfiguration weicht von den eingestellten Parametern im witterungsgeführten Regler FW 200 ab;202;Sytemkonfiguration weicht von den eingestellten Parametern ab;EMS
+10;Eine Fernbedienung FB 10 für den nicht vorhandenen Heizkreis 1 wurde vom FW 200 erkannt;195;Fernbedienung für nicht vorhandenen Heizkreis 1 erkannt;EMS
+10;Falsche Systemkonfiguration für zwei ungemischte Heizkreise am FW 200;196;Ungemischter Heizkreis 1 ohne IPM und ungemischter Heizkreis 2 mit IPM eingestellt;EMS
+10;Falsche Systemkonfiguration für zwei ungemischte Heizkreise am FW 200;197;Ungemischter Heizkreis 1 mit IPM und ungemischter Heizkreis 2 ohne IPM vorhanden;EMS
+11;Neues ISM 1 fehlt in der Systemkonfiguration beim witterungsgeführten Regler FW 500;132;Neues ISM 1 fehlt in der Systemkonfiguration;EMS
+11;Falsche Systemkonfiguration für die Fernbedienung im Heizkreis 2 beim witterungsgeführten Regler FW 200;133;Vorhandene Fernbedienung für Heizkreis 2 entspricht nicht der Systemkonfiguration;EMS
+11;Vorhandene Fernbedienung für den Heizkreis 1 entspricht nicht der Systemkonfiguration im witterungsgeführten Regler FW 200;134;Vorhandene Fernbedienung für Heizkreis 1 entspricht nicht der Systemkonfiguration;EMS
+11;Neues IPM 1 für einen ungemischten Heizkreis entspricht nicht der eingestellten Systemkonfiguration am witterungsgerführten Regler FW 200;137;Neues IPM 1 für ungemischten Heizkreis entspricht nicht der Systemkonfiguration;EMS
+14;Warmwasser Konfiguration am witterungsgeführten Regler FW 500 falsch eingestellt;117;Warmwasser Konfiguration am Regler falsch eingestellt;EMS
+14;Warmwasser Konfiguration am witterungsgeführten Regler FW 200 falsch eingestellt;117;Warmwasser Konfiguration am Regler falsch eingestellt;EMS
+35;Kein eindeutiges Eingangssignal am Anschlussstecker J-B im Schaltmodul IEM;26;Schlechtes Eingangssignal am Eingang J-B;EMS
+93;Temperaturfühler unten im Pufferspeicher sendet kein Signal;87;Anschlussstecker für Temperaturfühler unten im Pufferspeicher fehlt;EMS
