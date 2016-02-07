@@ -23,6 +23,8 @@
 #                               'modem-telegramms added (draft)'
 # Ver:0.1.7.1/ Datum 04.03.2015 'socket interface added'
 #                               logging from ht_utils added
+# Ver:0.1.8  / Datum 07.02.2016 HeizkreisMsg_ID677_max33byte added
+#                                 for CWxyz handling
 #################################################################
 
 import serial
@@ -98,6 +100,7 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
         value=[]
         nickname=""
         try:
+            value = None
             firstbyte=self.__read()
             if firstbyte == 0x88:
                 self.buffer[0] = firstbyte
@@ -117,12 +120,6 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                                 self.buffer[x] = self.__read()
                             length=33
                         value=self.decode.HeizgeraetMsg(self.buffer, length)
-                        if not value == None:
-                            if self.debug:
-                                print("'{0}':{1}\n".format(nickname, value))
-                            if self.database.is_sql_db_enabled():
-                                self.database.insert(str(self.data.getlongname(nickname)), value)
-                                self.database.commit()
                             
                     ## Telegram: Heizgeraet Msg2 (88001900) ##
                     elif (self.buffer[2] == 0x19 and self.buffer[3] == 0):
@@ -131,12 +128,6 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                         for x in range (4, length):
                             self.buffer[x] = self.__read()
                         value=self.decode.HeizgeraetMsg2(self.buffer, length)
-                        if not value == None:
-                            if self.debug:
-                                print("'{0}':{1}\n".format(nickname, value))
-                            if self.database.is_sql_db_enabled():
-                                self.database.insert(str(self.data.getlongname(nickname)), value)
-                                self.database.commit()
                             
                     ## Telegram: Warmwasser (88003400) ##
                     elif (self.buffer[2] == 0x34 and self.buffer[3] == 0):
@@ -152,12 +143,6 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                             for x in range (23, length):
                                 self.buffer[x] = self.__read()
                                 value=self.decode.WarmwasserMsg(self.buffer, length)
-                        if not value == None:
-                            if self.debug:
-                                print("'{0}':{1}\n".format(nickname, value))
-                            if self.database.is_sql_db_enabled():
-                                self.database.insert(str(self.data.getlongname(nickname)), value)
-                                self.database.commit()
                             
                     ## Telegram: Request    (88000700) ##
                     elif (self.buffer[2] == 0x07 and self.buffer[3] == 0):
@@ -167,6 +152,13 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                             self.buffer[x] = self.__read()
                         self.decode.RequestMsg(self.buffer, length)
                         # nothing to do for database
+
+                if not value == None:
+                    if self.debug:
+                        print("'{0}':{1}\n".format(nickname, value))
+                    if self.database.is_sql_db_enabled():
+                        self.database.insert(str(self.data.getlongname(nickname)), value)
+                        self.database.commit()
 
             ## Telegram: Modem ##
             ### still under development ###
@@ -306,12 +298,30 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                             if (self.crc_testen(self.buffer, length) and self.buffer[5]==0xd3) :
                                 value   =self.decode.HeizkreisMsg_FW100_200_11byte(self.buffer, length)
                             else:
-                                #load rest of 6 bytes for length=17
-                                length=17
+                                #load rest of bytes for length=14
+                                length=14
                                 for x in range (11, length):
                                     self.buffer[x] = self.__read()
-                                value   =self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
-                                
+                                if (self.crc_testen(self.buffer, length)) :
+                                    value = self.decode.HeizkreisMsg_FW100_200_14byte(self.buffer, length)
+                                else:
+                                #load rest of bytes for length=17
+                                    length=17
+                                    for x in range (14, length):
+                                        self.buffer[x] = self.__read()
+                                    if (self.crc_testen(self.buffer, length)) :
+                                        value  = self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
+                                    else:
+                                        #load rest of bytes for length=33
+                                        length=33
+                                        for x in range (17, length):
+                                            self.buffer[x] = self.__read()
+                                        if (self.crc_testen(self.buffer, length)) :
+                                            value = self.decode.HeizkreisMsg_ID677_max33byte(self.buffer, length)
+                                        else:
+                                            value = None
+                                            if self.debug:
+                                                print("Msg:9000FF00:CRC failed")
                         if not value == None:
                             nickname=self.decode.CurrentHK_Nickname()
                             if self.debug:
@@ -326,13 +336,23 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                         length=14
                         for x in range (4, length):
                             self.buffer[x] = self.__read()
-                        value=self.decode.DatumUhrzeitMsg(self.buffer, length)
-                        if not value == None:
-                            if self.debug:
-                                print("'{0}':{1}\n".format(nickname, value))
-                            if self.database.is_sql_db_enabled():
-                                self.database.insert(str(self.data.getlongname(nickname)), value)
-                                self.database.commit()
+                        if (self.crc_testen(self.buffer, length)) :
+                            #1. Message with 14 Byte length
+                            value = self.decode.DatumUhrzeitMsg(self.buffer, length)
+                        else:
+                            #2. Message with 17 Byte length
+                            #2. load rest of bytes for length=17
+                            length=17
+                            for x in range (14, length):
+                                self.buffer[x] = self.__read()
+                            value = self.decode.DatumUhrzeitMsg(self.buffer, length)
+
+                if not value == None:
+                    if self.debug:
+                        print("'{0}':{1}\n".format(nickname, value))
+                    if self.database.is_sql_db_enabled():
+                        self.database.insert(str(self.data.getlongname(nickname)), value)
+                        self.database.commit()
 
             ## Telegram: Heizkreis Msg (9x00FF00 und 9x10FF00 wobei: x <- 8 bis F) ##
             ##  Fernbedienungen FB1xy
@@ -345,22 +365,50 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                     length=17
                     for x in range (4, length):
                         self.buffer[x] = self.__read()
-                    value   =self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
-                    nickname=self.decode.CurrentHK_Nickname()
+                    if (self.crc_testen(self.buffer, length)) :
+                        value = self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
+                    else:
+                        #handling for CWxyz controller configured as rome sensor
+                        length=30
+                        for x in range (17, length):
+                            self.buffer[x] = self.__read()
+                        if (self.crc_testen(self.buffer, length)) :
+                            value = self.decode.HeizkreisMsg_ID677_max33byte(self.buffer, length)
+                        else:
+                            value = None
                     if not value == None:
-                        if self.debug:
-                            print("'{0}':{1}\n".format(nickname, value))
-                        if self.database.is_sql_db_enabled():
-                            self.database.insert(str(self.data.getlongname(nickname)), value)
-                            self.database.commit()
-
+                        nickname=self.decode.CurrentHK_Nickname()
+                        
+                elif (self.buffer[2] == 6 and self.buffer[3] == 0):
+                    nickname="DT"
+                    length=14
+                    for x in range (4, length):
+                        self.buffer[x] = self.__read()
+                    if (self.crc_testen(self.buffer, length)) :
+                        #1. Message with 14 Byte length
+                        value = self.decode.DatumUhrzeitMsg(self.buffer, length)
+                    else:
+                        #2. Message with 17 Byte length
+                        #2. load rest of bytes for length=17
+                        length=17
+                        for x in range (14, length):
+                            self.buffer[x] = self.__read()
+                        value = self.decode.DatumUhrzeitMsg(self.buffer, length)
+                        
                 elif (self.buffer[1] == 0x10 and self.buffer[2] == 0xff and self.buffer[3] == 0):
                     nickname="HK1"
                     length=12
                     for x in range (4, length):
                         self.buffer[x] = self.__read()
                     value=self.decode.HeizkreisMsg_FB1xyMsg(self.buffer, length)
-                
+                    
+                if not value == None:
+                    if self.debug:
+                        print("'{0}':{1}\n".format(nickname, value))
+                    if self.database.is_sql_db_enabled():
+                        self.database.insert(str(self.data.getlongname(nickname)), value)
+                        self.database.commit()
+
             ## Telegram: ISM Solarinfo (B000FF00) ##
             elif firstbyte == 0xb0:
                 self.buffer[0] = firstbyte
@@ -379,12 +427,13 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                             self.buffer[x] = self.__read()
                         length=24
                     value=self.decode.SolarMsg(self.buffer, length)
-                    if not value == None:
-                        if self.debug:
-                            print("'{0}':{1}\n".format(nickname, value))
-                        if self.database.is_sql_db_enabled():
-                            self.database.insert(str(self.data.getlongname(nickname)), value)
-                            self.database.commit()
+
+                if not value == None:
+                    if self.debug:
+                        print("'{0}':{1}\n".format(nickname, value))
+                    if self.database.is_sql_db_enabled():
+                        self.database.insert(str(self.data.getlongname(nickname)), value)
+                        self.database.commit()
 
             ## Telegram: IPM Lastschaltmodul (Ax00...) wobei x := (0...7)##
             elif (firstbyte>=0xa0 and firstbyte<=0xa7):
@@ -406,13 +455,7 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                     for x in range (4, length):
                         self.buffer[x] = self.__read()
                     value=self.decode.IPM_LastschaltmodulWWModeMsg(self.buffer, length)
-                    if not value == None:
-                        if self.debug:
-                            print("'{0}':{1}\n".format(nickname, value))
-                        if self.database.is_sql_db_enabled():
-                            self.database.insert(str(self.data.getlongname(nickname)), value)
-                            self.database.commit()
-                            
+
             else:                
                 # do db_info-tests if enabled
                 if  self.__rrdtool_info.isrrdtool_info_active():

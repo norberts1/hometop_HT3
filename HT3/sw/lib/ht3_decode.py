@@ -24,6 +24,9 @@
 # Ver:0.1.7.1/ Datum 04.03.2015 'heizungspumpenleistung' added
 #              https://www.mikrocontroller.net/topic/324673#3970615
 #              logging from ht_utils added
+# Ver:0.1.8  / Datum 07.02.2016 HeizkreisMsg_ID677_max33byte added
+#                                 for CWxyz handling
+#                               Heating-circuit assignment corrected (6F...72)
 #################################################################
 
 import data, time, ht_utils
@@ -328,12 +331,12 @@ class cht3_decode(ht_utils.cht_utils):
                     # //70 Heizkreis 2
                     nickname="HK2"
                     self.__currentHK_nickname=nickname
-                elif buffer[5] == 114:
-                    # //72 Heizkreis 3
+                elif buffer[5] == 113:
+                    # //71 Heizkreis 3
                     nickname="HK3"
                     self.__currentHK_nickname=nickname
-                elif buffer[5] == 116:
-                    # //74 Heizkreis 4 <<-- TBD
+                elif buffer[5] == 114:
+                    # //72 Heizkreis 4
                     nickname="HK4"
                     self.__currentHK_nickname=nickname
 
@@ -372,12 +375,12 @@ class cht3_decode(ht_utils.cht_utils):
                 # //70 Heizkreis 2
                 nickname="HK2"
                 self.__currentHK_nickname=nickname
-            elif buffer[5] == 114:
-                # //72 Heizkreis 3
+            elif buffer[5] == 113:
+                # //71 Heizkreis 3
                 nickname="HK3"
                 self.__currentHK_nickname=nickname
-            elif buffer[5] == 116:
-                # //74 Heizkreis 4 <<-- TBD
+            elif buffer[5] == 114:
+                # //72 Heizkreis 4
                 nickname="HK4"
                 self.__currentHK_nickname=nickname
 
@@ -452,6 +455,92 @@ class cht3_decode(ht_utils.cht_utils):
             return values
         else:
             return None
+
+    def HeizkreisMsg_FW100_200_14byte(self, buffer, length):
+        nickname="HK1"
+        if self.crc_testen(buffer, length) == True:
+            i_betriebsart   =int(buffer[6])
+            f_Soll_HK   =float(buffer[8]*256+ buffer[9])/10
+            f_Ist_HK    =float(buffer[10]*256+ buffer[11])/10
+            if self.__IsTempInRange(f_Soll_HK) and self.__IsTempInRange(f_Ist_HK):
+                nickname="HK1"
+                self.__currentHK_nickname=nickname
+                if buffer[5] == 111:
+                    # //6F Heizkreis 1
+                    nickname="HK1"
+                    self.__currentHK_nickname=nickname
+                elif buffer[5] == 112:
+                    # //70 Heizkreis 2
+                    nickname="HK2"
+                    self.__currentHK_nickname=nickname
+                elif buffer[5] == 113:
+                    # //71 Heizkreis 3
+                    nickname="HK3"
+                    self.__currentHK_nickname=nickname
+                elif buffer[5] == 114:
+                    # //72 Heizkreis 4
+                    nickname="HK4"
+                    self.__currentHK_nickname=nickname
+
+                self.__gdata.update(nickname,"Vbetriebs_art",i_betriebsart)
+                self.__gdata.update(nickname,"Tsoll_HK",f_Soll_HK)
+                self.__gdata.update(nickname,"Tist_HK",self.__Check4MaxValue(nickname,"Tist_HK",f_Ist_HK))
+                temptext = nickname+":"
+                for x in range (0,length):
+                    temptext = temptext+" "+format(buffer[x],"02x")
+                self.__gdata.update(nickname,"hexdump",temptext)
+                
+                values = self.__gdata.values(nickname)
+                return values
+            else:
+                return None
+        else:
+            return None
+
+
+    def HeizkreisMsg_ID677_max33byte(self, buffer, length):
+        if self.crc_testen(buffer, length) == True:
+            #check bytes for msg-ID:=677
+            if (buffer[4] == 1 and buffer[5] == 0xa5):
+                i_betriebsart   =int(buffer[17])
+                f_Ist_HK    =float(buffer[6]*256+ buffer[7])/10
+                Soll_temp = buffer[10]
+                if buffer[10] > 30:
+                    Soll_temp = buffer[10] / 2 
+                f_Soll_HK   =float(Soll_temp)
+                nickname="HK1"
+                self.__currentHK_nickname=nickname
+                if buffer[5] == 165:
+                    # //A5 Heizkreis 1
+                    nickname="HK1"
+                    self.__currentHK_nickname=nickname
+                elif buffer[5] == 166:
+                    # //A6 Heizkreis 2
+                    nickname="HK2"
+                    self.__currentHK_nickname=nickname
+                elif buffer[5] == 167:
+                    # //A7 Heizkreis 3
+                    nickname="HK3"
+                    self.__currentHK_nickname=nickname
+                elif buffer[5] == 168:
+                    # //A8 Heizkreis 4
+                    nickname="HK4"
+                    self.__currentHK_nickname=nickname
+
+                self.__gdata.update(nickname,"Vbetriebs_art",i_betriebsart)
+                self.__gdata.update(nickname,"Tsoll_HK",f_Soll_HK)
+                self.__gdata.update(nickname,"Tist_HK",self.__Check4MaxValue(nickname,"Tist_HK",f_Ist_HK))
+                temptext = nickname+":"
+                for x in range (0,length):
+                    temptext = temptext+" "+format(buffer[x],"02x")
+                self.__gdata.update(nickname,"hexdump",temptext)
+                values = self.__gdata.values(nickname)
+                return values
+            else:
+                return None
+        else:
+            return None
+
 
     def IPM_LastschaltmodulWWModeMsg(self, buffer, length):
         nickname="WW"
