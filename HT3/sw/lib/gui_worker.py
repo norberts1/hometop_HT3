@@ -21,6 +21,8 @@
 # Ver:0.1.7.1/ Datum 04.03.2015 'heizungspumpenleistung' added
 #              https://www.mikrocontroller.net/topic/324673#3970615
 #              logging from ht_utils added
+# Ver:0.1.8  / Datum 07.02.2016 HeizkreisMsg_ID677_max33byte added
+#                                 for CWxyz handling
 #################################################################
 #
 """ Class 'gui_cworker' for creating HT3 - Graphical User Interface (GUI)
@@ -40,8 +42,8 @@ import ht_utils, logging
 
 __author__  = "Norbert S <junky-zs@gmx.de>"
 __status__  = "draft"
-__version__ = "0.1.7.1"
-__date__    = "4 Maerz 2015"
+__version__ = "0.1.8"
+__date__    = "7 Februar 2016"
 
 class gui_cworker(ht_utils.clog):
     def __init__(self, gdata, hexdump_window=True, titel_input="ASYNC", logger=None):
