@@ -18,8 +18,12 @@
 #
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
-# Ver:0.1.7  / Datum xy.zw.2015 'heizungspumpenleistung' added
+# Ver:0.1.7  / Datum 04.03.2015 'heizungspumpenleistung' added
 #              https://www.mikrocontroller.net/topic/324673#3970615
+# Ver:0.1.8  / Datum 19.01.2016 'Betriebsart' added
+#              right_axis_label added see:
+#              https://www.mikrocontroller.net/topic/324673#3972919
+#              'Last' - Values added in legend
 #################################################################
 
 #
@@ -106,9 +110,13 @@ my $ImageWW  = File::Spec->catfile($mytargetpath,"/HT3/sw/etc/html/HT3_Warmwasse
 my $ImageSO  = File::Spec->catfile($mytargetpath,"/HT3/sw/etc/html/HT3_Solar.png");
 my $ImageSO_ertrag = File::Spec->catfile($mytargetpath,"/HT3/sw/etc/html/HT3_Solarertrag.png");
 
+$rc = $heizgeraet_rrdh->option_add("graph", "right_axis");
+$rc = $heizgeraet_rrdh->option_add("graph", "right_axis_label");
 $rc = $heizgeraet_rrdh->graph(
 	image			=> $ImageHG,
 	vertical_label	=> 'Temperaturen (Celsius)',
+	right_axis	=> '1:0',
+	right_axis_label	=> 'Temperaturen (Celsius)',
 	start			=> $start_time,
 	end				=> $end_time,
 	width			=> $mywidth,
@@ -131,26 +139,70 @@ $rc = $heizgeraet_rrdh->graph(
 	},
 	draw		=> {
 		dsname	=> 'V_leistung',
-		legend	=> 'Brennerleistung (%)\l',
+		name	=> "Brennerleistung",
+		legend	=> 'Brennerleistung (%)',
 		color	=> 'cccccc',
 		type	=> 'area'
 	},
 	draw		=> {
+		type	=> "hidden",
+		name	=> "Brennerleistung_last",
+		vdef	=> "Brennerleistung,LAST"
+	},
+	comment		=> '                       last\:',
+	gprint		=> {
+		format	=> '%2.lf\l',
+		draw	=> 'Brennerleistung_last',
+	},
+	draw		=> {
 		dsname	=> 'T_vorlauf_soll',
-		legend	=> 'T-Soll (Regelung)\l',
+		name	=> "TSoll",
+		legend	=> 'T-Soll (Regelung)',
 		color	=> 'ff0000'
 	},
 	draw		=> {
+		type	=> "hidden",
+		name	=> "TSoll_last",
+		vdef	=> "TSoll,LAST"
+	},
+	comment		=> '                         last\:',
+	gprint		=> {
+		format	=> '%2.lf\l',
+		draw	=> 'TSoll_last',
+	},
+	draw		=> {
 		dsname	=> 'T_vorlauf_ist',
-		legend	=> 'T-Ist  (Vorlauf)\l',
+		name	=> "TIst",
+		legend	=> 'T-Ist  (Vorlauf)',
 		thickness => 1,
 		color	=> '0000ff'
 	},
 	draw		=> {
+		type	=> "hidden",
+		name	=> "TIst_last",
+		vdef	=> "TIst,LAST"
+	},
+	comment		=> '                          last\:',
+	gprint		=> {
+		format	=> '%2.1lf\l',
+		draw	=> 'TIst_last',
+	},
+	draw		=> {
 		dsname	=> 'T_ruecklauf',
-		legend	=> 'Rücklauf\l',
+		name	=> "TRueck",
+		legend	=> 'Rücklauf',
 		thickness => 1,
 		color	=> '00ff00'
+	},
+	draw		=> {
+		type	=> "hidden",
+		name	=> "TRueck_last",
+		vdef	=> "TRueck,LAST"
+	},
+	comment		=> '                                  last\:',
+	gprint		=> {
+		format	=> '%2.1lf\l',
+		draw	=> 'TRueck_last',
 	},
 	draw           => {
 		dsname => 'V_zirkula_pumpe',
@@ -172,9 +224,19 @@ $rc = $heizgeraet_rrdh->graph(
 #Rev.:0.1.7 ######### neu
 	draw           => {
 		dsname => 'V_spare_1',
-		color	=> '008d00',
-		legend => 'Heizungspumpenleistung (%)\l',
 		name	=> 'Heizungspumpenleistung',
+		color	=> '008d00',
+		legend => 'Heizungspumpenleistung (%)',
+	},
+	draw		=> {
+		type	=> "hidden",
+		name	=> "HP_Leistung_last",
+		vdef	=> "Heizungspumpenleistung,LAST"
+	},
+	comment		=> '                last\:',
+	gprint		=> {
+		format	=> '%2.lf\l',
+		draw	=> 'HP_Leistung_last',
 	},
 #Rev.:0.1.7 ######### deaktiviert
 #	draw		=> {
@@ -197,7 +259,7 @@ $rc = $heizgeraet_rrdh->graph(
 		vdef	=> "Aussentemperatur,MINIMUM",
 	},
 	gprint		=> {
-		format	=> '%3.2lf',
+		format	=> '%3.1lf',
 		draw	=> 'Aussentemperatur_min',
 	},
 	draw		=> {
@@ -207,10 +269,19 @@ $rc = $heizgeraet_rrdh->graph(
 	},
 	comment		=> 'max\:',
 	gprint		=> {
-		format	=> '%3.2lf\l',
+		format	=> '%3.1lf',
 		draw	=> 'Aussentemperatur_max',
 	},
-
+	draw		=> {
+		type	=> "hidden",
+		name	=> "Aussentemperatur_last",
+		vdef	=> "Aussentemperatur,LAST"
+	},
+	comment		=> '   last\:',
+	gprint		=> {
+		format	=> '%3.1lf\l',
+		draw	=> 'Aussentemperatur_last',
+	},
 	draw		=> {
 		dsname	=> 'C_betrieb_gesamt',
 		name	=> 'BZeitg',
@@ -226,7 +297,6 @@ $rc = $heizgeraet_rrdh->graph(
 		format	=> '  Betriebszeit gesamt \: %6.lf Minuten\l',
 		draw	=> 'BZeitg_average',
 	},
-
 	draw		=> {
 		dsname	=> 'C_brenner_heizung',
 		name	=> 'brennereinheiz',
@@ -246,9 +316,13 @@ $rc = $heizgeraet_rrdh->graph(
 	comment		=> ' \s',
 );
 
+$rc = $heizkreis1_rrdh->option_add("graph", "right_axis");
+$rc = $heizkreis1_rrdh->option_add("graph", "right_axis_label");
 $rc = $heizkreis1_rrdh->graph(
 	image			=> $ImageHK1,
 	vertical_label	=> 'Temperaturen (Celsius)',
+	right_axis	=> '1:0',
+	right_axis_label	=> 'Temperaturen (Celsius)',
 	start			=> $start_time,
 	end				=> $end_time,
 	width			=> $mywidth,
@@ -259,13 +333,35 @@ $rc = $heizkreis1_rrdh->graph(
 	},
 	draw		=> {
 		dsname	=> 'T_soll_HK',
-		legend	=> 'T-Soll (gewünscht)\l',
+		name	=> 'TSoll_HK',
+		legend	=> 'T-Soll (gewünscht)',
 		color	=> 'ff0000'
 	},
 	draw		=> {
+		type	=> "hidden",
+		name	=> "TSoll_HK_last",
+		vdef	=> "TSoll_HK,LAST"
+	},
+	comment		=> '                            last\:',
+	gprint		=> {
+		format	=> '%2.1lf\l',
+		draw	=> 'TSoll_HK_last',
+	},
+	draw		=> {
 		dsname	=> 'T_ist_HK',
-		legend	=> 'T-Ist  (Regler/Wand)\l',
+		name	=> 'TIst_HK',
+		legend	=> 'T-Ist  (Regler/Wand)',
 		color	=> '00ff00'
+	},
+	draw		=> {
+		type	=> "hidden",
+		name	=> "TIst_HK_last",
+		vdef	=> "TIst_HK,LAST"
+	},
+	comment		=> '                          last\:',
+	gprint		=> {
+		format	=> '%2.1lf\l',
+		draw	=> 'TIst_HK_last',
 	},
 	draw		=> {
 		dsname	=> 'T_steuer_FB',
@@ -281,7 +377,7 @@ $rc = $heizkreis1_rrdh->graph(
 	vdef	=> "Raumtemperatur,MINIMUM",
 	},
 	gprint		=> {
-		format	=> '%3.2lf',
+		format	=> '%3.1lf',
 		draw	=> 'Raumtemperatur_min',
 	},
 	draw		=> {
@@ -291,28 +387,50 @@ $rc = $heizkreis1_rrdh->graph(
 	},
 	comment		=> 'max\:',
 	gprint		=> {
-		format	=> '%3.2lf\l',
+		format	=> '%3.1lf',
 		draw	=> 'Raumtemperatur_max',
 	},
-#zs### zu testzwecken hinzu
 	draw		=> {
-		dsname	=> 'V_spare_1',
-		name	=> 'weisnich',
-		legend	=> 'V_spare1 unbekannt',
+		type	=> "hidden",
+		name	=> "Raumtemperatur_HK_last",
+		vdef	=> "Raumtemperatur,LAST"
+	},
+	comment		=> '   last\:',
+	gprint		=> {
+		format	=> '%2.1lf\l',
+		draw	=> 'Raumtemperatur_HK_last',
+	},
+#Rev.:0.1.8 ######### 'Betriebsart' added
+	draw		=> {
+		dsname	=> 'V_betriebs_art',
+		name	=> 'Betriebsart',
+		legend	=> 'Betriebsart (3=Heizen 2=Sparen 1=Frost)\l',
 		thickness => 2,
-		color	=> '803300',
+		color	=> '808080'
 	},
-	draw		=> {
-		color	=> '803300',
-		type	=> 'area',
-		cdef	=> "weisnich,2,*"
-	},
+#Rev.:0.1.8 ######### 'V_spare_1' deactivated
+#	draw		=> {
+#		dsname	=> 'V_spare_1',
+#		name	=> 'weisnich',
+#		legend	=> 'V_spare1 unbekannt',
+#		thickness => 2,
+#		color	=> '803300',
+#	},
+#	draw		=> {
+#		color	=> '803300',
+#		type	=> 'area',
+#		cdef	=> "weisnich,1,*"
+#	},
 );
 
 if ($myanzahlheizkreise>1) {
+	$rc = $heizkreis2_rrdh->option_add("graph", "right_axis");
+	$rc = $heizkreis2_rrdh->option_add("graph", "right_axis_label");
 	$rc = $heizkreis2_rrdh->graph(
 		image			=> $ImageHK2,
 		vertical_label	=> 'Temperaturen (Celsius)',
+		right_axis	=> '1:0',
+		right_axis_label	=> 'Temperaturen (Celsius)',
 		start			=> $start_time,
 		end				=> $end_time,
 		width			=> $mywidth,
@@ -323,13 +441,35 @@ if ($myanzahlheizkreise>1) {
 		},
 		draw		=> {
 			dsname	=> 'T_soll_HK',
-			legend	=> 'T-Soll (gewünscht)\l',
+			name	=> 'TSoll_HK',
+			legend	=> 'T-Soll (gewünscht)',
 			color	=> 'ff0000'
 		},
 		draw		=> {
+			type	=> "hidden",
+			name	=> "TSoll_HK_last",
+			vdef	=> "TSoll_HK,LAST"
+		},
+		comment		=> '                            last\:',
+		gprint		=> {
+			format	=> '%2.1lf\l',
+			draw	=> 'TSoll_HK_last',
+		},
+		draw		=> {
 			dsname	=> 'T_ist_HK',
-			legend	=> 'T-Ist  (Regler/Wand)\l',
+			name	=> 'TIst_HK',
+			legend	=> 'T-Ist  (Regler/Wand)',
 			color	=> '00ff00'
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "TIst_HK_last",
+			vdef	=> "TIst_HK,LAST"
+		},
+		comment		=> '                          last\:',
+		gprint		=> {
+			format	=> '%2.1lf\l',
+			draw	=> 'TIst_HK_last',
 		},
 		draw		=> {
 			dsname	=> 'T_steuer_FB',
@@ -345,7 +485,7 @@ if ($myanzahlheizkreise>1) {
 		vdef	=> "Raumtemperatur,MINIMUM",
 		},
 		gprint		=> {
-			format	=> '%3.2lf',
+			format	=> '%3.1lf',
 			draw	=> 'Raumtemperatur_min',
 		},
 		draw		=> {
@@ -355,17 +495,38 @@ if ($myanzahlheizkreise>1) {
 		},
 		comment		=> 'max\:',
 		gprint		=> {
-			format	=> '%3.2lf\l',
+			format	=> '%3.1lf',
 			draw	=> 'Raumtemperatur_max',
 		},
-
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Raumtemperatur_HK_last",
+			vdef	=> "Raumtemperatur,LAST"
+		},
+		comment		=> '   last\:',
+		gprint		=> {
+			format	=> '%2.1lf\l',
+			draw	=> 'Raumtemperatur_HK_last',
+		},
+#Rev.:0.1.8 ######### 'Betriebsart' added
+		draw		=> {
+			dsname	=> 'V_betriebs_art',
+			name	=> 'Betriebsart',
+			legend	=> 'Betriebsart (3=Heizen 2=Sparen 1=Frost)\l',
+			thickness => 2,
+			color	=> '808080'
+		},
 	);
 }
 
 if ($myanzahlheizkreise>2) {
+	$rc = $heizkreis3_rrdh->option_add("graph", "right_axis");
+	$rc = $heizkreis3_rrdh->option_add("graph", "right_axis_label");
 	$rc = $heizkreis3_rrdh->graph(
 		image			=> $ImageHK3,
 		vertical_label	=> 'Temperaturen (Celsius)',
+		right_axis	=> '1:0',
+		right_axis_label	=> 'Temperaturen (Celsius)',
 		start			=> $start_time,
 		end				=> $end_time,
 		width			=> $mywidth,
@@ -376,13 +537,35 @@ if ($myanzahlheizkreise>2) {
 		},
 		draw		=> {
 			dsname	=> 'T_soll_HK',
-			legend	=> 'T-Soll (gewünscht)\l',
+			name	=> "TSoll_HK",
+			legend	=> 'T-Soll (gewünscht)',
 			color	=> 'ff0000'
 		},
 		draw		=> {
+			type	=> "hidden",
+			name	=> "TSoll_HK_last",
+			vdef	=> "TSoll_HK,LAST"
+		},
+		comment		=> '                            last\:',
+		gprint		=> {
+			format	=> '%2.1lf\l',
+			draw	=> 'TSoll_HK_last',
+		},
+		draw		=> {
 			dsname	=> 'T_ist_HK',
-			legend	=> 'T-Ist  (Regler/Wand)\l',
+			name	=> "TIst_HK",
+			legend	=> 'T-Ist  (Regler/Wand)',
 			color	=> '00ff00'
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "TIst_HK_last",
+			vdef	=> "TIst_HK,LAST"
+		},
+		comment		=> '                          last\:',
+		gprint		=> {
+			format	=> '%2.1lf\l',
+			draw	=> 'TIst_HK_last',
 		},
 		draw		=> {
 			dsname	=> 'T_steuer_FB',
@@ -398,7 +581,7 @@ if ($myanzahlheizkreise>2) {
 		vdef	=> "Raumtemperatur,MINIMUM",
 		},
 		gprint		=> {
-			format	=> '%3.2lf',
+			format	=> '%3.1lf',
 			draw	=> 'Raumtemperatur_min',
 		},
 		draw		=> {
@@ -408,17 +591,38 @@ if ($myanzahlheizkreise>2) {
 		},
 		comment		=> 'max\:',
 		gprint		=> {
-			format	=> '%3.2lf\l',
+			format	=> '%3.1lf',
 			draw	=> 'Raumtemperatur_max',
 		},
-
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Raumtemperatur_HK_last",
+			vdef	=> "Raumtemperatur,LAST"
+		},
+		comment		=> '   last\:',
+		gprint		=> {
+			format	=> '%2.1lf\l',
+			draw	=> 'Raumtemperatur_HK_last',
+		},
+#Rev.:0.1.8 ######### 'Betriebsart' added
+		draw		=> {
+			dsname	=> 'V_betriebs_art',
+			name	=> 'Betriebsart',
+			legend	=> 'Betriebsart (3=Heizen 2=Sparen 1=Frost)\l',
+			thickness => 2,
+			color	=> '808080'
+		},
 	);
 }
 
 if ($myanzahlheizkreise>3) {
+	$rc = $heizkreis4_rrdh->option_add("graph", "right_axis");
+	$rc = $heizkreis4_rrdh->option_add("graph", "right_axis_label");
 	$rc = $heizkreis4_rrdh->graph(
 		image			=> $ImageHK4,
 		vertical_label	=> 'Temperaturen (Celsius)',
+		right_axis	=> '1:0',
+		right_axis_label	=> 'Temperaturen (Celsius)',
 		start			=> $start_time,
 		end				=> $end_time,
 		width			=> $mywidth,
@@ -429,13 +633,35 @@ if ($myanzahlheizkreise>3) {
 		},
 		draw		=> {
 			dsname	=> 'T_soll_HK',
-			legend	=> 'T-Soll (gewünscht)\l',
+			name	=> "TSoll_HK",
+			legend	=> 'T-Soll (gewünscht)',
 			color	=> 'ff0000'
 		},
 		draw		=> {
+			type	=> "hidden",
+			name	=> "TSoll_HK_last",
+			vdef	=> "TSoll_HK,LAST"
+		},
+		comment		=> '                            last\:',
+		gprint		=> {
+			format	=> '%2.1lf\l',
+			draw	=> 'TSoll_HK_last',
+		},
+		draw		=> {
 			dsname	=> 'T_ist_HK',
-			legend	=> 'T-Ist  (Regler/Wand)\l',
+			name	=> "TIst_HK",
+			legend	=> 'T-Ist  (Regler/Wand)',
 			color	=> '00ff00'
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "TIst_HK_last",
+			vdef	=> "TIst_HK,LAST"
+		},
+		comment		=> '                          last\:',
+		gprint		=> {
+			format	=> '%2.1lf\l',
+			draw	=> 'TIst_HK_last',
 		},
 		draw		=> {
 			dsname	=> 'T_steuer_FB',
@@ -451,7 +677,7 @@ if ($myanzahlheizkreise>3) {
 		vdef	=> "Raumtemperatur,MINIMUM",
 		},
 		gprint		=> {
-			format	=> '%3.2lf',
+			format	=> '%3.1lf',
 			draw	=> 'Raumtemperatur_min',
 		},
 		draw		=> {
@@ -461,16 +687,37 @@ if ($myanzahlheizkreise>3) {
 		},
 		comment		=> 'max\:',
 		gprint		=> {
-			format	=> '%3.2lf\l',
+			format	=> '%3.1lf',
 			draw	=> 'Raumtemperatur_max',
 		},
-
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Raumtemperatur_HK_last",
+			vdef	=> "Raumtemperatur,LAST"
+		},
+		comment		=> '   last\:',
+		gprint		=> {
+			format	=> '%2.1lf\l',
+			draw	=> 'Raumtemperatur_HK_last',
+		},
+#Rev.:0.1.8 ######### 'Betriebsart' added
+		draw		=> {
+			dsname	=> 'V_betriebs_art',
+			name	=> 'Betriebsart',
+			legend	=> 'Betriebsart (3=Heizen 2=Sparen 1=Frost)\l',
+			thickness => 2,
+			color	=> '808080'
+		},
 	);
 }
 
+$rc = $warmwasser_rrdh->option_add("graph", "right_axis");
+$rc = $warmwasser_rrdh->option_add("graph", "right_axis_label");
 $rc = $warmwasser_rrdh->graph(
 	image			=> $ImageWW,
 	vertical_label	=> 'Temperaturen (Celsius)',
+	right_axis	=> '1:0',
+	right_axis_label	=> 'Temperaturen (Celsius)',
 	start			=> $start_time,
 	end				=> $end_time,
 	width			=> $mywidth,
@@ -525,7 +772,7 @@ $rc = $warmwasser_rrdh->graph(
 		vdef	=> "Speicher,MINIMUM",
 	},
 	gprint		=> {
-		format	=> '%3.2lf',
+		format	=> '%3.1lf',
 	draw	=> 'Speicher_min',
 	},
 	draw		=> {
@@ -534,8 +781,18 @@ $rc = $warmwasser_rrdh->graph(
 		vdef	=> "Speicher,MAXIMUM",
 	},
 	gprint		=> {
-		format	=> 'max\:%3.2lf\l',
+		format	=> 'max\:%3.1lf',
 		draw	=> 'Speicher_max',
+	},
+	draw		=> {
+		type	=> "hidden",
+		name	=> "Speicher_last",
+		vdef	=> "Speicher,LAST"
+	},
+	comment		=> ' last\:',
+	gprint		=> {
+		format	=> '%2.1lf\l',
+		draw	=> 'Speicher_last',
 	},
 	draw		=> {
 		dsname	=> 'C_betriebs_zeit',
@@ -562,9 +819,13 @@ $rc = $warmwasser_rrdh->graph(
 	comment		=> ' \s',
 );
 
+$rc = $solar_rrdh->option_add("graph", "right_axis");
+$rc = $solar_rrdh->option_add("graph", "right_axis_label");
 $rc = $solar_rrdh->graph(
 	image			=> $ImageSO,
 	vertical_label	=> 'Temperaturen (Celsius)',
+	right_axis	=> '1:0',
+	right_axis_label	=> 'Temperaturen (Celsius)',
 	start			=> $start_time,
 	end				=> $end_time,
 	width			=> $mywidth,
@@ -589,7 +850,7 @@ $rc = $solar_rrdh->graph(
 		vdef	=> "speiunten,MINIMUM",
 	},
 	gprint		=> {
-		format	=> 'min\:%3.2lf',
+		format	=> 'min\:%03.1lf',
 		draw	=> 'speiunten_min',
 	},
 	draw		=> {
@@ -598,8 +859,18 @@ $rc = $solar_rrdh->graph(
 		vdef	=> "speiunten,MAXIMUM",
 	},
 	gprint		=> {
-		format	=> 'max\:%3.2lf\l',
+		format	=> 'max\:%03.1lf',
 		draw	=> 'speiunten_max',
+	},
+	draw		=> {
+		type	=> "hidden",
+		name	=> "speiunten_last",
+		vdef	=> "speiunten,LAST"
+	},
+	comment		=> ' last\:',
+	gprint		=> {
+		format	=> '%03.1lf\l',
+		draw	=> 'speiunten_last',
 	},
 	comment	=>	'\j',
 	##### Kollektor #####
@@ -623,7 +894,7 @@ $rc = $solar_rrdh->graph(
 		vdef	=> "kollektor,MINIMUM",
 	},
 	gprint		=> {
-		format	=> 'min\:%03.2lf',
+		format	=> 'min\:%03.1lf',
 		draw	=> 'kollektor_min',
 	},
 	draw		=> {
@@ -632,10 +903,19 @@ $rc = $solar_rrdh->graph(
 		vdef	=> "kollektor,MAXIMUM",
 	},
 	gprint		=> {
-		format	=> 'max\:%03.2lf\l',
+		format	=> 'max\:%03.1lf',
 		draw	=> 'kollektor_max',
 	},
-
+	draw		=> {
+		type	=> "hidden",
+		name	=> "kollektor_last",
+		vdef	=> "kollektor,LAST"
+	},
+	comment		=> ' last\:',
+	gprint		=> {
+		format	=> '%03.1lf\l',
+		draw	=> 'kollektor_last',
+	},
 	draw		=> {
 		dsname	=> 'T_speicher_unten',
 		thickness => 1,
@@ -659,9 +939,13 @@ $rc = $solar_rrdh->graph(
 
 );
 
+$rc = $solar_rrdh->option_add("graph", "right_axis");
+$rc = $solar_rrdh->option_add("graph", "right_axis_label");
 $rc = $solar_rrdh->graph(
 	image			=> $ImageSO_ertrag,
 	vertical_label	=> '(k)Wh',
+	right_axis	=> '1:0',
+	right_axis_label	=> '(k)Wh',
 	start			=> $start_time,
 	end				=> $end_time,
 	width			=> $mywidth,
@@ -690,10 +974,19 @@ $rc = $solar_rrdh->graph(
 		vdef	=> "ertrag_std,MAXIMUM",
 	},
 	gprint		=> {
-		format	=> '%6.2lf %SWh\l',
+		format	=> '%6.1lf %SWh',
 		draw	=> 'ertrag_draw',
 	},
-
+	draw		=> {
+		type	=> "hidden",
+		name	=> "ertrag_std_last",
+		vdef	=> "ertrag_std,LAST"
+	},
+	comment		=> ' last\:',
+	gprint		=> {
+		format	=> '%6.1lf\l',
+		draw	=> 'ertrag_std_last',
+	},
 	##### Solarpumpen-Laufzeit #####
 	draw		=> {
 		dsname	=> 'C_laufzeit',
