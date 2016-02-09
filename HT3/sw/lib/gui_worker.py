@@ -23,6 +23,9 @@
 #              logging from ht_utils added
 # Ver:0.1.8  / Datum 07.02.2016 HeizkreisMsg_ID677_max33byte added
 #                                 for CWxyz handling
+# Ver:0.1.8.1 / Datum 10.02.2016 HeizkreisMsg_ID677_max33byte modified
+#                  '__GetStrBetriebsart()' update with value 4:="Auto"
+#                                
 #################################################################
 #
 """ Class 'gui_cworker' for creating HT3 - Graphical User Interface (GUI)
@@ -42,8 +45,8 @@ import ht_utils, logging
 
 __author__  = "Norbert S <junky-zs@gmx.de>"
 __status__  = "draft"
-__version__ = "0.1.8"
-__date__    = "7 Februar 2016"
+__version__ = "0.1.8.1"
+__date__    = "10 Februar 2016"
 
 class gui_cworker(ht_utils.clog):
     def __init__(self, gdata, hexdump_window=True, titel_input="ASYNC", logger=None):
@@ -678,6 +681,8 @@ class gui_cworker(ht_utils.clog):
                 return "Sparen"
             elif ivalue == 3:
                 return "Heizen"
+            elif ivalue == 4:
+                return "Auto"
             else:
                 return "---"
 
