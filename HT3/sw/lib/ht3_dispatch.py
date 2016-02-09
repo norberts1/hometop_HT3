@@ -25,6 +25,8 @@
 #                               logging from ht_utils added
 # Ver:0.1.8  / Datum 07.02.2016 HeizkreisMsg_ID677_max33byte added
 #                                 for CWxyz handling
+# Ver:0.1.8.1/ Datum 10.02.2016 double commit in HK removed
+#                               commit added at IPM Lastschaltmodul (Ax00...)
 #################################################################
 
 import serial
@@ -322,13 +324,6 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                                             value = None
                                             if self.debug:
                                                 print("Msg:9000FF00:CRC failed")
-                        if not value == None:
-                            nickname=self.decode.CurrentHK_Nickname()
-                            if self.debug:
-                                print("'{0}':{1}\n".format(nickname, value))
-                            if self.database.is_sql_db_enabled():
-                                self.database.insert(str(self.data.getlongname(nickname)), value)
-                                self.database.commit()
                             
                     ## Telegram: Datum / Uhrzeit (90000600) ##
                     elif (self.buffer[2] == 6 and self.buffer[3] == 0):
@@ -455,6 +450,13 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                     for x in range (4, length):
                         self.buffer[x] = self.__read()
                     value=self.decode.IPM_LastschaltmodulWWModeMsg(self.buffer, length)
+
+                if not value == None:
+                    if self.debug:
+                        print("'{0}':{1}\n".format(nickname, value))
+                    if self.database.is_sql_db_enabled():
+                        self.database.insert(str(self.data.getlongname(nickname)), value)
+                        self.database.commit()
 
             else:                
                 # do db_info-tests if enabled
