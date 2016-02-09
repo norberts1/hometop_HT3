@@ -27,6 +27,9 @@
 # Ver:0.1.8  / Datum 07.02.2016 HeizkreisMsg_ID677_max33byte added
 #                                 for CWxyz handling
 #                               Heating-circuit assignment corrected (6F...72)
+# Ver:0.1.8.1/ Datum 10.02.2016 Methode: HeizkreisMsg_ID677_max33byte()
+#                                 'Tsoll_HK'      assigned to Byte12 
+#                                 'Vbetriebs_art' assigned to Byte27
 #################################################################
 
 import data, time, ht_utils
@@ -502,12 +505,9 @@ class cht3_decode(ht_utils.cht_utils):
         if self.crc_testen(buffer, length) == True:
             #check bytes for msg-ID:=677
             if (buffer[4] == 1 and buffer[5] == 0xa5):
-                i_betriebsart   =int(buffer[17])
+                i_betriebsart   =int(buffer[27])
                 f_Ist_HK    =float(buffer[6]*256+ buffer[7])/10
-                Soll_temp = buffer[10]
-                if buffer[10] > 30:
-                    Soll_temp = buffer[10] / 2 
-                f_Soll_HK   =float(Soll_temp)
+                f_Soll_HK   =float(buffer[12] / 2)
                 nickname="HK1"
                 self.__currentHK_nickname=nickname
                 if buffer[5] == 165:
