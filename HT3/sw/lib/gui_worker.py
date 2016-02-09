@@ -25,7 +25,7 @@
 #                                 for CWxyz handling
 # Ver:0.1.8.1 / Datum 10.02.2016 HeizkreisMsg_ID677_max33byte modified
 #                  '__GetStrBetriebsart()' update with value 4:="Auto"
-#                                
+#                  value < 0:="Auto" and value 0:="Manual"
 #################################################################
 #
 """ Class 'gui_cworker' for creating HT3 - Graphical User Interface (GUI)
@@ -675,13 +675,21 @@ class gui_cworker(ht_utils.clog):
                 return "--"
 
     def __GetStrBetriebsart(self, ivalue):
-            if ivalue == 1:
+            ivalue = int(ivalue)
+            if ivalue == 0:
+                #rev 0.1.8.1 (new for CWxyz)
+                return "Manuell"
+            elif ivalue == 1:
                 return "Frost"
             elif ivalue == 2:
                 return "Sparen"
             elif ivalue == 3:
                 return "Heizen"
             elif ivalue == 4:
+                #rev 0.1.8.1
+                return "Auto"
+            elif ivalue < 0:
+                #rev 0.1.8.1 (new for CWxyz)
                 return "Auto"
             else:
                 return "---"
