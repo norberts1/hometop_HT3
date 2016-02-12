@@ -30,6 +30,8 @@
 # Ver:0.1.8.1/ Datum 10.02.2016 Methode: HeizkreisMsg_ID677_max33byte()
 #                                 'Tsoll_HK'      assigned to Byte12 
 #                                 'Vbetriebs_art' assigned to Byte27
+# Ver:0.1.8.2/ Datum 12.02.2016 'IPM_LastschaltmodulWWModeMsg()'
+#                                 fix for wrong msg-detection: 'a1 00 34 00'
 #################################################################
 
 import data, time, ht_utils
@@ -543,8 +545,10 @@ class cht3_decode(ht_utils.cht_utils):
 
 
     def IPM_LastschaltmodulWWModeMsg(self, buffer, length):
+        # 0.1.8.2 modification for wrong detection, see:
+        # https://www.mikrocontroller.net/topic/324673#4466160
         nickname="WW"
-        if self.crc_testen(buffer, length) == True:
+        if ((self.crc_testen(buffer, length) == True) and (buffer[length-1] == 0)):
             i_Soll=int(buffer[4])
             f_Ist              = float(buffer[5]*256+ buffer[6])/10
             f_WWSpeicherextern = float(buffer[7]*256+ buffer[8])/10
