@@ -30,6 +30,7 @@
  #               removed <portnumber>
  # Ver:0.1.7.1/ Datum 04.03.2015
  #               added   <logging>
+ # Ver:0.1.8.2/ Datum 22.02.2016 buscoding update to 1,2,3,4
  #################################################################
  #
  #  Configuration-file for 'HT3_heater'-datalogging to databases.
@@ -350,7 +351,7 @@
         <shortname name="HK2"/>
         <hardwaretype>IPM2-Modul</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
         <unmixed>False</unmixed>   <!-- True/False -->
-        <buscodierung>4</buscodierung>   <!-- 1,2,3,4 -->
+        <buscodierung>2</buscodierung>   <!-- 1,2,3,4 -->
         <logitem name="T_soll_HK">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
@@ -429,7 +430,7 @@
         <shortname name="HK3"/>
         <hardwaretype>IPM2-Modul</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
         <unmixed>False</unmixed>   <!-- True/False -->
-        <buscodierung>2</buscodierung>   <!-- 1,2,3,4 -->
+        <buscodierung>3</buscodierung>   <!-- 1,2,3,4 -->
         <logitem name="T_soll_HK">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
@@ -508,7 +509,7 @@
         <shortname name="HK4"/>
         <hardwaretype>IPM2-Modul</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
         <unmixed>True</unmixed>   <!-- True/False -->
-        <buscodierung>3</buscodierung>   <!-- 1,2,3,4 -->
+        <buscodierung>4</buscodierung>   <!-- 1,2,3,4 -->
         <logitem name="T_soll_HK">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
