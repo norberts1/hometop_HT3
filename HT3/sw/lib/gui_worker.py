@@ -26,6 +26,8 @@
 # Ver:0.1.8.1 / Datum 10.02.2016 HeizkreisMsg_ID677_max33byte modified
 #                  '__GetStrBetriebsart()' update with value 4:="Auto"
 #                  value < 0:="Auto" and value 0:="Manual"
+# Ver:0.1.8.2 / Datum 22.02.2016 'IPM_LastschaltmodulMsg()' fixed wrong
+#                                 HK-circuit assignment in ht3_decode.py
 #################################################################
 #
 """ Class 'gui_cworker' for creating HT3 - Graphical User Interface (GUI)
@@ -45,8 +47,8 @@ import ht_utils, logging
 
 __author__  = "Norbert S <junky-zs@gmx.de>"
 __status__  = "draft"
-__version__ = "0.1.8.1"
-__date__    = "10 Februar 2016"
+__version__ = "0.1.8.2"
+__date__    = "22 Februar 2016"
 
 class gui_cworker(ht_utils.clog):
     def __init__(self, gdata, hexdump_window=True, titel_input="ASYNC", logger=None):
