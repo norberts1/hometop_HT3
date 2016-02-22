@@ -27,6 +27,7 @@
 #                                 for CWxyz handling
 # Ver:0.1.8.1/ Datum 10.02.2016 double commit in HK removed
 #                               commit added at IPM Lastschaltmodul (Ax00...)
+# Ver:0.1.8.2/ Datum 22.02.2016 'IPM_LastschaltmodulMsg()' fixed wrong HK-circuit assignment
 #################################################################
 
 import serial
@@ -442,6 +443,8 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                     for x in range (4, length):
                         self.buffer[x] = self.__read()
                     value=self.decode.IPM_LastschaltmodulMsg(self.buffer, length, firstbyte)
+                    if not value == None:
+                        nickname=self.decode.CurrentHK_Nickname()
                             
                 ## Telegram: IPM Lastschaltmodul (Ax003400) (WW-Mode) 
                 elif (self.buffer[1] == 0 and self.buffer[2] == 0x34 and self.buffer[3] == 0):
