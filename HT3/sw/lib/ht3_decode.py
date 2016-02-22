@@ -30,8 +30,9 @@
 # Ver:0.1.8.1/ Datum 10.02.2016 Methode: HeizkreisMsg_ID677_max33byte()
 #                                 'Tsoll_HK'      assigned to Byte12 
 #                                 'Vbetriebs_art' assigned to Byte27
-# Ver:0.1.8.2/ Datum 12.02.2016 'IPM_LastschaltmodulWWModeMsg()'
+# Ver:0.1.8.2/ Datum 22.02.2016 'IPM_LastschaltmodulWWModeMsg()'
 #                                 fix for wrong msg-detection: 'a1 00 34 00'
+#                               'IPM_LastschaltmodulMsg()' fixed wrong HK-circuit assignment
 #################################################################
 
 import data, time, ht_utils
@@ -401,22 +402,17 @@ class cht3_decode(ht_utils.cht_utils):
 
     ### Heizkreismessage 2 ##            
     def IPM_LastschaltmodulMsg(self, buffer, length, firstbyte):
-        # select IPM-Modulnumber/BusCodierung ?? a0:=1; a1:=2; a2:=3; a3:=4
-        #  A0/A3 -> IPM2 Modul 1/ 1;4 ??
-        #  A1/A2 -> IPM2 Modul 2/ 2;3 ??
-        
-        if firstbyte == 0xa0:
-            nickname="HK1"
-        elif firstbyte == 0xa1:
-            nickname="HK3"
-        elif firstbyte == 0xa2:
-            nickname="HK4"
-        elif firstbyte == 0xa3:
-            nickname="HK2"
+        # 0.1.8.2 fixed wrong HK-circuit assignment
+        # select HK-Number a0:=1; a1:=2; a2:=3; a3:=4
+        HK_index = int((firstbyte & 0x0f)+1)
+        if (HK_index > 0 and HK_index < 5):
+            nickname = "HK" + str(HK_index)
         else:
-            nickname="HK1"
+            nickname = "HK1"
             
         if self.crc_testen(buffer, length) == True:
+            # save found nickname to current nickname
+            self.__currentHK_nickname=nickname
             i_IPM_Byte6  =int(buffer[6])
             i_IPM_Byte7  =int(buffer[7])
             i_IPM_Mischerstellung =int(buffer[8])
