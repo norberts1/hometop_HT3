@@ -28,6 +28,7 @@
 # Ver:0.1.8.1/ Datum 10.02.2016 double commit in HK removed
 #                               commit added at IPM Lastschaltmodul (Ax00...)
 # Ver:0.1.8.2/ Datum 22.02.2016 'IPM_LastschaltmodulMsg()' fixed wrong HK-circuit assignment
+# Ver:0.1.9  / Datum 27.04.2016 msg:9x00FF00' size 10byte handled
 #################################################################
 
 import serial
@@ -292,39 +293,47 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                         if (self.crc_testen(self.buffer, length)) :
                             value   =self.decode.HeizkreisMsg_FW100_200Msg_9byte(self.buffer, length)
                         else:
-                            #2. load rest of byte until length=11
-                            # see: https://www.mikrocontroller.net/topic/317004#3687762
-                            length=11
+                            # Message with 10 Byte length
+                            length=10
                             for x in range (9, length):
                                 self.buffer[x] = self.__read()
-                             #check for 11 byte message
-                            if (self.crc_testen(self.buffer, length) and self.buffer[5]==0xd3) :
-                                value   =self.decode.HeizkreisMsg_FW100_200_11byte(self.buffer, length)
+                             #check for 10 byte message
+                            if (self.crc_testen(self.buffer, length)) :
+                                value = self.decode.HeizkreisMsg_ID677_max33byte(self.buffer, length)
                             else:
-                                #load rest of bytes for length=14
-                                length=14
-                                for x in range (11, length):
+                                #2. load rest of byte until length=11
+                                # see: https://www.mikrocontroller.net/topic/317004#3687762
+                                length=11
+                                for x in range (10, length):
                                     self.buffer[x] = self.__read()
-                                if (self.crc_testen(self.buffer, length)) :
-                                    value = self.decode.HeizkreisMsg_FW100_200_14byte(self.buffer, length)
+                                 #check for 11 byte message
+                                if (self.crc_testen(self.buffer, length) and self.buffer[5]==0xd3) :
+                                    value   =self.decode.HeizkreisMsg_FW100_200_11byte(self.buffer, length)
                                 else:
-                                #load rest of bytes for length=17
-                                    length=17
-                                    for x in range (14, length):
+                                    #load rest of bytes for length=14
+                                    length=14
+                                    for x in range (11, length):
                                         self.buffer[x] = self.__read()
                                     if (self.crc_testen(self.buffer, length)) :
-                                        value  = self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
+                                        value = self.decode.HeizkreisMsg_FW100_200_14byte(self.buffer, length)
                                     else:
-                                        #load rest of bytes for length=33
-                                        length=33
-                                        for x in range (17, length):
+                                    #load rest of bytes for length=17
+                                        length=17
+                                        for x in range (14, length):
                                             self.buffer[x] = self.__read()
                                         if (self.crc_testen(self.buffer, length)) :
-                                            value = self.decode.HeizkreisMsg_ID677_max33byte(self.buffer, length)
+                                            value  = self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
                                         else:
-                                            value = None
-                                            if self.debug:
-                                                print("Msg:9000FF00:CRC failed")
+                                            #load rest of bytes for length=33
+                                            length=33
+                                            for x in range (17, length):
+                                                self.buffer[x] = self.__read()
+                                            if (self.crc_testen(self.buffer, length)) :
+                                                value = self.decode.HeizkreisMsg_ID677_max33byte(self.buffer, length)
+                                            else:
+                                                value = None
+                                                if self.debug:
+                                                    print("Msg:9000FF00:CRC failed")
                             
                     ## Telegram: Datum / Uhrzeit (90000600) ##
                     elif (self.buffer[2] == 6 and self.buffer[3] == 0):
@@ -358,22 +367,30 @@ class cht3_dispatch(ht_utils.cht_utils, ht_utils.clog):
                     self.buffer[x] = self.__read()
                 if (self.buffer[1] == 0 and self.buffer[2] == 0xff and self.buffer[3] == 0):
                     nickname="HK1"
-                    length=17
+                    # Message with 10 Byte length
+                    length=10
                     for x in range (4, length):
                         self.buffer[x] = self.__read()
+                    #check for 10 byte message
                     if (self.crc_testen(self.buffer, length)) :
-                        value = self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
+                        value = self.decode.HeizkreisMsg_ID677_max33byte(self.buffer, length)
                     else:
-                        #handling for CWxyz controller configured as rome sensor
-                        length=30
-                        for x in range (17, length):
+                        length=17
+                        for x in range (10, length):
                             self.buffer[x] = self.__read()
                         if (self.crc_testen(self.buffer, length)) :
-                            value = self.decode.HeizkreisMsg_ID677_max33byte(self.buffer, length)
+                            value = self.decode.HeizkreisMsg_FW100_200Msg(self.buffer, length)
                         else:
-                            value = None
-                    if not value == None:
-                        nickname=self.decode.CurrentHK_Nickname()
+                            #handling for CWxyz controller
+                            length=30
+                            for x in range (17, length):
+                                self.buffer[x] = self.__read()
+                            if (self.crc_testen(self.buffer, length)) :
+                                value = self.decode.HeizkreisMsg_ID677_max33byte(self.buffer, length)
+                            else:
+                                value = None
+                        if not value == None:
+                            nickname=self.decode.CurrentHK_Nickname()
                         
                 elif (self.buffer[2] == 6 and self.buffer[3] == 0):
                     nickname="DT"
