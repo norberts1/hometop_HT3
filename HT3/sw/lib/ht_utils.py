@@ -21,15 +21,28 @@
 # Ver:0.1.7.1/ Datum 04.03.2015 'crc_check' added
 #                               'make_crc' buffer-length corrected
 #                               logging-class added
+# Ver:0.1.9  / Datum 26.04.2016 'Is_TransceiverHaeder',
+#                               'Transceiver_msg_size' and
+#                               'Payload_msg_size'     added
+# Ver:0.2    / Datum 28.08.2016 minor text-adjustments after Pylint
+#                               'Absfilepathname()' added
 #################################################################
 
 import os
-import logging, logging.handlers
+import logging
+import logging.handlers
+
 
 class cht_utils(object):
+    """
+    Class: cht_utils.
+     Common used for crc-check and more.
+    """
     def __init__(self):
-        self.__crc_table = [ \
-            0x00, 0x02 ,0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x10, 0x12, 0x14, 0x16, 0x18,
+        """
+        """
+        self.__crc_table = [
+            0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E, 0x10, 0x12, 0x14, 0x16, 0x18,
             0x1A, 0x1C, 0x1E, 0x20, 0x22, 0x24, 0x26, 0x28, 0x2A, 0x2C, 0x2E, 0x30, 0x32,
             0x34, 0x36, 0x38, 0x3A, 0x3C, 0x3E, 0x40, 0x42, 0x44, 0x46, 0x48, 0x4A, 0x4C,
             0x4E, 0x50, 0x52, 0x54, 0x56, 0x58, 0x5A, 0x5C, 0x5E, 0x60, 0x62, 0x64, 0x66,
@@ -50,16 +63,24 @@ class cht_utils(object):
             0xCD, 0xCF, 0xC1, 0xC3, 0xC5, 0xC7, 0xF9, 0xFB, 0xFD, 0xFF, 0xF1, 0xF3, 0xF5,
             0xF7, 0xE9, 0xEB, 0xED, 0xEF, 0xE1, 0xE3, 0xE5, 0xE7]
 
+        self.__payloadlength = 0
+
     def crc_check(self, buffer, bufferlength):
+        """
+        returns True/False if CRC is OK or not.
+        """
         return self.crc_testen(buffer, bufferlength)
 
-        
     def crc_testen(self, buffer, bufferlength):
+        """
+        returns True/False if CRC is OK or not.
+        """
         crc = 0
-        if bufferlength<3: return False
+        if bufferlength < 3:
+            return False
         try:
-            for i in range(0, bufferlength-2):
-                crc = self.__crc_table[crc] 
+            for i in range(0, bufferlength - 2):
+                crc = self.__crc_table[crc]
                 crc ^= buffer[i]
             else:
                 if crc == buffer[bufferlength-2]:
@@ -67,170 +88,289 @@ class cht_utils(object):
                 else:
                     return False
         except (IndexError) as e:
-            print("HT3_decode.__crc_testen();Error;",e.args[0])
-            return False
- 
-    def make_crc(self, buffer, bufferlength):
-        crc = 0
-        if bufferlength<3: return False
-        try:
-            for i in range(0, bufferlength):
-                crc = self.__crc_table[crc] 
-                crc ^= buffer[i]
-            return crc
-        
-        except (IndexError) as e:
-            print("HT3_decode.__crc_testen();Error;",e.args[0])
+            print("HT3_decode.__crc_testen();Error;{0}", e.args[0])
             return False
 
-    def IsTempInRange(self, tempvalue, maxvalue=300.0, minvalue = -50.0):
-        return True if (float(tempvalue)<maxvalue and float(tempvalue)>minvalue) else False
+    def make_crc(self, buffer, bufferlength):
+        """
+        returns crc-value if valid else False.
+        """
+        crc = 0
+        if bufferlength < 3:
+            return False
+        try:
+            for i in range(0, bufferlength):
+                crc = self.__crc_table[crc]
+                crc ^= buffer[i]
+            return crc
+
+        except (IndexError) as e:
+            print("HT3_decode.__crc_testen();Error;{0}", e.args[0])
+            return False
+
+    def IsTempInRange(self, tempvalue, maxvalue=300.0, minvalue=-50.0):
+        """
+        returns True/False if tempvalue is in range or not.
+        """
+        return True if (float(tempvalue) < maxvalue and float(tempvalue) > minvalue) else False
+
+    ## is ht_transceiver header ?
+    def Is_TransceiverHeader(self, msgbuffer):
+        """
+        returns True/False if message starts with 'Transceiver-header' or not.
+        """
+        rtn_flag = False
+        if len(msgbuffer) < 5:
+            return False
+        try:
+            # start-tag '#'
+            if (msgbuffer[0] == 0x23):
+                # looking for 'H' and 'R'
+                if (msgbuffer[1] == 0x48 and msgbuffer[2] == 0x52):
+                    self.__payloadlength = msgbuffer[4]
+                    rtn_flag = True
+                else:
+                    rtn_flag = False
+                    self.__payloadlength = 0
+        except:
+            self.__payloadlength = 0
+
+        return rtn_flag
+
+    def Transceiver_msg_size(self):
+        """
+        returns the size of: payload + crc-byte
+        """
+        rtn_value = 0
+        # plus 1 for CRC-byte
+        if self.__payloadlength > 0:
+            rtn_value = self.__payloadlength + 1
+        return rtn_value
+
+    def Payload_msg_size(self):
+        """
+        returns the size of: payload
+        """
+        return self.__payloadlength
+
+    def Absfilepathname(self, filepathname):
+        """
+        return a tuple of absolute-path and filename as: (abspath, filename).
+         This is independent from OS.
+        """
+        (path, filename) = os.path.split(filepathname)
+        abspath = os.path.abspath(os.path.normcase(path))
+        return (abspath, filename)
 
 #--- class cht_utils end ---#
 
+
 class clog(object):
+    """
+    Class: clog.
+     Common used for logging.
+    """
     def __init__(self):
-        self._created      = False
-        self._loglevel     = logging.INFO
+        """
+        Initialisation of logging.
+        """
+        self._created = False
+        self._loglevel = logging.INFO
 
     def create_logfile(self, logfilepath="./default_logfile.log", loglevel=logging.INFO, loggertag="default"):
-        self._logfilepath  = logfilepath
-        self._loglevel     = loglevel
-        self._loggertag    = loggertag
-        self._pathonly     = ""
-        self._fileonly     = ""
-        (path,filename)    = os.path.split(logfilepath)
+        """
+        Create logfile with default-values (overwrite-able).
+        """
+        self._logfilepath = logfilepath
+        self._loglevel = loglevel
+        self._loggertag = loggertag
+        self._pathonly = ""
+        self._fileonly = ""
+        (path, filename) = os.path.split(logfilepath)
         if len(path) > 0:
             self._pathonly = os.path.normcase(path)
         if len(filename) > 0:
             self._fileonly = filename
 
         try:
-            self._handler=logging.handlers.RotatingFileHandler(self._logfilepath, maxBytes=1000000)
+            self._handler = logging.handlers.RotatingFileHandler(self._logfilepath, maxBytes=1000000)
             _frm = logging.Formatter("%(asctime)s %(levelname)s: %(message)s", "%d.%m.%Y %H:%M:%S")
             self._handler.setFormatter(_frm)
-            self._logger        = logging.getLogger(self._loggertag)
+            self._logger = logging.getLogger(self._loggertag)
             self._logger.addHandler(self._handler)
             self._logger.setLevel(self._loglevel)
-            self._created       = True
+            self._created = True
             return self._logger
         except:
             raise EnvironmentError("clog.create_logfile();Error; could not create logging")
 
     def critical(self, logmessage):
-        if not self._created: raise EnvironmentError("clog.critical();Error; logging not created, call clog.create_logfile() at first")
+        """
+        Log in critical error-level.
+        """
+        if not self._created:
+            raise EnvironmentError("clog.critical();Error; logging not created, call clog.create_logfile() at first")
         self._logger.critical(logmessage)
-        
+
     def error(self, logmessage):
-        if not self._created: raise EnvironmentError("clog.error();Error; logging not created, call clog.create_logfile() at first")
+        """
+        Log in standard error-level.
+        """
+        if not self._created:
+            raise EnvironmentError("clog.error();Error; logging not created, call clog.create_logfile() at first")
         self._logger.error(logmessage)
-        
+
     def warning(self, logmessage):
-        if not self._created: raise EnvironmentError("clog.warning();Error; logging not created, call clog.create_logfile() at first")
+        """
+        Log in warning-level.
+        """
+        if not self._created:
+            raise EnvironmentError("clog.warning();Error; logging not created, call clog.create_logfile() at first")
         self._logger.warning(logmessage)
-        
+
     def info(self, logmessage):
-        if not self._created: raise EnvironmentError("clog.info();Error; logging not created, call clog.create_logfile() at first")
+        """
+        Log in info-level.
+        """
+        if not self._created:
+            raise EnvironmentError("clog.info();Error; logging not created, call clog.create_logfile() at first")
         self._logger.info(logmessage)
-        
+
     def debug(self, logmessage):
-        if not self._created: raise EnvironmentError("clog.debug();Error; logging not created, call clog.create_logfile() at first")
+        """
+        Log in debug-level.
+        """
+        if not self._created:
+            raise EnvironmentError("clog.debug();Error; logging not created, call clog.create_logfile() at first")
         self._logger.debug(logmessage)
 
     def logfilepathname(self, logfilepath=None):
+        """
+        returns the currently defined 'logpath'.
+         Value is set in configuration-file.
+        """
         if logfilepath != None:
             self._logfilepath = logfilepath
         return self._logfilepath
 
     def logfilename(self, logfilename=None):
+        """
+        returns the currently defined 'logfilename'.
+         Value is set in configuration-file.
+        """
         if logfilename != None:
-            self._fileonly    = logfilename
+            self._fileonly = logfilename
             self._logfilepath = os.path.normcase(os.path.join(self._pathonly, self._fileonly))
         return self._fileonly
 
     def logpathname(self, logpathname=None):
+        """
+        returns the currently defined 'logfilename joined with 'logpath'.
+         Values are set in configuration-file.
+        """
         if logpathname != None:
-            self._pathonly    = logpathname
+            self._pathonly = logpathname
             self._logfilepath = os.path.normcase(os.path.join(self._pathonly, self._fileonly))
         return self._pathonly
 
     def loglevel(self, loglevel=None):
+        """
+        returns the currently defined 'loglevel' as defined in logging.py.
+         Value is set in configuration-file.
+        """
         if loglevel != None:
-            tmp_loglevel=loglevel.upper()
+            tmp_loglevel = loglevel.upper()
             #check first possible parameters
-            if tmp_loglevel in ('CRITICAL','ERROR','WARNING','INFO','DEBUG'):
+            if tmp_loglevel in ('CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'):
                 if tmp_loglevel in ('CRITICAL'):
-                    loglevel=logging.CRITICAL
+                    loglevel = logging.CRITICAL
                 if tmp_loglevel in ('ERROR'):
-                    loglevel=logging.ERROR
+                    loglevel = logging.ERROR
                 if tmp_loglevel in ('WARNING'):
-                    loglevel=logging.WARNING
+                    loglevel = logging.WARNING
                 if tmp_loglevel in ('INFO'):
-                    loglevel=logging.INFO
+                    loglevel = logging.INFO
                 if tmp_loglevel in ('DEBUG'):
-                    loglevel=logging.DEBUG
+                    loglevel = logging.DEBUG
                 self._loglevel = loglevel
             else:
                 self._loglevel = logging.INFO
-            #zs#test# print("loglevel:{0}".format(logging.getLevelName(self._loglevel)))                
+#zs#test# print("loglevel:{0}".format(logging.getLevelName(self._loglevel)))
         return self._loglevel
-    
+
 #--- class clogging end ---#
-        
+
 ################################################
 
 if __name__ == "__main__":
-    print("-------------------- do some CRC-checks ----------------------------------------")
-    utils=cht_utils()
-    
+    print("-------------------- do some CRC-checks ----------------------------")
+    utils = cht_utils()
+
     print("-- check with valid 'heizgeraet' Message 1 --")
     # Heizgeraet
     # HG: 88 00 18 00 27 01 31 54 00 01 03 20 c0 01 c5 80
     #     00 01 2c ff ff ff 00 00 00 00 00 00 00 e9 00
-    length=31
-    heizgeraet = [ \
-       0x88, 0x00 ,0x18, 0x00, 0x27, 0x01, 0x31, 0x54,
+    length = 31
+    heizgeraet = [
+       0x88, 0x00, 0x18, 0x00, 0x27, 0x01, 0x31, 0x54,
        0x00, 0x01, 0x03, 0x20, 0xC0, 0x01, 0xC5, 0x80,
        0x00, 0x01, 0x2C, 0xFF, 0xFF, 0xFF, 0x00, 0x00,
        0x00, 0x00, 0x00, 0x00, 0x00, 0xE9, 0x00]
-    crc_ok=utils.crc_testen(heizgeraet, length)
+    crc_ok = utils.crc_testen(heizgeraet, length)
     print("+-> OK") if crc_ok else print("+-> Error")
-    
+
     print("-- check with valid 'heizgeraet' Message 2 --")
     # Heizgeraetmessage 2
     # HK: 88 00 19 00 ff fc 80 00 80 00 ff ff 00 41 00 15
     #     fa 02 97 fd 00 00 00 02 5d 3d 00 0b 51 80 00 d5 00
-    length=33
-    heizgeraettestbuffer2 = [ \
-       0x88, 0x00 ,0x19, 0x00, 0xFF, 0xFC, 0x80, 0x00,
+    length = 33
+    heizgeraettestbuffer2 = [
+       0x88, 0x00, 0x19, 0x00, 0xFF, 0xFC, 0x80, 0x00,
        0x80, 0x00, 0xFF, 0xFF, 0x00, 0x41, 0x00, 0x15,
        0xFA, 0x02, 0x97, 0xFD, 0x00, 0x00, 0x00, 0x02,
        0x5D, 0x3D, 0x00, 0x0B, 0x51, 0x80, 0x00, 0xD5, 0x00]
-    crc_ok=utils.crc_testen(heizgeraettestbuffer2, length)
+    crc_ok = utils.crc_testen(heizgeraettestbuffer2, length)
     print("+-> OK") if crc_ok else print("+-> Error")
-    
+
     print("-- check with valid 'heizkreis'  Message 3 --")
     # Heizkreismessage
-    # HK: 90 00 ff 00 00 6f 03 02 00 d7 00 e1 00 d8 00 23 00    
-    length=17
-    heizkreistestbuffer = [ \
-       0x90, 0x00 ,0xFF, 0x00, 0x00, 0x6F, 0x03, 0x02,
+    # HK: 90 00 ff 00 00 6f 03 02 00 d7 00 e1 00 d8 00 23 00
+    length = 17
+    heizkreistestbuffer = [
+       0x90, 0x00, 0xFF, 0x00, 0x00, 0x6F, 0x03, 0x02,
        0x00, 0xD7, 0x00, 0xE1, 0x00, 0xD8, 0x00, 0x23, 0x00]
-    crc_ok=utils.crc_testen(heizkreistestbuffer, length)
+    crc_ok = utils.crc_testen(heizkreistestbuffer, length)
     print("+-> OK") if crc_ok else print("+-> Error")
 
     print(" --  -- check with wrong values --  --")
-    
+
     print(" -- check with wrong bufferlength on 'heizgeraet' Message --")
-    length=30
-    crc_ok=utils.crc_testen(heizgeraettestbuffer2, length)
+    length = 30
+    crc_ok = utils.crc_testen(heizgeraettestbuffer2, length)
     print("+-> OK") if crc_ok else print("+-> Error seen and so it's OK")
 
-    import os, time
-    
-    print("-------------------- do some logging-checks ------------------------------------")
+    print("-------------------- do some transceiver-header-checks -------------")
+    transceiver_header = [0x23, 0x48, 0x52, 0x11, 1, 0, 4]
+    if utils.Is_TransceiverHeader(transceiver_header):
+        print("Transceiver_message found; msg-size:{0}".format(utils.Transceiver_msg_size()))
+        print("+-> OK")
+    else:
+        print("No Transceiver_message found!")
+        print("+-> Error")
+    wrong_transceiver_header = [0x23, 0x23, 0x48, 0x52, 0x11, 1, 0, 4]
+    if utils.Is_TransceiverHeader(wrong_transceiver_header):
+        print("Transceiver_message found; msg-size:{0}".format(utils.Transceiver_msg_size()))
+        print("+-> Error")
+    else:
+        print("No Transceiver_message found! msg-size:{0}".format(utils.Transceiver_msg_size()))
+        print("+-> OK")
+
+    import os
+    import time
+
+    print("-------------------- do some logging-checks ------------------------")
     #first default logging
-    log=clog()
+    log = clog()
     log.create_logfile()
     if not os.path.exists(log.logfilepathname()):
         print(" could not create logfile:{0}".format(log.logfilepathname()))
@@ -242,10 +382,10 @@ if __name__ == "__main__":
     log.warning("Is warning")
     log.info("Is info")
     log.debug("debug must not be logged")
-    
+
     #second debug logging
-    logdebug=clog()
-    logdebug.create_logfile(logfilepath="./debug_logfile.log",loglevel=logging.DEBUG, loggertag="debug_me")
+    logdebug = clog()
+    logdebug.create_logfile(logfilepath="./debug_logfile.log", loglevel=logging.DEBUG, loggertag="debug_me")
     if not os.path.exists(logdebug.logfilepathname()):
         print(" could not create logfile:{0}".format(logdebug.logfilepathname()))
         raise
