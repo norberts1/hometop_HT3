@@ -22,260 +22,267 @@
 #                               'max- and default-values' added
 # Ver:0.1.7.1/ Datum 04.03.2015 'socket option' activated
 #                               logging from ht_utils added
+# Ver:0.1.8  / Datum 05.10.2015 'GetUnmixedFlagHK()' update to name
+#                               'UnmixedFlagHK()'
+#                               'getall_sorted_logitem_names()' added
+# Ver:0.1.10 / Datum 18.08.2016 Flag and getter-fkt added for Bus-type
+#                               'GetBuscodierungHK' removed
+#                               'IsSolarAvailable' added
+#                               'create_mylogger' added
+#                               'syspartnames()' added
+# Ver:0.2    / Datum 29.08.2016 Fkt.doc added
 #################################################################
 
-""" Class 'cdata' for reading xml-configfile and generating dependent datastructur
-
-read_db_config          -- reading xml-configfile and setup datastructure.
-                           The 'shortname' from config-file is used as main-key 'nickname'
-    # data-structur:
-    #   {nickname:[{itemname:arrayindex},[value1,value2,...],Update-Flag,{itemname:logitem},
-    #                                                                    {itemname:displayname},
-    #                                                                    {itemname:unit},
-    #                                                                    {itemname:maxvalue},
-    #                                                                    {itemname:defaultvalue},
-    #                                                                    hardwaretype]}
-
-configfilename           -- returns and setup of used xml-config filename.
-db_sqlite_filename       -- returns and setup of used sqlite-db  filename.
-is_sql_db_enabled        -- returns True/False for sql-db config-tag 'enable'
-db_rrdtool_filename      -- returns and setup of used rrdtool-db filename.
-is_db_rrdtool_enabled    -- returns True/False for rrdtool-db config-tag 'enable'
-db_rrdtool_stepseconds   -- returns value 'step_seconds' for rrdtool-db
-db_rrdtool_starttime_utc -- returns value 'starttime_utc' for rrdtool-db
-heatercircuits_amount    -- returns the number of heater-circuits
-                            Value is set in configuration-file.
-getlongname              -- returns the 'systempart' longname with input:'shortname'
-                             Only the first three chars of 'shortname' are used, upper-
-                             and lower-case is possible.
-                             Undefined 'shortnames' returns: 'None'
-update                   -- updates an already created data.member (logitem)
-                             with the new value or will create it, if not yet available
-                             parameter 'logitem' is set to 'value' (default:=0)
-values                   -- returns the values (array) for 'nickname and unset 'logitem' or
-                             value (single one) for 'nickname' and 'logitem'
-displayname              -- returns the 'name' to be displayed for the logitem.
-                            Value is set in configuration-file.
-                             parameters 'nickname' and 'logitem' are required
-displayunit              -- returns the 'unit' to be displayed for the logitem.
-                            Value is set in configuration-file.
-                             parameters 'nickname' and 'logitem' are required
-maxvalue                 -- returns the 'maxvalue' for the logitem.
-                            Value is set in configuration-file.
-                             parameters 'nickname' and 'logitem' are required
-defaultvalue             -- returns the 'default'-value for the logitem.
-                            Value is set in configuration-file.
-                             parameters 'nickname' and 'logitem' are required
-IsDataIf_async           -- returns True if data-Interface is configured to be in
-                            asychron-mode, else False. Values is set in configuration-file.
-IsDataIf_socket          -- returns True if data-Interface is configured to be in
-                            socket-mode, else False. Values is set in configuration-file.
-dataif_comm_type_str     -- returns the currently defined communication-mode as string.
-                            Values are "ASYNC" or "SOCKET"
-IsDataIf_raw             -- returns True if data-Interface has RAW-mode protokoll configuration,
-                            else False. Values is set in configuration-file.
-IsDataIf_trx             -- returns True if data-Interface has TRX-mode protokoll configuration,
-                            else False. Value is set in configuration-file.
-AyncSerialdevice         -- returns the currently defined devicename for async-mode.
-                            Value is set in configuration-file.
-AyncBaudrate             -- returns the currently defined Baudrate for async-mode.
-                            Value is set in configuration-file.
-AyncConfig               -- returns the currently defined Parameter for async-mode (fixed to 8N1).
-                            Value is set in configuration-file.
-client_cfg_file          -- returns the currently defined 'client configuration file' for socket-purposes.
-IsAnyUpdate              -- returns True/False if any update was set
-UpdateRead               -- resets status of new-update flag
-IsSyspartUpdate          -- returns True/False for parameter 'nickname' if new data is
-                            available and resets the flag
-GetUnmixedFlagHK         -- returns True for parameter 'nickname' if heater-circuit (HK1..4) has
-                            no mixer, else False. Values are set in configuration-file.
-GetBuscodierungHK        -- returns the Buscodierung-number for parameter 'nickname' (HK1..4).
-                            Values are set in configuration-file.
-IsLoadpump_WW            -- returns True, if heater-external water-loadpump is available, else False.
-                            Value is set in configuration-file.
-IsSecondHeater_SO        -- returns True, if second heater in system is available, else False.
-                            Value is set in configuration-file.
-IsSecondBuffer_SO        -- returns True, if extra water-buffer for second heater is available, else False.
-                            Value is set in configuration-file.
-logpathname              -- returns the currently defined 'logpath'. Value is set in configuration-file.
-logfilename              -- returns the currently defined 'logfilename'. Value is set in configuration-file.
-logfilepathname          -- returns the currently defined 'logfilename joined with 'logpath'. Values are set in configuration-file.
-loglevel                 -- returns the currently defined 'loglevel' as defined in logging.py. Value is set in configuration-file.
-"""
-
 import xml.etree.ElementTree as ET
-import sys, os, _thread
-import ht_utils, logging
+import sys
+import os
+import _thread
+import ht_utils
+import logging
+import ht_const
+
 
 class cdata(ht_utils.clog):
+    """
+    Class 'cdata' for reading xml-configfile and generating dependent datastructur.
+    """
     def __init__(self):
+        """
+        initialisation of class 'cdata'.
+        """
         ht_utils.clog.__init__(self)
-        self.__nickname={}
-        self.__logitemHG={}
-        self.__HKcount=1
-        self.__logitemHK1={}
-        self.__logitemHK2={}
-        self.__logitemHK3={}
-        self.__logitemHK4={}
-        self.__logitemWW={}
-        self.__logitemSO={}
-        self.__logitemDT={}
-        self.__logitemNN={}
-        self.__valuesHG =[]
-        self.__valuesHK1 =[]
-        self.__valuesHK2 =[]
-        self.__valuesHK3 =[]
-        self.__valuesHK4 =[]
-        self.__valuesWW =[]
-        self.__valuesSO =[]
-        self.__valuesDT =[]
-        self.__valuesNN =[]
-        self.__UpdateHG =False
-        self.__UpdateHK1 =False
-        self.__UpdateHK2 =False
-        self.__UpdateHK3 =False
-        self.__UpdateHK4 =False
-        self.__UpdateWW =False
-        self.__UpdateSO =False
-        self.__UpdateDT =False
-        self.__UpdateNN =False
+        self.__nickname = {}
+        self.__logitemHG = {}
+        self.__HKcount = 1
+        self.__logitemHK1 = {}
+        self.__logitemHK2 = {}
+        self.__logitemHK3 = {}
+        self.__logitemHK4 = {}
+        self.__logitemWW = {}
+        self.__logitemSO = {}
+        self.__logitemDT = {}
+        self.__logitemNN = {}
+        self.__valuesHG = []
+        self.__valuesHK1 = []
+        self.__valuesHK2 = []
+        self.__valuesHK3 = []
+        self.__valuesHK4 = []
+        self.__valuesWW = []
+        self.__valuesSO = []
+        self.__valuesDT = []
+        self.__valuesNN = []
+        self.__UpdateHG = False
+        self.__UpdateHK1 = False
+        self.__UpdateHK2 = False
+        self.__UpdateHK3 = False
+        self.__UpdateHK4 = False
+        self.__UpdateWW = False
+        self.__UpdateSO = False
+        self.__UpdateDT = False
+        self.__UpdateNN = False
         # dir's for hardwaretype to be displayed
-        self.__hwtypeHG=""
-        self.__hwtypeHK1=""
-        self.__hwtypeHK2=""
-        self.__hwtypeHK3=""
-        self.__hwtypeHK4=""
-        self.__hwtypeWW=""
-        self.__hwtypeSO=""
-        self.__hwtypeDT=""
-        self.__hwtypeNN=""
-        self.__logitemMapHG={}
-        self.__logitemMapHK1={}
-        self.__logitemMapHK2={}
-        self.__logitemMapHK3={}
-        self.__logitemMapHK4={}
-        self.__logitemMapWW={}
-        self.__logitemMapSO={}
-        self.__logitemMapDT={}
-        self.__logitemMapNN={}
+        self.__hwtypeHG = ""
+        self.__hwtypeHK1 = ""
+        self.__hwtypeHK2 = ""
+        self.__hwtypeHK3 = ""
+        self.__hwtypeHK4 = ""
+        self.__hwtypeWW = ""
+        self.__hwtypeSO = ""
+        self.__hwtypeDT = ""
+        self.__hwtypeNN = ""
+        self.__logitemMapHG = {}
+        self.__logitemMapHK1 = {}
+        self.__logitemMapHK2 = {}
+        self.__logitemMapHK3 = {}
+        self.__logitemMapHK4 = {}
+        self.__logitemMapWW = {}
+        self.__logitemMapSO = {}
+        self.__logitemMapDT = {}
+        self.__logitemMapNN = {}
         # dir's for Logitem Display-Names
-        self.__logitemDisplaynameHG={}
-        self.__logitemDisplaynameHK1={}
-        self.__logitemDisplaynameHK2={}
-        self.__logitemDisplaynameHK3={}
-        self.__logitemDisplaynameHK4={}
-        self.__logitemDisplaynameWW={}
-        self.__logitemDisplaynameSO={}
-        self.__logitemDisplaynameDT={}
-        self.__logitemDisplaynameNN={}
+        self.__logitemDisplaynameHG = {}
+        self.__logitemDisplaynameHK1 = {}
+        self.__logitemDisplaynameHK2 = {}
+        self.__logitemDisplaynameHK3 = {}
+        self.__logitemDisplaynameHK4 = {}
+        self.__logitemDisplaynameWW = {}
+        self.__logitemDisplaynameSO = {}
+        self.__logitemDisplaynameDT = {}
+        self.__logitemDisplaynameNN = {}
         # dir's for Logitem: 'unit' to be displayed
-        self.__logitemUnitHG={}
-        self.__logitemUnitHK1={}
-        self.__logitemUnitHK2={}
-        self.__logitemUnitHK3={}
-        self.__logitemUnitHK4={}
-        self.__logitemUnitWW={}
-        self.__logitemUnitSO={}
-        self.__logitemUnitDT={}
-        self.__logitemUnitNN={}
+        self.__logitemUnitHG = {}
+        self.__logitemUnitHK1 = {}
+        self.__logitemUnitHK2 = {}
+        self.__logitemUnitHK3 = {}
+        self.__logitemUnitHK4 = {}
+        self.__logitemUnitWW = {}
+        self.__logitemUnitSO = {}
+        self.__logitemUnitDT = {}
+        self.__logitemUnitNN = {}
         # dir's for Logitem: 'maxvalue'
-        self.__maxvalueHG={}
-        self.__maxvalueHK1={}
-        self.__maxvalueHK2={}
-        self.__maxvalueHK3={}
-        self.__maxvalueHK4={}
-        self.__maxvalueWW={}
-        self.__maxvalueSO={}
-        self.__maxvalueDT={}
-        self.__maxvalueNN={}
+        self.__maxvalueHG = {}
+        self.__maxvalueHK1 = {}
+        self.__maxvalueHK2 = {}
+        self.__maxvalueHK3 = {}
+        self.__maxvalueHK4 = {}
+        self.__maxvalueWW = {}
+        self.__maxvalueSO = {}
+        self.__maxvalueDT = {}
+        self.__maxvalueNN = {}
         # dir's for Logitem: 'defaultvalue'
-        self.__defaultvalueHG={}
-        self.__defaultvalueHK1={}
-        self.__defaultvalueHK2={}
-        self.__defaultvalueHK3={}
-        self.__defaultvalueHK4={}
-        self.__defaultvalueWW={}
-        self.__defaultvalueSO={}
-        self.__defaultvalueDT={}
-        self.__defaultvalueNN={}
-        self.__unmixedHK1_HK4={}
-        self.__buscodierungHK1_HK4={}
-        self.__LoadpumpWW =False
-        self.__SecondHeaterSO =False
-        self.__SecondBufferSO =False
-        self.__data={}
-        self.__thread_lock=_thread.allocate_lock()
-        self.__newdata_available=False
-        self.__configfilename=""
-        self.__dbname_sqlite=""
-        self.__sql_enable=False
-        self.__dbname_rrdtool=""
-        self.__rrdtool_enable=False
-        self.__rrdtool_stepseconds  =0
-        self.__rrdtool_starttime_utc=0
-        self._SetDataIf_async() #"ASYNC":=1; "SOCKET":=2
-        self._SetDataIf_raw()   #"RAW"  :=1; "TRX"   :=2
+        self.__defaultvalueHG = {}
+        self.__defaultvalueHK1 = {}
+        self.__defaultvalueHK2 = {}
+        self.__defaultvalueHK3 = {}
+        self.__defaultvalueHK4 = {}
+        self.__defaultvalueWW = {}
+        self.__defaultvalueSO = {}
+        self.__defaultvalueDT = {}
+        self.__defaultvalueNN = {}
+        # other required values
+        self.__accessnames = {}
+        self.__syspartnames = []
+        self.__unmixedHK1_HK4 = {}
+        self.__LoadpumpWW = False
+        self.__SecondHeaterSO = False
+        self.__SecondBufferSO = False
+        self.__data = {}
+        self.__thread_lock = _thread.allocate_lock()
+        self.__newdata_available = False
+        self.__configfilename = ""
+        self.__dbname_sqlite = ""
+        self.__sql_enable = False
+        self.__dbname_rrdtool = ""
+        self.__rrdtool_enable = False
+        self.__rrdtool_stepseconds = 0
+        self.__rrdtool_starttime_utc = 0
+        self._SetDataIf_async()  # "ASYNC":=1; "SOCKET":=2
+        self._SetDataIf_raw()   # "RAW"  :=1; "TRX"   :=2
         self.AsyncSerialdevice("/dev/ttyAMA0")
         self.AsyncBaudrate(9600)
         self.AsyncConfig("8N1")
         self.client_cfg_file("./etc/config/ht_proxy_cfg.xml")
-        self._logging=None
+        self._logging = None
+        self._heater_bustype = ht_const.BUS_TYPE_HT3
+        self._IsSolarAvailable = False
+        self._sqlite_autoerase_afterSeconds = 0
+        self._rrdtool_autocreate_draw = False
 
     def setlogger(self, logger):
-        self._logging=logger
-        
-    def read_db_config(self,xmlconfigpathname, logger=None):
+        """
+        setup logger-handler.
+        """
+        self._logging = logger
+
+    def create_mylogger(self, filepath="./cdata.log", tag="cdata"):
+        """
+        creating logger with default values (overwrite-able).
+        """
+        rtnvalue = None
+        try:
+            ht_utils.clog.__init__(self)
+            rtnvalue = ht_utils.clog.create_logfile(self, logfilepath=filepath, loggertag=tag)
+        except:
+            errorstr = "data.create_mylogger();could not create logger-file"
+            print(errorstr)
+            raise EnvironmentError(errorstr)
+        return rtnvalue
+
+    def read_db_config(self, xmlconfigpathname, logger=None):
+        """
+        reading xml-configfile and setup datastructure.
+            The 'shortname' from config-file is used as main-key 'nickname'
+            data-structur:
+            {nickname:[{itemname:arrayindex},[value1,value2,...],Update-Flag,{itemname:logitem},
+                                                                {itemname:displayname},
+                                                                {itemname:unit},
+                                                                {itemname:maxvalue},
+                                                                {itemname:defaultvalue},
+                                                                hardwaretype]}
+        """
         # init/setup logging-file if not already forced from external call
         if self._logging == None:
-            try:
-                if logger == None:
-                    ht_utils.clog.__init__(self)
-                    self._logging=ht_utils.clog.create_logfile(self, logfilepath="./cdata.log", loggertag="cdata")
-                else:
-                    self._logging=logger
-            except:
-                errorstr="data.read_db_config();could not create logger-file"
-                print(errorstr)
-                raise EnvironmentError(errorstr)
+            if logger == None:
+                self._logging = self.create_mylogger()
+            else:
+                self._logging = logger
         try:
-            self.__configfilename=xmlconfigpathname
+            self.__configfilename = xmlconfigpathname
             self.__tree = ET.parse(xmlconfigpathname)
         except (NameError, EnvironmentError) as e:
-            errorstr="data.read_db_config();Error;{0} on file:'{1}'".format(e.args[0], xmlconfigpathname)
+            errorstr = "data.read_db_config();Error;{0} on file:'{1}'".format(e.args[0], xmlconfigpathname)
             self._logging.critical(errorstr)
             print(errorstr)
-            sys.exit(1)
-        else:            
+            raise
+        else:
             try:
                 self.__root = self.__tree.getroot()
+            except:
+                errorstr = "data.read_db_config();Error on getroot()"
+                print(errorstr)
+                self._logging.critical(errorstr)
+                raise
 
-                                
-                #find sql_db-entries
-                self.__dbname_sqlite =self.__root.find('dbname_sqlite').text
+            try:
+                #  find sql_db-entries
+                self.__dbname_sqlite = self.__root.find('dbname_sqlite').text
                 for sql_db_part in self.__root.findall('sql-db'):
-                    self.__sql_enable    = sql_db_part.find('enable').text.upper()
-                    if self.__sql_enable=='ON' or self.__sql_enable=='1':
-                        self.__sql_enable=True
+                    self.__sql_enable = sql_db_part.find('enable').text.upper()
+                    if self.__sql_enable == 'ON' or self.__sql_enable == '1':
+                        self.__sql_enable = True
                     else:
-                        self.__sql_enable=False
+                        self.__sql_enable = False
+                    try:
+                        tmperasevalue = int(sql_db_part.find('autoerase_olddata').text)
+                        if tmperasevalue > 0:
+                            # set autoerase-handling to 86400 seconds * day(s)
+                            self._sqlite_autoerase_afterSeconds = 86400 * tmperasevalue
+                        else:
+                            # autoerase-handling is disabled
+                            self._sqlite_autoerase_afterSeconds = 0
+                    except:
+                        # set autoerase-handling to disabled
+                        self._sqlite_autoerase_afterSeconds = 0
+            except:
+                errorstr = "data.read_db_config();Error on db_sqlite parameter"
+                print(errorstr)
+                self._logging.critical(errorstr)
+                raise
 
-                #find rrdtool-entries
-                self.__dbname_rrdtool=self.__root.find('dbname_rrd').text
+            try:
+                # find rrdtool-entries
+                self.__dbname_rrdtool = self.__root.find('dbname_rrd').text
                 for rrdtool_part in self.__root.findall('rrdtool-db'):
-                    self.__rrdtool_enable    = rrdtool_part.find('enable').text.upper()
-                    if self.__rrdtool_enable=='ON' or self.__rrdtool_enable=='1':
-                        self.__rrdtool_enable=True
+                    self.__rrdtool_enable = rrdtool_part.find('enable').text.upper()
+                    if self.__rrdtool_enable == 'ON' or self.__rrdtool_enable == '1':
+                        self.__rrdtool_enable = True
                     else:
-                        self.__rrdtool_enable=False
-                        
-                    self.__rrdtool_stepseconds  =int(rrdtool_part.find('step_seconds').text)
-                    if self.__rrdtool_stepseconds < 60:
-                        self.__rrdtool_stepseconds=60
-                        
-                    self.__rrdtool_starttime_utc=int(rrdtool_part.find('starttime_utc').text)
-                    if self.__rrdtool_starttime_utc<1344000000 or self.__rrdtool_starttime_utc>1999999999:
-                        self.__rrdtool_starttime_utc=1344000000
+                        self.__rrdtool_enable = False
 
+                    self.__rrdtool_stepseconds = int(rrdtool_part.find('step_seconds').text)
+                    if self.__rrdtool_stepseconds < 60:
+                        self.__rrdtool_stepseconds = 60
+
+                    self.__rrdtool_starttime_utc = int(rrdtool_part.find('starttime_utc').text)
+                    if self.__rrdtool_starttime_utc < 1344000000 or self.__rrdtool_starttime_utc > 1999999999:
+                        self.__rrdtool_starttime_utc = 1344000000
+
+                    try:
+                        self._rrdtool_autocreate_draw = rrdtool_part.find('autocreate_draw').text.upper()
+                        if self._rrdtool_autocreate_draw == 'ON' or self._rrdtool_autocreate_draw == '1':
+                            self._rrdtool_autocreate_draw = True
+                        else:
+                            self._rrdtool_autocreate_draw = False
+                    except:
+                        self._rrdtool_autocreate_draw = False
+
+            except:
+                errorstr = "data.read_db_config();Error on db_rrdtool parameter"
+                print(errorstr)
+                self._logging.critical(errorstr)
+                raise
+
+            try:
                 #find datainterface-entries
                 for data_if in self.__root.findall('data_interface'):
                     commtype = data_if.find('comm_type').text.upper()[0:3]
@@ -285,7 +292,7 @@ class cdata(ht_utils.clog):
                     else:
                         # else set async-active
                         self._SetDataIf_async()
-                    
+
                     prototype = data_if.find('proto_type').text.upper()[0:3]
                     if prototype in ("TRX"):
                         # force value 'TRX' currently to "RAW"
@@ -302,138 +309,221 @@ class cdata(ht_utils.clog):
                             if (len(testfilepath) > 0):
                                 self.inputtestfilepath(testfilepath)
                             self.AsyncBaudrate(int(param.find('baudrate').text))
-                            self.__dataif_param_config    = str(param.find('config').text)
+                            self.__dataif_param_config = str(param.find('config').text)
 
                         if param.attrib["name"].upper()[0:3] in ("SOC"):
-                            self.__dataif_param_proxy_cfg_file  = str(param.find('proxy_config_file').text)
+                            self.__dataif_param_proxy_cfg_file = str(param.find('proxy_config_file').text)
+            except:
+                errorstr = "data.read_db_config();Error on data_interface parameter"
+                print(errorstr)
+                self._logging.critical(errorstr)
+                raise
 
-                #find logging -entries
+            try:
+                #  find logging -entries
                 for logging_param in self.__root.findall('logging'):
-                    path             = logging_param.find('path').text
+                    path = logging_param.find('path').text
                     default_filename = logging_param.find('default_filename').text
                     self.logpathname(path)
                     self.logfilename(default_filename)
-                    #join both 'path' and 'default_filename' an save it
-                    logfilepathname=os.path.normcase(os.path.join(path, default_filename))
+                    #  join both 'path' and 'default_filename' an save it
+                    logfilepathname = os.path.normcase(os.path.join(path, default_filename))
                     self.logfilepathname(logfilepathname)
-                    #get and save loglevel
+                    #  get and save loglevel
                     self.loglevel(logging_param.find('loglevel').text.upper())
+            except:
+                errorstr = "data.read_db_config();Error on logging parameter"
+                print(errorstr)
+                self._logging.critical(errorstr)
+                raise
 
-                            
-                #find amount of heizkreise -entries
-                self.__HKcount=int(self.__root.find('anzahl_heizkreise').text)
-                if self.__HKcount>4 or self.__HKcount<1:
-                    errorstr="data.read_db_config();Error;amount of:'anzahl_heizkreise' out of range (1...4)"
-                    self._logging.critical(errorstr)
-                    raise IndexError(errorstr)
+            try:
+                #  find amount of heizkreise -entries
+                self.__HKcount = int(self.__root.find('anzahl_heizkreise').text)
+            except:
+                errorstr = "data.read_db_config();Error on anzahl_heizkreise parameter"
+                print(errorstr)
+                self._logging.critical(errorstr)
+                raise
 
-                syspart=""
+            if self.__HKcount > 4 or self.__HKcount < 1:
+                errorstr = "data.read_db_config();Error;amount of:'anzahl_heizkreise' out of range (1...4)"
+                self._logging.critical(errorstr)
+                raise IndexError(errorstr)
+
+            try:
+                syspart = ""
                 for syspart in self.__root.findall('systempart'):
                     syspartname = syspart.attrib["name"]
-                    shortname=""
-                    hardwaretype=""
+                    self.__syspartnames.append(syspartname)
+                    shortname = ""
+                    hardwaretype = ""
                     for shortname in syspart.findall('shortname'):
                         shortname = shortname.attrib["name"].upper()
-                        if shortname in ("HK1","HK2","HK3","HK4"):
-                            self.__unmixedHK1_HK4.update({shortname : syspart.find('unmixed').text})
-                            self.__buscodierungHK1_HK4.update({shortname : int(syspart.find('buscodierung').text)})
-                                                            
+                        if shortname in ("HK1", "HK2", "HK3", "HK4"):
+                            if syspart.find('unmixed').text.upper() in ('TRUE'):
+                                self.__unmixedHK1_HK4.update({shortname: True})
+                            else:
+                                self.__unmixedHK1_HK4.update({shortname: False})
+
                         try:
                             if shortname in ("WW"):
-                                self.__LoadpumpWW=True if syspart.find('load_pump').text.upper()=="TRUE" else False
+                                self.__LoadpumpWW = True if syspart.find('load_pump').text.upper() == "TRUE" else False
 
                             if shortname in ("SO"):
-                                self.__SecondHeaterSO=True if syspart.find('second_heater').text.upper()=="TRUE" else False
-                                self.__SecondBufferSO=True if syspart.find('second_buffer').text.upper()=="TRUE" else False
+                                self.__SecondHeaterSO = True if syspart.find('second_heater').text.upper() == "TRUE" else False
+                                self.__SecondBufferSO = True if syspart.find('second_buffer').text.upper() == "TRUE" else False
                         except (KeyError, IndexError, AttributeError) as e:
-                            errorstr="data.read_db_config();Error on xml-tag:{0}".format(e.args[0])
+                            errorstr = "data.read_db_config();Error on xml-tag:{0}".format(e.args[0])
                             self._logging.critical(errorstr)
                             print(errorstr)
 
                     hardwaretype = syspart.find('hardwaretype').text
-                            
+
                     # set nicknames
                     self._setnickname(shortname, syspartname)
-                    logitem=""
-                    for logitem in syspart.findall('logitem'):
-                        name       = logitem.attrib["name"]
-                        maxvalue   = logitem.find('maxvalue').text
-                        default    = logitem.find('default').text
-                        unit       = logitem.find('unit').text
-                        displayname= logitem.find('displayname').text
-    ##### unused values from xml-file in data-context ###                    
-    ##                    datatype= logitem.find('datatype').text
-    ##                    datause = logitem.find('datause').text
-    ##                    values=[datatype,datause]
-    #####                    
-                        # add itemname and values to table
-                        self.update(shortname,name,default,displayname,unit,hardwaretype,maxvalue,default)
-                    else:
-                        if not len(logitem):
-                            errorstr="data.read_db_config();Error;AttributeError(’logitem’)"
-                            self._logging.critical(errorstr)
-                            raise AttributeError(errorstr)
-                else:
-                    if not len(syspart):
-                        errorstr="data.read_db_config();Error;AttributeError(’syspart’)"
+                    logitem = ""
+                    try:
+                        for logitem in syspart.findall('logitem'):
+                            name = logitem.attrib["name"]
+                            maxvalue = logitem.find('maxvalue').text
+                            default = logitem.find('default').text
+                            unit = logitem.find('unit').text
+                            displayname = logitem.find('displayname').text
+        ##### unused values from xml-file in data-context ###
+        ##                    datatype= logitem.find('datatype').text
+        ##                    datause = logitem.find('datause').text
+        ##                    values=[datatype,datause]
+        #####
+                            try:
+                                accessname = logitem.find('accessname').text
+                            except:
+                                accessname = ""
+
+                            # add itemname and values to table
+                            self.update(shortname, name, default, displayname, unit, hardwaretype, maxvalue, default, accessname)
+                        else:
+                            if not len(logitem):
+                                errorstr = "data.read_db_config();Error;AttributeError(logitem)"
+                                self._logging.critical(errorstr)
+                                raise AttributeError(errorstr)
+                    except:
+                        errorstr = """data.read_db_config();Error on reading items:
+                            name:{0};
+                            maxvalue:{1};
+                            unit:{2};
+                            displayname:{3}""".format(name, maxvalue, unit, displayname)
+                        print(errorstr)
                         self._logging.critical(errorstr)
                         raise AttributeError(errorstr)
-                
+
+                else:
+                    if not len(syspart):
+                        errorstr = "data.read_db_config();Error;AttributeError(syspart)"
+                        self._logging.critical(errorstr)
+                        raise AttributeError(errorstr)
+
             except (KeyError, IndexError, AttributeError) as e:
                 if not type(e) == AttributeError:
-                    errorstr="data.read_db_config();Error on xml-tag:{0}".format(e.args[0])
+                    errorstr = "data.read_db_config();Error on xml-tag:{0}".format(e.args[0])
                 else:
-                    errorstr="data.read_db_config();Error on xml-tag"
+                    errorstr = "data.read_db_config();Error on xml-tag"
                 print(errorstr)
                 self._logging.critical(errorstr)
-                sys.exit(1)
-            
+                raise
+
     def configfilename(self, xmlconfigpathname=""):
+        """
+        return and setup of used xml-config filename.
+        """
         if len(xmlconfigpathname):
-            self.__configfilename=xmlconfigpathname
+            self.__configfilename = xmlconfigpathname
         return self.__configfilename
-    
+
     def db_sqlite_filename(self, xmlconfigpathname=""):
+        """
+        return and setup of used sqlite-db  filename.
+        """
         if len(xmlconfigpathname):
-            self.__configfilename=xmlconfigpathname
+            self.__configfilename = xmlconfigpathname
             self.read_db_config(xmlconfigpathname)
         return self.__dbname_sqlite
 
     def is_sql_db_enabled(self):
+        """
+        return True/False for sql-db config-tag 'enable'.
+        """
         return self.__sql_enable
 
     def db_rrdtool_filename(self, xmlconfigpathname=""):
+        """
+        return and setup of used rrdtool-db filename.
+        """
         if len(xmlconfigpathname):
-            self.__configfilename=xmlconfigpathname
+            self.__configfilename = xmlconfigpathname
             self.read_db_config(xmlconfigpathname)
         return self.__dbname_rrdtool
 
+    def db_rrdtool_filepathname(self, xmlconfigpathname=""):
+        """
+        return a tuple of absolute-path and filename as: (path, filename).
+         This is independent from OS.
+        """
+        (normpath, filename) = (".", "")
+        if len(xmlconfigpathname):
+            (path, filename) = os.path.split(xmlconfigpathname)
+        else:
+            (path, filename) = os.path.split(self.__dbname_rrdtool)
+        normpath = os.path.abspath(os.path.normcase(path))
+        return (normpath, filename)
+
     def is_db_rrdtool_enabled(self):
+        """
+        return True/False for rrdtool-db config-tag 'enable'.
+        """
         return self.__rrdtool_enable
 
     def db_rrdtool_stepseconds(self):
+        """
+        return value 'step_seconds' for rrdtool-db.
+        """
         return self.__rrdtool_stepseconds
 
     def db_rrdtool_starttime_utc(self):
+        """
+        return value 'starttime_utc' for rrdtool-db.
+        """
         return self.__rrdtool_starttime_utc
 
-    def heatercircuits_amount(self):
+    def heatercircuits_amount(self, hc_counts=0):
+        """
+        return the number of heater-circuits.
+         Value is set in configuration-file or is
+         dynamicly updated in the application.
+        """
+        if hc_counts > self.__HKcount:
+            self.__HKcount = hc_counts
         return self.__HKcount
-    
-    def _setnickname(self,shortname,longname):
-        shortname=shortname.upper()[0:3]
+
+    def _setnickname(self, shortname, longname):
+        """
+        save nickname attached to longname. Additional the assignment for
+        'Systempart' to the attached value-arrays are done here.
+         Values are set in configuration-file.
+        """
+        shortname = shortname.upper()[0:3]
         try:
             if not len(shortname):
-                errorstr="data._setnickname();Error; shortname undefined')"
+                errorstr = "data._setnickname();Error; shortname undefined')"
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
-            if not len(longname) :
-                errorstr="data._setnickname();Error; longname undefined')"
+            if not len(longname):
+                errorstr = "data._setnickname();Error; longname undefined')"
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
-            self.__nickname.update({shortname:longname})
-            if   "HG" in shortname:
-                self.__data.update({"HG":[self.__logitemHG,
+            self.__nickname.update({shortname: longname})
+            if "HG" in shortname:
+                self.__data.update({"HG": [self.__logitemHG,
                                           self.__valuesHG,
                                           self.__UpdateHG,
                                           self.__logitemMapHG,
@@ -443,7 +533,7 @@ class cdata(ht_utils.clog):
                                           self.__defaultvalueHG,
                                           self.__hwtypeHG]})
             elif "HK1" in shortname:
-                self.__data.update({"HK1":[self.__logitemHK1,
+                self.__data.update({"HK1": [self.__logitemHK1,
                                           self.__valuesHK1,
                                           self.__UpdateHK1,
                                           self.__logitemMapHK1,
@@ -453,7 +543,7 @@ class cdata(ht_utils.clog):
                                           self.__defaultvalueHK1,
                                           self.__hwtypeHK1]})
             elif "HK2" in shortname:
-                self.__data.update({"HK2":[self.__logitemHK2,
+                self.__data.update({"HK2": [self.__logitemHK2,
                                           self.__valuesHK2,
                                           self.__UpdateHK2,
                                           self.__logitemMapHK2,
@@ -462,9 +552,9 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueHK2,
                                           self.__defaultvalueHK2,
                                           self.__hwtypeHK2]})
-                                           
+
             elif "HK3" in shortname:
-                self.__data.update({"HK3":[self.__logitemHK3,
+                self.__data.update({"HK3": [self.__logitemHK3,
                                           self.__valuesHK3,
                                           self.__UpdateHK3,
                                           self.__logitemMapHK3,
@@ -473,9 +563,9 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueHK3,
                                           self.__defaultvalueHK3,
                                           self.__hwtypeHK3]})
-                                    
+
             elif "HK4" in shortname:
-                self.__data.update({"HK4":[self.__logitemHK4,
+                self.__data.update({"HK4": [self.__logitemHK4,
                                           self.__valuesHK4,
                                           self.__UpdateHK4,
                                           self.__logitemMapHK4,
@@ -484,9 +574,9 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueHK4,
                                           self.__defaultvalueHK4,
                                           self.__hwtypeHK4]})
-                                    
+
             elif "WW" in shortname:
-                self.__data.update({"WW":[self.__logitemWW,
+                self.__data.update({"WW": [self.__logitemWW,
                                           self.__valuesWW,
                                           self.__UpdateWW,
                                           self.__logitemMapWW,
@@ -495,9 +585,9 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueWW,
                                           self.__defaultvalueWW,
                                           self.__hwtypeWW]})
-                                          
+
             elif "SO" in shortname:
-                self.__data.update({"SO":[self.__logitemSO,
+                self.__data.update({"SO": [self.__logitemSO,
                                           self.__valuesSO,
                                           self.__UpdateSO,
                                           self.__logitemMapSO,
@@ -506,9 +596,9 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueSO,
                                           self.__defaultvalueSO,
                                           self.__hwtypeSO]})
-                                          
+
             elif "DT" in shortname:
-                self.__data.update({"DT":[self.__logitemDT,
+                self.__data.update({"DT": [self.__logitemDT,
                                           self.__valuesDT,
                                           self.__UpdateDT,
                                           self.__logitemMapDT,
@@ -517,9 +607,9 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueDT,
                                           self.__defaultvalueDT,
                                           self.__hwtypeDT]})
-                                          
+
             else:
-                self.__data.update({"NN":[self.__logitemNN,
+                self.__data.update({"NN": [self.__logitemNN,
                                           self.__valuesNN,
                                           self.__UpdateNN,
                                           self.__logitemMapNN,
@@ -528,198 +618,276 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueNN,
                                           self.__defaultvalueNN,
                                           self.__hwtypeNN]})
-                                          
-            
+
         except (NameError, AttributeError) as e:
-            errorstr="data._setnickname();Error;{0}".format(e.args[0])
+            errorstr = "data._setnickname();Error;{0}".format(e.args[0])
             print(errorstr)
             self._logging.critical(errorstr)
 
-
-            
-    def getlongname(self,shortname):
+    def getlongname(self, shortname):
+        """
+        return the 'systempart' longname attached to input:'shortname'.
+         Only the first three chars of 'shortname' are used, upper-
+         and lower-case is possible.
+         Undefined 'shortnames' returns: 'None'
+        """
         try:
             return self.__nickname[shortname.upper()[0:3]]
         except (KeyError, IndexError, AttributeError) as e:
-            errorstr="data.getlongname();Error;longname'{0}' not found".format(e.args[0])
+            errorstr = "data.getlongname();Error;longname'{0}' not found".format(e.args[0])
             print(errorstr)
             self._logging.critical(errorstr)
             return None
 
-    ############################
-    # function updates tableentry, if not yet available tableentry is created and set
-    #
-    # data-structur:
-    #   {nickname:[ {itemname:arrayindex},[value1,value2,...],Update-Flag,{itemname:logitem},
-    #                                                                     {itemname:displayname},
-    #                                                                     {itemname:unit},
-    #                                                                     {itemname:maxvalue},
-    #                                                                     {itemname:defaultvalue},
-    #                                                                     hardwaretype]}
-    #
-    def update(self, nickname, logitem, value=0.0,displayname="",unit="",hwtype="", maxvalue=100.0, default=0.0):
-        nickname=nickname.upper()[0:3]
-        itemname=logitem.replace("_","").lower()
+    def getall_sorted_logitem_names(self, nickname, rtn_internal_itemname=False):
+        """
+        returns sorted list of logitem-names for the nickname.
+        """
+        nickname = nickname.upper()[0:3]
+        all_logitem_names = []
+        length = 0
+        if nickname in self.__nickname:
+            length = len(self.__data[nickname][0])
+            for x in range(0, length):
+                all_logitem_names.append("")
+
+            for (key, value) in self.__data[nickname][0].items():
+                itemname = key
+                if not rtn_internal_itemname:
+                    itemname = self.__data[nickname][3][key]
+                all_logitem_names[int(value)] = itemname
+            return all_logitem_names
+        else:
+            errorstr = "getall_sorted_logitem_names();Error;nickname'{0}' not found".format(nickname)
+            print(errorstr)
+            self._logging.critical(errorstr)
+            return None
+
+    def getall_sorted_items_with_values(self, nickname):
+        """
+        This function returns the sorted tuple-array of items and attached values.
+        """
+        nickname = nickname.upper()[0:3]
+        all_logitem_names = self.getall_sorted_logitem_names(nickname)
+        rtntuple_array = []
+        for itemname in all_logitem_names:
+            if not itemname == "hexdump":
+                internal_itemname = itemname.replace("_", "").lower()
+                index = int(self.__data[nickname][0][internal_itemname])
+                value = self.__data[nickname][1][index]
+                rtntuple_array.append((itemname, value))
+        return rtntuple_array
+
+    def update(self, nickname, logitem, value=0.0, displayname="", unit="", hwtype="", maxvalue=100.0, default=0.0, accessname=""):
+        """
+        updates an already created data.member (logitem) with the new value or
+         will create it, if not yet available.
+         parameter 'logitem' is assigned to 'value' (default:=0)
+         data-structur:
+          {nickname:[ {itemname:arrayindex},[value1,value2,...],Update-Flag,{itemname:logitem},
+                                                                        {itemname:displayname},
+                                                                        {itemname:unit},
+                                                                        {itemname:maxvalue},
+                                                                        {itemname:defaultvalue},
+                                                                        hardwaretype]}
+        """
+
+        nickname = nickname.upper()[0:3]
+        itemname = logitem.replace("_", "").lower()
         try:
             if not len(nickname):
-                errorstr="data.update();Error;nickname: '{0}' undefined".format(nickname)
+                errorstr = "data.update();Error;nickname: '{0}' undefined".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if not len(itemname):
-                errorstr="data.update();Error;itemname:'{0}' undefined".format(logitem)
+                errorstr = "data.update();Error;itemname:'{0}' undefined".format(logitem)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if nickname in self.__nickname:
                 if itemname in self.__data[nickname][0]:
                     # update value, get index first from dir{itemname:index}
-                    index=int(self.__data[nickname][0][itemname])
-                    self.__data[nickname][1][index]=value
+                    index = int(self.__data[nickname][0][itemname])
+                    self.__data[nickname][1][index] = value
                     # set 'IsSyspartUpdate' true
-                    self.__data[nickname][2]=True
-                    if len(displayname) > 0:self.__data[nickname][4][itemname]=displayname 
-                    if len(unit) > 0       :self.__data[nickname][5][itemname]=unit        
-                    if maxvalue !=100.0    :self.__data[nickname][6][itemname]=maxvalue        
-                    if default  !=0.0      :self.__data[nickname][7][itemname]=default        
+                    self.__data[nickname][2] = True
+                    if len(displayname) > 0:
+                        self.__data[nickname][4][itemname] = displayname
+                    if len(unit) > 0:
+                        self.__data[nickname][5][itemname] = unit
+                    if maxvalue != 100.0:
+                        self.__data[nickname][6][itemname] = maxvalue
+                    if default != 0.0:
+                        self.__data[nickname][7][itemname] = default
+                    if len(accessname) > 0:
+                        # no update() for this already set value
+                        pass
                 else:
                     # add new item and value, index is the current array-length
                     # and is set to dir{itemname:index}
-                    index=len(self.__data[nickname][1])
-                    self.__data[nickname][0].update({itemname:index})
+                    index = len(self.__data[nickname][1])
+                    self.__data[nickname][0].update({itemname: index})
                     self.__data[nickname][1].append(value)
                     # set internal itemname to external logitem
-                    self.__data[nickname][3].update({itemname:logitem})
-                    
-                    if not displayname==None and len(displayname)>0:
-                        self.__data[nickname][4].update({itemname:displayname})
-                    else:
-                        self.__data[nickname][4].update({itemname:""})
-                        
-                    if not unit==None and len(unit)>0:
-                        self.__data[nickname][5].update({itemname:unit})
-                    else:
-                        self.__data[nickname][5].update({itemname:""})
+                    self.__data[nickname][3].update({itemname: logitem})
 
-                    self.__data[nickname][6].update({itemname:maxvalue})
-                    self.__data[nickname][7].update({itemname:default})
-                        
-                if not hwtype==None and len(hwtype)>0:
-                    self.__data[nickname][8]=hwtype
-                        
+                    if not displayname == None and len(displayname) > 0:
+                        self.__data[nickname][4].update({itemname: displayname})
+                    else:
+                        self.__data[nickname][4].update({itemname: ""})
+
+                    if not unit == None and len(unit) > 0:
+                        self.__data[nickname][5].update({itemname: unit})
+                    else:
+                        self.__data[nickname][5].update({itemname: ""})
+
+                    self.__data[nickname][6].update({itemname: maxvalue})
+                    self.__data[nickname][7].update({itemname: default})
+
+                    if not accessname == None and len(accessname) > 0:
+                        # setup accessname to tuple: 
+                        #   (nickname, external logitem, internal itemname)
+                        self.__accessnames.update({accessname: (nickname, logitem, itemname)})
+                    else:
+                        # setup dummy_accessname to tuple:
+                        #   (nickname, external logitem, internal itemname)
+                        dummy_accessname = str(nickname).lower() + "_access_" + str(index)
+                        self.__accessnames.update({dummy_accessname: (nickname, logitem, itemname)})
+
+                if not hwtype == None and len(hwtype) > 0:
+                    self.__data[nickname][8] = hwtype
             else:
-                errorstr="data.update();Error;nickname:'{0}' not found".format(nickname)
+                errorstr = "data.update();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
-            
+
             self.__thread_lock.acquire()
-            self.__newdata_available=True
+            self.__newdata_available = True
             self.__thread_lock.release()
-            
+
         except (KeyError, NameError, AttributeError) as e:
-            errorstr="data.update();Error;{0}".format(e.args[0])
+            errorstr = "data.update();Error;{0}".format(e.args[0])
             print(errorstr)
             self._logging.critical(errorstr)
             self.__thread_lock.acquire()
-            self.__newdata_available=False
+            self.__newdata_available = False
             self.__thread_lock.release()
-                
+
     def values(self, nickname, logitem=""):
-        nickname=nickname.upper()[0:3]
-        itemname=logitem.replace("_","").lower()
+        """
+        returns all values (array) for 'nickname or value (single one) for
+         'nickname' and 'logitem'.
+        """
+        nickname = nickname.upper()[0:3]
+        itemname = logitem.replace("_", "").lower()
         try:
             self.__thread_lock.acquire()
             if not len(nickname):
-                errorstr="data.values();Error;nickname: '{0}' undefined".format(nickname)
+                errorstr = "data.values();Error;nickname: '{0}' undefined".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if nickname in self.__nickname:
                 if len(itemname):
                     if itemname in self.__data[nickname][0]:
-                        index=int(self.__data[nickname][0][itemname])
+                        index = int(self.__data[nickname][0][itemname])
                         return self.__data[nickname][1][index]
                     else:
-                        errorstr="data.values();Error;itemname:'{0}' not found".format(logitem)
+                        errorstr = "data.values();Error;itemname:'{0}' not found".format(logitem)
                         self._logging.critical(errorstr)
                         raise NameError(errorstr)
                 else:
                     return self.__data[nickname][1]
             else:
-                errorstr="data.values();Error;nickname:'{0}' not found".format(nickname)
+                errorstr = "data.values();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            errorstr="data.values();Error;{0}".format(e.args[0])
+            errorstr = "data.values();Error;{0}".format(e.args[0])
             self._logging.critical(errorstr)
 
         finally:
             self.__thread_lock.release()
 
-
     def displayname(self, nickname, logitem):
-        nickname=nickname.upper()[0:3]
-        itemname=logitem.replace("_","").lower()
+        """
+        returns the 'name' to be displayed for the logitem.
+         Value is set in configuration-file.
+         parameters 'nickname' and 'logitem' are required.
+        """
+        nickname = nickname.upper()[0:3]
+        itemname = logitem.replace("_", "").lower()
         try:
             if not len(nickname):
-                errorstr="data.displayname();Error;nickname: '{0}' undefined".format(nickname)
+                errorstr = "data.displayname();Error;nickname: '{0}' undefined".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
-            if not len(logitem) :
-                errorstr="data.displayname();Error;logitem: '{0}' undefined".format(logitem)
+            if not len(logitem):
+                errorstr = "data.displayname();Error;logitem: '{0}' undefined".format(logitem)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if nickname in self.__nickname:
                 if itemname in self.__data[nickname][0]:
                     return str(self.__data[nickname][4][itemname])
                 else:
-                    errorstr="data.displayname();Error;itemname:'{0}' not found in nicknames:'{1}'".format(logitem, nickname)
+                    errorstr = "data.displayname();Error;itemname:'{0}' not found in nicknames:'{1}'".format(logitem, nickname)
                     self._logging.critical(errorstr)
                     raise NameError(errorstr)
             else:
-                errorstr="data.displayname();Error;nickname:'{0}' not found".format(nickname)
+                errorstr = "data.displayname();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            errorstr="data.displayname();Error;{0}".format(e.args[0])
+            errorstr = "data.displayname();Error;{0}".format(e.args[0])
             print(errorstr)
             self._logging.critical(errorstr)
 
     def displayunit(self, nickname, logitem):
-        nickname=nickname.upper()[0:3]
-        itemname=logitem.replace("_","").lower()
+        """
+        returns the 'unit' to be displayed for the logitem.
+         Value is set in configuration-file.
+         parameters 'nickname' and 'logitem' are required.
+        """
+        nickname = nickname.upper()[0:3]
+        itemname = logitem.replace("_", "").lower()
         try:
             if not len(nickname):
-                errorstr="data.displayunit();Error;nickname: '{0}' undefined".format(nickname)
+                errorstr = "data.displayunit();Error;nickname: '{0}' undefined".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
-            if not len(logitem) :
-                errorstr="data.displayunit();Error;logitem: '{0}' undefined".format(logitem)
+            if not len(logitem):
+                errorstr = "data.displayunit();Error;logitem: '{0}' undefined".format(logitem)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if nickname in self.__nickname:
                 if itemname in self.__data[nickname][0]:
                     return self.__data[nickname][5][itemname]
                 else:
-                    errorstr="data.displayunit();Error;itemname:'{0}' not found".format(logitem)
+                    errorstr = "data.displayunit();Error;itemname:'{0}' not found".format(logitem)
                     self._logging.critical(errorstr)
                     raise NameError(errorstr)
             else:
-                errorstr="data.displayunit();Error;nickname:'{0}' not found".format(nickname)
+                errorstr = "data.displayunit();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            errorstr="data.displayunit();Error;displayname();Error;{0}".format(e.args[0])
+            errorstr = "data.displayunit();Error;displayname();Error;{0}".format(e.args[0])
             print(errorstr)
             self._logging.critical(errorstr)
-            
+
     def maxvalue(self, nickname, logitem):
-        nickname=nickname.upper()[0:3]
-        itemname=logitem.replace("_","").lower()
+        """
+        returns the 'maxvalue' for the logitem.
+         Value is set in configuration-file.
+         parameters 'nickname' and 'logitem' are required.
+        """
+        nickname = nickname.upper()[0:3]
+        itemname = logitem.replace("_", "").lower()
         try:
             if not len(nickname):
-                errorstr="data.maxvalue();Error;nickname: '{0}' undefined".format(nickname)
+                errorstr = "data.maxvalue();Error;nickname: '{0}' undefined".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
-            if not len(logitem) :
-                errorstr="data.maxvalue();Error;logitem: '{0}' undefined".format(logitem)
+            if not len(logitem):
+                errorstr = "data.maxvalue();Error;logitem: '{0}' undefined".format(logitem)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if nickname in self.__nickname:
@@ -730,29 +898,33 @@ class cdata(ht_utils.clog):
                     else:
                         return int(self.__data[nickname][6][itemname])
                 else:
-                    errorstr="data.maxvalue();Error;itemname:'{0}' not found".format(logitem)
+                    errorstr = "data.maxvalue();Error;itemname:'{0}' not found".format(logitem)
                     self._logging.critical(errorstr)
                     raise NameError(errorstr)
             else:
-                errorstr="data.maxvalue();Error;nickname:'{0}' not found".format(nickname)
+                errorstr = "data.maxvalue();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            errorstr="data.maxvalue();Error;{0}".format(e.args[0])
+            errorstr = "data.maxvalue();Error;{0}".format(e.args[0])
             print(errorstr)
             self._logging.critical(errorstr)
-            
 
     def defaultvalue(self, nickname, logitem):
-        nickname=nickname.upper()[0:3]
-        itemname=logitem.replace("_","").lower()
+        """
+        returns the 'default'-value for the logitem.
+         Value is set in configuration-file.
+         parameters 'nickname' and 'logitem' are required.
+        """
+        nickname = nickname.upper()[0:3]
+        itemname = logitem.replace("_", "").lower()
         try:
             if not len(nickname):
-                errorstr="data.defaultvalue();Error;nickname: '{0}' undefined".format(nickname)
+                errorstr = "data.defaultvalue();Error;nickname: '{0}' undefined".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
-            if not len(logitem) :
-                errorstr="data.defaultvalue();Error;logitem: '{0}' undefined".format(logitem)
+            if not len(logitem):
+                errorstr = "data.defaultvalue();Error;logitem: '{0}' undefined".format(logitem)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if nickname in self.__nickname:
@@ -763,135 +935,267 @@ class cdata(ht_utils.clog):
                     else:
                         return int(self.__data[nickname][7][itemname])
                 else:
-                    errorstr="data.defaultvalue();Error;itemname:'{0}' not found".format(logitem)
+                    errorstr = "data.defaultvalue();Error;itemname:'{0}' not found".format(logitem)
                     self._logging.critical(errorstr)
                     raise NameError(errorstr)
             else:
-                errorstr="data.defaultvalue();Error;nickname:'{0}' not found".format(nickname)
+                errorstr = "data.defaultvalue();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            errorstr="data.defaultvalue();Error;{0}".format(e.args[0])
+            errorstr = "data.defaultvalue();Error;{0}".format(e.args[0])
             print(errorstr)
             self._logging.critical(errorstr)
 
     def hardwaretype(self, nickname):
-        nickname=nickname.upper()[0:3]
+        """
+        returns the hardwaretype read from configuration-file.
+        """
+        nickname = nickname.upper()[0:3]
         try:
             if not len(nickname):
-                errorstr="data.hardwaretype();Error;nickname: '{0}' undefined".format(nickname)
+                errorstr = "data.hardwaretype();Error;nickname: '{0}' undefined".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if nickname in self.__nickname:
                 return str(self.__data[nickname][8])
             else:
-                errorstr="data.hardwaretype();Error;nickname:'{0}' not found".format(nickname)
+                errorstr = "data.hardwaretype();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
         except(KeyError, NameError, AttributeError) as e:
-            errorstr="data.hardwaretype();Error;{0}".format(e.args[0])
+            errorstr = "data.hardwaretype();Error;{0}".format(e.args[0])
             self._logging.critical(errorstr)
             print(errorstr)
 
+
+    def get_access_context(self, accessname):
+        """
+        returns the context attached to 'accesname' as tuple.
+         accessname-Values are set in configuration-file or set to
+         default-values if there aren't any.
+         The returned tuple-values are defined as:
+           (Systempart-Nickname, logitem, itemname)
+             where:
+               'Nickname' is the 'shortname' from configuration-file.
+               'logitem'  is the logitem-name from configuration-file.
+               'itemname' is the internal application-used access-name.
+        returns '("", "", "")' if there isn't any context available.
+        """
+        rtntuple = ("", "", "")
+        try:
+            if accessname in self.__accessnames:
+                rtntuple = self.__accessnames.get(accessname)
+        except:
+            pass
+        return rtntuple
+
     def _SetDataIf_async(self):
+        """
+        setup Data-interface to type: async.
+        """
         self.__dataif_commtype = 1
-    
+
     def IsDataIf_async(self):
+        """
+        returns True if data-Interface is configured to be in asychron-mode, else False.
+         Value is set in configuration-file.
+        """
         return True if (self.__dataif_commtype == 1) else False
 
     def _SetDataIf_socket(self):
+        """
+        setup Data-interface to type: socket.
+        """
         self.__dataif_commtype = 2
 
     def IsDataIf_socket(self):
+        """
+        returns True if data-Interface is configured to be in socket-mode, else False.
+         Value is set in configuration-file.
+        """
         return True if (self.__dataif_commtype == 2) else False
-    
+
     def dataif_comm_type_str(self):
-        rtnstr=""
+        """
+        returns the currently defined communication-mode as string.
+         Values are "ASYNC" or "SOCKET".
+        """
+        rtnstr = ""
         if self.IsDataIf_async():
-            rtnstr="ASYNC"
+            rtnstr = "ASYNC"
         else:
             if self.IsDataIf_socket():
-                rtnstr="SOCKET"
+                rtnstr = "SOCKET"
         return rtnstr
 
     def _SetDataIf_raw(self):
+        """
+        setup Data-interface to protocoll-type: raw.
+        """
         self.__dataif_prototype = 1
-        
+
     def _SetDataIf_trx(self):
+        """
+        setup Data-interface to protocoll-type: TX/RX.
+        """
         self.__dataif_prototype = 2
 
     def IsDataIf_raw(self):
+        """
+        returns True if data-Interface has RAW-mode protokoll configuration else False.
+         Values is set in configuration-file.
+        """
         return True if (self.__dataif_prototype == 1) else False
 
     def IsDataIf_trx(self):
+        """
+        returns True if data-Interface has TRX-mode protokoll configuration else False.
+         Value is set in configuration-file.
+        """
         return True if (self.__dataif_prototype == 2) else False
 
     def dataif_protocoll_type_str(self):
-        rtnstr=""
+        """
+        returns the protocoll-type as string-value.
+        """
+        rtnstr = ""
         if self.IsDataIf_raw():
-            rtnstr="RAW"
+            rtnstr = "RAW"
         if self.IsDataIf_trx():
-            rtnstr="TRX"
+            rtnstr = "TRX"
         return rtnstr
 
     def AsyncSerialdevice(self, serialdevice=None):
+        """
+        returns the currently defined devicename for async-mode.
+         Value is set in configuration-file.
+        """
         if serialdevice != None:
-            self.__dataif_param_serialdevice=serialdevice
+            self.__dataif_param_serialdevice = serialdevice
         return self.__dataif_param_serialdevice
 
     def AsyncBaudrate(self, baudrate=None):
+        """
+        returns the currently defined Baudrate for async-mode.
+         Value is set in configuration-file.
+        """
         if baudrate != None:
-            self.__dataif_param_baudrate=baudrate
+            self.__dataif_param_baudrate = baudrate
         return self.__dataif_param_baudrate
 
     def AsyncConfig(self, config=None):
+        """
+        returns the currently defined Parameter for async-mode (fixed to 8N1).
+         Value is set in configuration-file.
+        """
         if config != None:
-            self.__dataif_param_config=config
+            self.__dataif_param_config = config
         return self.__dataif_param_config
 
     def inputtestfilepath(self, testfilepath=None):
+        """
+        return and setup of testfilename and path.
+        """
         if testfilepath != None:
-            self.__dataif_param_testfilepath=testfilepath
+            self.__dataif_param_testfilepath = testfilepath
         return self.__dataif_param_testfilepath
 
     def client_cfg_file(self, client_cfg_file=None):
+        """
+        returns the currently defined 'client configuration file' for socket-purposes.
+        """
         if client_cfg_file != None:
             self.__dataif_param_proxy_cfg_file = client_cfg_file
         return self.__dataif_param_proxy_cfg_file
-    
+
     def IsAnyUpdate(self):
+        """
+        returns True/False if any update was set.
+        """
         return self.__newdata_available
 
     def UpdateRead(self):
+        """
+        resets the status of new-data available flag.
+        """
         self.__thread_lock.acquire()
-        self.__newdata_available=False
+        self.__newdata_available = False
         self.__thread_lock.release()
 
     def IsSyspartUpdate(self, nickname):
-        nickname=nickname.upper()[0:3]
-        Rtn=self.__data[nickname][2]
-        self.__data[nickname][2]=False
+        """
+        returns True/False for parameter 'nickname' if new data is available and resets the flag.
+        """
+        nickname = nickname.upper()[0:3]
+        self.__thread_lock.acquire()
+        Rtn = self.__data[nickname][2]
+        self.__data[nickname][2] = False
+        self.__thread_lock.release()
         return Rtn
 
-    def GetUnmixedFlagHK(self, nickname):
-        nickname=nickname.upper()[0:3]
-        return self.__unmixedHK1_HK4.get(nickname)
-
-    def GetBuscodierungHK(self, nickname):
-        nickname=nickname.upper()[0:3]
-        return self.__buscodierungHK1_HK4.get(nickname)
+    def UnmixedFlagHK(self, nickname, unmixed=None):
+        """
+        returns True for parameter 'nickname' if heater-circuit (HK1..4) has no mixer else False.
+         Values are set in configuration-file.
+        """
+        nickname = nickname.upper()[0:3]
+        if unmixed != None:
+            self.__unmixedHK1_HK4.update({nickname: unmixed})
+        return bool(self.__unmixedHK1_HK4.get(nickname))
 
     def IsLoadpump_WW(self):
+        """
+        returns True, if heater-external water-loadpump is available else False.
+         Value is set in configuration-file.
+        """
         return self.__LoadpumpWW
-    
+
     def IsSecondHeater_SO(self):
+        """
+        returns True, if second heater in system is available else False.
+         Value is set in configuration-file.
+        """
         return self.__SecondHeaterSO
 
     def IsSecondBuffer_SO(self):
+        """
+        returns True, if extra water-buffer for second heater is available else False.
+         Value is set in configuration-file.
+        """
         return self.__SecondBufferSO
-    
+
+    def HeaterBusType(self, bustype=None):
+        """
+        returns and setup the heater-bustype.
+         The available values are defined in: ht_const.py.
+        """
+        if not bustype == None:
+            self._heater_bustype = bustype
+        return self._heater_bustype
+
+    def IsSolarAvailable(self, available=None):
+        """
+        returns and setup solar systempart availability.
+        """
+        if not available == None:
+            self._IsSolarAvailable = available
+        return self._IsSolarAvailable
+
+    def syspartnames(self):
+        """ return of all system-partnames.
+                read from configuration.
+        """
+        return self.__syspartnames
+
+    def Sqlite_autoerase_seconds(self):
+        return self._sqlite_autoerase_afterSeconds
+
+    def IsAutocreate_draw(self):
+        return self._rrdtool_autocreate_draw
+
 #--- class cdata end ---#
-        
+
 if __name__ == "__main__":
     ########
     ##
@@ -906,89 +1210,82 @@ if __name__ == "__main__":
     #                                                                     {itemname:default},
     #                                                                     hardwaretype]}
     #
-    testtype=1
-    
+    testtype = 1
+
     if testtype == 0:
         #---------------- testtype=0 -------------------
-        data=cdata()
+        data = cdata()
+        data.setlogger(data.create_mylogger())
         print("-- setup nicknames --")
-        data._setnickname("HG","heizgeraet")
-        data._setnickname("Hklein","heizkreis")
-        data._setnickname("HK1","heizkreis1")
-        data._setnickname("HK2","heizkreis2")
-        data._setnickname("HK3","heizkreis3")
-        data._setnickname("HK4","heizkreis4")
-        data._setnickname("WW","warmwasser")
-        data._setnickname("SO","solar")
-        data._setnickname("DT","datetime")
-        data._setnickname("data","dadadata")
+        data._setnickname("HG", "heizgeraet")
+        data._setnickname("Hklein", "heizkreis")
+        data._setnickname("HK1", "heizkreis1")
+        data._setnickname("HK2", "heizkreis2")
+        data._setnickname("HK3", "heizkreis3")
+        data._setnickname("HK4", "heizkreis4")
+        data._setnickname("WW", "warmwasser")
+        data._setnickname("SO", "solar")
+        data._setnickname("DT", "datetime")
+        data._setnickname("data", "dadadata")
         #----------------
         print("-- updata data --")
-        data.update("SO","T_Collector")
-        data.update("SO","T_Collector",33.5)
-        data.update("SO","T_Soll")
-        data.update("SO","T_Soll",13.4)
-        data.update("SO","T_Speicherunten",20.2)
-        data.update("SO","T_Laufzeit",3456)
-        data.update("SO","T_Pumpe",1)
-        data.update("HK1","T_Ist",12.3)
-        data.update("HK2","T_Ist",23.4)
-        data.update("HK3","T_Ist",34.5)
-        data.update("HK4","T_Ist",45.6)
-        data.update("SO","T_Aussen",0.2)
-        data.update("DT","Date","23.03.2013")
-        data.update("DT","Time","11:12:13")
+        data.update("SO", "T_Collector")
+        data.update("SO", "T_Collector", 33.5)
+        data.update("SO", "T_Soll")
+        data.update("SO", "T_Soll", 13.4)
+        data.update("SO", "T_Speicherunten", 20.2)
+        data.update("SO", "T_Laufzeit", 3456)
+        data.update("SO", "T_Pumpe", 1)
+        data.update("HK1", "T_Ist", 12.3)
+        data.update("HK2", "T_Ist", 23.4)
+        data.update("HK3", "T_Ist", 34.5)
+        data.update("HK4", "T_Ist", 45.6)
+        data.update("SO", "T_Aussen", 0.2)
+        data.update("DT", "Date", "23.03.2013")
+        data.update("DT", "Time", "11:12:13")
         print("----------- unknown values check ----------")
         print(" -- setup nickname with wrong value --")
-        data._setnickname("","solar")
-        data._setnickname("WW","")
+        data._setnickname("", "solar")
+        data._setnickname("WW", "")
         print(" -- check unavailable names    --")
-        data.update("ST","T_Collector")
-        data.update("","T_Collector")
-        data.update("ST","")
+        data.update("ST", "T_Collector")
+        data.update("", "T_Collector")
+        data.update("ST", "")
         print(' -- check for unknown longname --')
         print(data.getlongname("LO"))
-        print(""" -- check for unknown values in ["{0}"] ---""".format(
-                                    data.getlongname("SO")))
-        print(data.values("SO","T_blabla"))
-        print(data.values("","T_Pumpe"))
+        print(""" -- check for unknown values in ["{0}"] ---""".format(data.getlongname("SO")))
+        print(data.values("SO", "T_blabla"))
+        print(data.values("", "T_Pumpe"))
         #----------------
         print("----------- normal operation   ----------")
         print("-- Known values get and update --")
 
-        print(""" -- get: value:'T_Ist' from ["{0}"] ---""".format(
-                                    data.getlongname("HK1")))
-        print(data.values("HK1","T_Ist"))
-        print(""" -- get: value:'T_Ist' from ["{0}"] ---""".format(
-                                    data.getlongname("HK2")))
-        print(data.values("HK2","T_Ist"))
-        print(""" -- get: value:'T_Ist' from ["{0}"] ---""".format(
-                                    data.getlongname("HK3")))
-        print(data.values("HK3","T_Ist"))
-        print(""" -- get: value:'T_Ist' from ["{0}"] ---""".format(
-                                    data.getlongname("HK4")))
-        print(data.values("HK4","T_Ist"))
+        print(""" -- get: value:'T_Ist' from ["{0}"] ---""".format(data.getlongname("HK1")))
+        print(data.values("HK1", "T_Ist"))
+        print(""" -- get: value:'T_Ist' from ["{0}"] ---""".format(data.getlongname("HK2")))
+        print(data.values("HK2", "T_Ist"))
+        print(""" -- get: value:'T_Ist' from ["{0}"] ---""".format(data.getlongname("HK3")))
+        print(data.values("HK3", "T_Ist"))
+        print(""" -- get: value:'T_Ist' from ["{0}"] ---""".format(data.getlongname("HK4")))
+        print(data.values("HK4", "T_Ist"))
 
-        print(""" -- get: all values from ["{0}"] ---""".format(
-                                    data.getlongname("SO")))
+        print(""" -- get: all values from ["{0}"] ---""".format(data.getlongname("SO")))
         print(data.values("SO"))
-        print(""" -- get: value:'T_Laufzeit' from ["{0}"] ---""".format(
-                                    data.getlongname("SO")))
-        print(data.values("SO","T_Laufzeit"))
+        print(""" -- get: value:'T_Laufzeit' from ["{0}"] ---""".format(data.getlongname("SO")))
+        print(data.values("SO", "T_Laufzeit"))
         print(""" -- update: value:'T_Laufzeit' at ["{0}"] to 654321 ---""".format(
                                     data.getlongname("SO")))
-        data.update("SO","T_Laufzeit",654321)
-        print(""" -- again get: value:'T_Laufzeit' from ["{0}"] ---""".format(
-                                    data.getlongname("SO")))
-        print(data.values("SO","T_Laufzeit"))
+        data.update("SO", "T_Laufzeit", 654321)
+        print(""" -- again get: value:'T_Laufzeit' from ["{0}"] ---""".format(data.getlongname("SO")))
+        print(data.values("SO", "T_Laufzeit"))
         print(""" -- get: values:'Date' and 'Time' from ["{0}"] ---""".format(
                                     data.getlongname("DT")))
-        print("{0} {1}".format(data.values("DT","Date"),data.values("DT","Time")))
+        print("{0} {1}".format(data.values("DT", "Date"), data.values("DT", "Time")))
     else:
         #---------------- testtype=1 -------------------
         print("current path   :'{0}'".format(os.getcwd()))
 
-        data=cdata()
+        data = cdata()
         data.read_db_config("./../etc/config/4test/create_db_test.xml")
 
         print("configfile            :'{0}'".format(data.configfilename()))
@@ -1004,7 +1301,7 @@ if __name__ == "__main__":
             print(" Baudrate              :{0}".format(data.AsyncBaudrate()))
             print(" Config                :{0}".format(data.AsyncConfig()))
             print(" Testfilepath          :{0}".format(data.inputtestfilepath()))
-            
+
         if data.IsDataIf_socket():
             print(" Client-cfg-file       :{0}".format(data.client_cfg_file()))
 
@@ -1013,67 +1310,96 @@ if __name__ == "__main__":
         print("logging-filename      :{0}".format(data.logfilename()))
         print("logging-filepathname  :{0}".format(data.logfilepathname()))
         print("logging-level         :{0}".format(logging.getLevelName(data.loglevel())))
-        
+
         print("Heatercircuits_amount :{0}".format(data.heatercircuits_amount()))
-        
-        print(""" -- get: all values from ["{0}"] ---""".format(
-                                    data.getlongname("HG")))
+        dberase_seconds = data.Sqlite_autoerase_seconds()
+        if dberase_seconds > 0:
+            tmptext = "{0} seconds".format(dberase_seconds)
+        else:
+            tmptext = "disabled".format(dberase_seconds)
+        print("SQlite autoerase after:{0}\n".format(tmptext))
+
+        print(""" -- get: all values from ["{0}"] ---""".format(data.getlongname("HG")))
         print(data.values("HG"))
-        for circuit_number in range (1,data.heatercircuits_amount()+1):
-            strHKname="HK"+str(circuit_number)
-            print(""" -- get: all values from ["{0}"] ---""".format(
-                                    data.getlongname(strHKname)))
+        for circuit_number in range(1, data.heatercircuits_amount() + 1):
+            strHKname = "HK" + str(circuit_number)
+            print(""" -- get: all values from ["{0}"] ---""".format(data.getlongname(strHKname)))
             print(data.values(strHKname))
 
-        print(""" -- get: all values from ["{0}"] ---""".format(
-                                    data.getlongname("WW")))
+        print(""" -- get: all values from ["{0}"] ---""".format(data.getlongname("WW")))
         print(data.values("WW"))
-        print(""" -- get: all values from ["{0}"] ---""".format(
-                                    data.getlongname("SO")))
+        print(""" -- get: all values from ["{0}"] ---""".format(data.getlongname("SO")))
         print(data.values("SO"))
 
         print(""" -- get       value:'T_Kollektor' from ["{0}"] ---""".format(
                                     data.getlongname("SO")))
-        print("{0} = {1} {2}".format(data.displayname("SO","T_kollektor"),
-                                     data.values("SO","T_Kollektor"),
-                                     data.displayunit("SO","T_Kollektor")))
+        print("{0} = {1} {2}".format(data.displayname("SO", "T_kollektor"),
+                                     data.values("SO", "T_Kollektor"),
+                                     data.displayunit("SO", "T_Kollektor")))
         print(""" -- update    value:'T_Kollektor' at   ["{0}"] to 89.1 ---""".format(
                                     data.getlongname("SO")))
-        data.update("SO","T_Kollektor",89.1)
+        data.update("SO", "T_Kollektor", 89.1)
         print(""" -- again get value:'T_Kollektor' from ["{0}"] ---""".format(
                                     data.getlongname("SO")))
-        print("{0} = {1} {2}".format(data.displayname("SO","T_kollektor"),
-                                     data.values("SO","T_Kollektor"),
-                                     data.displayunit("SO","T_Kollektor")))
+        print("{0} = {1} {2}".format(data.displayname("SO", "T_kollektor"),
+                                     data.values("SO", "T_Kollektor"),
+                                     data.displayunit("SO", "T_Kollektor")))
 
         # print maxvalue and defaultvalue
         print(""" -- get default-/maxvalues:'T_ist_HK' from ["{0}"] ---""".format(
                                     data.getlongname("HK1")))
-        print("{0} = maxvalue:{1} ".format(data.displayname("HK1","T_ist_HK"),
-                                     data.maxvalue("HK1","T_ist_HK")))
-        print("{0} = default :{1} ".format(data.displayname("HK1","T_ist_HK"),
-                                     data.defaultvalue("HK1","T_ist_HK")))
+        print("{0} = maxvalue:{1} ".format(data.displayname("HK1", "T_ist_HK"),
+                                     data.maxvalue("HK1", "T_ist_HK")))
+        print("{0} = default :{1} ".format(data.displayname("HK1", "T_ist_HK"),
+                                     data.defaultvalue("HK1", "T_ist_HK")))
         print(""" -- Set default(10)/maxvalue(60):'T_ist_HK' to   ["{0}"] ---""".format(
                                     data.getlongname("HK1")))
-        data.update("HK1","T_ist_HK",32.1,"T-Ist  (Regler/Wand)","Celsius","ZSB14",60,10)
+        data.update("HK1", "T_ist_HK", 32.1, "T-Ist  (Regler/Wand)", "Celsius", "ZSB14", 60, 10)
         print(""" -- Get again default-/maxvalues:'T_ist_HK' from ["{0}"] ---""".format(
                                     data.getlongname("HK1")))
-        print("{0} = maxvalue:{1} ".format(data.displayname("HK1","T_ist_HK"),
-                                     data.maxvalue("HK1","T_ist_HK")))
-        print("{0} = default :{1} ".format(data.displayname("HK1","T_ist_HK"),
-                                     data.defaultvalue("HK1","T_ist_HK")))
-        
+        print("{0} = maxvalue:{1} ".format(data.displayname("HK1", "T_ist_HK"),
+                                     data.maxvalue("HK1", "T_ist_HK")))
+        print("{0} = default :{1} ".format(data.displayname("HK1", "T_ist_HK"),
+                                     data.defaultvalue("HK1", "T_ist_HK")))
 
         print(""" -- Update Systemtime ---""")
         # update system-date and time and print it
-        data.update("DT","Date","01.12.2013","System Datum")
-        data.update("DT","Time","11:12:13","Zeit")
-        print("{0}: {1}; {2}: {3}".format(data.displayname("DT","Date"),
-                                        data.values("DT","Date"),
-                                        data.displayname("DT","Time"),
-                                        data.values("DT","Time")))
-        
+        data.update("DT", "Date", "01.12.2013", "System Datum")
+        data.update("DT", "Time", "11:12:13", "Zeit")
+        print("{0}: {1}; {2}: {3}".format(data.displayname("DT", "Date"),
+                                        data.values("DT", "Date"),
+                                        data.displayname("DT", "Time"),
+                                        data.values("DT", "Time")))
+
         print(" -- show all hardwaretypes ---")
-        for nickname in ["HG","HK1","HK2","HK3","HK4","WW","SO","DT"]:
+        for nickname in ["HG", "HK1", "HK2", "HK3", "HK4", "WW", "SO", "DT"]:
             print("Nickname:{0:3.3}; HWtype:{1}".format(nickname, data.hardwaretype(nickname)))
-        
+
+        print(" -- show all sorted logitemnames of nickname: 'HG' ---")
+        print("logitem_names:{0}".format(data.getall_sorted_logitem_names("HG")))
+        print(" -- show all sorted logitemnames of nickname: 'HK1' ---")
+        print("logitem_names:{0}".format(data.getall_sorted_logitem_names("HK1")))
+        print(" -- show all sorted logitemnames of nickname: 'HK2' ---")
+        print("logitem_names:{0}".format(data.getall_sorted_logitem_names("HK2")))
+        print(" -- show all sorted logitemnames of nickname: 'HK3' ---")
+        print("logitem_names:{0}".format(data.getall_sorted_logitem_names("HK3")))
+        print(" -- show all sorted logitemnames of nickname: 'HK4' ---")
+        print("logitem_names:{0}".format(data.getall_sorted_logitem_names("HK4")))
+        print(" -- show all sorted logitemnames of nickname: 'WW' ---")
+        print("logitem_names:{0}".format(data.getall_sorted_logitem_names("WW")))
+        print(" -- show all sorted logitemnames of nickname: 'SO' ---")
+        print("logitem_names:{0}".format(data.getall_sorted_logitem_names("SO")))
+
+
+        print(" -- show all items_with_values of nickname: 'HG' ---")
+        print("{0}".format(data.getall_sorted_items_with_values("HG")))
+        print(" -- show all items_with_values of nickname: 'HK1' ---")
+        print("{0}".format(data.getall_sorted_items_with_values("HK1")))
+
+        print(""" -- Get access-context for dummy-accessname    ---""")
+        print("""      using dummy access-name: 'hg_access_1'""")
+        (nickname, logitem, itemname) = data.get_access_context("hg_access_1")
+        if nickname == 'HG' and len(itemname) > 0:
+            print("      Result OK -> Nickname:{0}; Logitem:{1}; Itemname:{2}".format(nickname, logitem, itemname))
+        else:
+            print("      Failed    -> Nickname:{0}; Logitem:{1}; Itemname:{2}".format(nickname, logitem, itemname))
