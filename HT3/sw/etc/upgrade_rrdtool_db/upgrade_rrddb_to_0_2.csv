@@ -1,0 +1,11 @@
+systempart;logitem_name;datatype;datause;max;default
+heizgeraet;V_displaycode;INT;GAUGE;65535;0
+heizgeraet;V_causecode;INT;GAUGE;65535;0
+heizkreis1;V_tempera_niveau;INT;GAUGE;10;0
+heizkreis1;V_operation_status;INT;GAUGE;10;0
+heizkreis2;V_tempera_niveau;INT;GAUGE;10;0
+heizkreis2;V_operation_status;INT;GAUGE;10;0
+heizkreis3;V_tempera_niveau;INT;GAUGE;10;0
+heizkreis3;V_operation_status;INT;GAUGE;10;0
+heizkreis4;V_tempera_niveau;INT;GAUGE;10;0
+heizkreis4;V_operation_status;INT;GAUGE;10;0
