@@ -23,7 +23,12 @@
 # Ver:0.1.8  / Datum 19.01.2016 'Betriebsart' added
 #              right_axis_label added see:
 #              https://www.mikrocontroller.net/topic/324673#3972919
-#              'Last' - Values added in legend
+#              'Last' - Values added in legend.
+# Ver:0.2    / Datum 29.08.2016 'Betriebsart' changed to 
+#                'TemperaturNiveau'.
+#               Display: All 'Minutes' changed to 'hours':=Stunden.
+#               'BZeit' changed to:LAST (from AVERAGE).
+#               FB10 remote-controller deactivated.
 #################################################################
 
 #
@@ -62,7 +67,7 @@ my $solar_rrdh      = RRDTool::OO->new(file => $DB_solar);
 # 
 # Set Starttime
 my $start_time     = time()-2880*60;
-my $end_time       = time();
+my $end_time       = time()-60;
 
 if ( defined $mystart_param && defined $myend_param ){
 	if ($mystart_param < $myend_param) {
@@ -215,13 +220,13 @@ $rc = $heizgeraet_rrdh->graph(
 		legend	=> 'Zirkulations-Pumpe\l',
 		cdef	=> "zirkula_pumpe,10,*"
 	},
-#Rev.:0.1.7 ######### deaktiviert
+#Rev.:0.1.7 ######### deactivated
 #	draw           => {
 #		dsname => 'V_heizungs_pumpe',
 #		type	=> "hidden",
 #		name	=> 'Heizungspumpe',
 #	},
-#Rev.:0.1.7 ######### neu
+#Rev.:0.1.7 ######### new using of 'V_spare_1'.
 	draw           => {
 		dsname => 'V_spare_1',
 		name	=> 'Heizungspumpenleistung',
@@ -294,7 +299,7 @@ $rc = $heizgeraet_rrdh->graph(
 		vdef	=> "BZeitg,LAST",
 	},
 	gprint		=> {
-		format	=> '  Betriebszeit gesamt \: %6.lf Minuten\l',
+		format	=> '  Betriebszeit gesamt \: %6.1lf Stunden\l',
 		draw	=> 'BZeitg_average',
 	},
 	draw		=> {
@@ -363,64 +368,54 @@ $rc = $heizkreis1_rrdh->graph(
 		format	=> '%2.1lf\l',
 		draw	=> 'TIst_HK_last',
 	},
-	draw		=> {
-		dsname	=> 'T_steuer_FB',
-		name	=> 'Raumtemperatur',
-		legend	=> 'T-Raum (FB10/FB100) min\:',
-		thickness => 2,
-		color	=> '8080ff'
-	},
-	# vdef for calculating Maximum, Minimum of 'Raumtemperatur'
-	draw		=> {
-		type	=> "hidden",
-		name	=> "Raumtemperatur_min",
-	vdef	=> "Raumtemperatur,MINIMUM",
-	},
-	gprint		=> {
-		format	=> '%3.1lf',
-		draw	=> 'Raumtemperatur_min',
-	},
-	draw		=> {
-		type	=> "hidden",
-		name	=> "Raumtemperatur_max",
-		vdef	=> "Raumtemperatur,MAXIMUM",
-	},
-	comment		=> 'max\:',
-	gprint		=> {
-		format	=> '%3.1lf',
-		draw	=> 'Raumtemperatur_max',
-	},
-	draw		=> {
-		type	=> "hidden",
-		name	=> "Raumtemperatur_HK_last",
-		vdef	=> "Raumtemperatur,LAST"
-	},
-	comment		=> '   last\:',
-	gprint		=> {
-		format	=> '%2.1lf\l',
-		draw	=> 'Raumtemperatur_HK_last',
-	},
+####### activate this if you are using a remote-controller #######################
+#	draw		=> {
+#		dsname	=> 'T_steuer_FB',
+#		name	=> 'Raumtemperatur',
+#		legend	=> 'T-Raum (FB10) min\:',
+#		thickness => 2,
+#		color	=> '8080ff'
+#	},
+#	# vdef for calculating Maximum, Minimum of 'Raumtemperatur'
+#	draw		=> {
+#		type	=> "hidden",
+#		name	=> "Raumtemperatur_min",
+#	vdef	=> "Raumtemperatur,MINIMUM",
+#	},
+#	gprint		=> {
+#		format	=> '%3.1lf',
+#		draw	=> 'Raumtemperatur_min',
+#	},
+#	draw		=> {
+#		type	=> "hidden",
+#		name	=> "Raumtemperatur_max",
+#		vdef	=> "Raumtemperatur,MAXIMUM",
+#	},
+#	comment		=> 'max\:',
+#	gprint		=> {
+#		format	=> '%3.1lf',
+#		draw	=> 'Raumtemperatur_max',
+#	},
+#	draw		=> {
+#		type	=> "hidden",
+#		name	=> "Raumtemperatur_HK_last",
+#		vdef	=> "Raumtemperatur,LAST"
+#	},
+#	comment		=> '   last\:',
+#	gprint		=> {
+#		format	=> '%2.1lf\l',
+#		draw	=> 'Raumtemperatur_HK_last',
+#	},
+##############################
 #Rev.:0.1.8 ######### 'Betriebsart' added
+#Rev.:0.2   ######### 'Betriebsart' changed to 'TemperaturNiveau'
 	draw		=> {
-		dsname	=> 'V_betriebs_art',
-		name	=> 'Betriebsart',
-		legend	=> 'Betriebsart (3=Heizen 2=Sparen 1=Frost)\l',
+		dsname	=> 'V_tempera_niveau',
+		name	=> 'TemperaturNiveau',
+		legend	=> 'Temperatur Niveau (3=Heizen 2=Sparen 1=Frost)\l',
 		thickness => 2,
 		color	=> '808080'
 	},
-#Rev.:0.1.8 ######### 'V_spare_1' deactivated
-#	draw		=> {
-#		dsname	=> 'V_spare_1',
-#		name	=> 'weisnich',
-#		legend	=> 'V_spare1 unbekannt',
-#		thickness => 2,
-#		color	=> '803300',
-#	},
-#	draw		=> {
-#		color	=> '803300',
-#		type	=> 'area',
-#		cdef	=> "weisnich,1,*"
-#	},
 );
 
 if ($myanzahlheizkreise>1) {
@@ -471,48 +466,51 @@ if ($myanzahlheizkreise>1) {
 			format	=> '%2.1lf\l',
 			draw	=> 'TIst_HK_last',
 		},
-		draw		=> {
-			dsname	=> 'T_steuer_FB',
-			name	=> 'Raumtemperatur',
-			legend	=> 'T-Raum (FB10/FB100) min\:',
-			thickness => 2,
-			color	=> '8080ff'
-		},
-		# vdef for calculating Maximum, Minimum of 'Raumtemperatur'
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Raumtemperatur_min",
-		vdef	=> "Raumtemperatur,MINIMUM",
-		},
-		gprint		=> {
-			format	=> '%3.1lf',
-			draw	=> 'Raumtemperatur_min',
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Raumtemperatur_max",
-			vdef	=> "Raumtemperatur,MAXIMUM",
-		},
-		comment		=> 'max\:',
-		gprint		=> {
-			format	=> '%3.1lf',
-			draw	=> 'Raumtemperatur_max',
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Raumtemperatur_HK_last",
-			vdef	=> "Raumtemperatur,LAST"
-		},
-		comment		=> '   last\:',
-		gprint		=> {
-			format	=> '%2.1lf\l',
-			draw	=> 'Raumtemperatur_HK_last',
-		},
+####### activate this if you are using a remote-controller #######################
+#		draw		=> {
+#			dsname	=> 'T_steuer_FB',
+#			name	=> 'Raumtemperatur',
+#			legend	=> 'T-Raum (FB10) min\:',
+#			thickness => 2,
+#			color	=> '8080ff'
+#		},
+#		# vdef for calculating Maximum, Minimum of 'Raumtemperatur'
+#		draw		=> {
+#			type	=> "hidden",
+#			name	=> "Raumtemperatur_min",
+#		vdef	=> "Raumtemperatur,MINIMUM",
+#		},
+#		gprint		=> {
+#			format	=> '%3.1lf',
+#			draw	=> 'Raumtemperatur_min',
+#		},
+#		draw		=> {
+#			type	=> "hidden",
+#			name	=> "Raumtemperatur_max",
+#			vdef	=> "Raumtemperatur,MAXIMUM",
+#		},
+#		comment		=> 'max\:',
+#		gprint		=> {
+#			format	=> '%3.1lf',
+#			draw	=> 'Raumtemperatur_max',
+#		},
+#		draw		=> {
+#			type	=> "hidden",
+#			name	=> "Raumtemperatur_HK_last",
+#			vdef	=> "Raumtemperatur,LAST"
+#		},
+#		comment		=> '   last\:',
+#		gprint		=> {
+#			format	=> '%2.1lf\l',
+#			draw	=> 'Raumtemperatur_HK_last',
+#		},
+##############################
 #Rev.:0.1.8 ######### 'Betriebsart' added
+#Rev.:0.2   ######### 'Betriebsart' changed to 'TemperaturNiveau'
 		draw		=> {
-			dsname	=> 'V_betriebs_art',
-			name	=> 'Betriebsart',
-			legend	=> 'Betriebsart (3=Heizen 2=Sparen 1=Frost)\l',
+			dsname	=> 'V_tempera_niveau',
+			name	=> 'TemperaturNiveau',
+			legend	=> 'Temperatur Niveau (3=Heizen 2=Sparen 1=Frost)\l',
 			thickness => 2,
 			color	=> '808080'
 		},
@@ -567,48 +565,51 @@ if ($myanzahlheizkreise>2) {
 			format	=> '%2.1lf\l',
 			draw	=> 'TIst_HK_last',
 		},
-		draw		=> {
-			dsname	=> 'T_steuer_FB',
-			name	=> 'Raumtemperatur',
-			legend	=> 'T-Raum (FB10/FB100) min\:',
-			thickness => 2,
-			color	=> '8080ff'
-		},
-		# vdef for calculating Maximum, Minimum of 'Raumtemperatur'
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Raumtemperatur_min",
-		vdef	=> "Raumtemperatur,MINIMUM",
-		},
-		gprint		=> {
-			format	=> '%3.1lf',
-			draw	=> 'Raumtemperatur_min',
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Raumtemperatur_max",
-			vdef	=> "Raumtemperatur,MAXIMUM",
-		},
-		comment		=> 'max\:',
-		gprint		=> {
-			format	=> '%3.1lf',
-			draw	=> 'Raumtemperatur_max',
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Raumtemperatur_HK_last",
-			vdef	=> "Raumtemperatur,LAST"
-		},
-		comment		=> '   last\:',
-		gprint		=> {
-			format	=> '%2.1lf\l',
-			draw	=> 'Raumtemperatur_HK_last',
-		},
+####### activate this if you are using a remote-controller #######################
+#		draw		=> {
+#			dsname	=> 'T_steuer_FB',
+#			name	=> 'Raumtemperatur',
+#			legend	=> 'T-Raum (FB10) min\:',
+#			thickness => 2,
+#			color	=> '8080ff'
+#		},
+#		# vdef for calculating Maximum, Minimum of 'Raumtemperatur'
+#		draw		=> {
+#			type	=> "hidden",
+#			name	=> "Raumtemperatur_min",
+#		vdef	=> "Raumtemperatur,MINIMUM",
+#		},
+#		gprint		=> {
+#			format	=> '%3.1lf',
+#			draw	=> 'Raumtemperatur_min',
+#		},
+#		draw		=> {
+#			type	=> "hidden",
+#			name	=> "Raumtemperatur_max",
+#			vdef	=> "Raumtemperatur,MAXIMUM",
+#		},
+#		comment		=> 'max\:',
+#		gprint		=> {
+#			format	=> '%3.1lf',
+#			draw	=> 'Raumtemperatur_max',
+#		},
+#		draw		=> {
+#			type	=> "hidden",
+#			name	=> "Raumtemperatur_HK_last",
+#			vdef	=> "Raumtemperatur,LAST"
+#		},
+#		comment		=> '   last\:',
+#		gprint		=> {
+#			format	=> '%2.1lf\l',
+#			draw	=> 'Raumtemperatur_HK_last',
+#		},
+##############################
 #Rev.:0.1.8 ######### 'Betriebsart' added
+#Rev.:0.2   ######### 'Betriebsart' changed to 'TemperaturNiveau'
 		draw		=> {
-			dsname	=> 'V_betriebs_art',
-			name	=> 'Betriebsart',
-			legend	=> 'Betriebsart (3=Heizen 2=Sparen 1=Frost)\l',
+			dsname	=> 'V_tempera_niveau',
+			name	=> 'TemperaturNiveau',
+			legend	=> 'Temperatur Niveau (3=Heizen 2=Sparen 1=Frost)\l',
 			thickness => 2,
 			color	=> '808080'
 		},
@@ -663,48 +664,51 @@ if ($myanzahlheizkreise>3) {
 			format	=> '%2.1lf\l',
 			draw	=> 'TIst_HK_last',
 		},
-		draw		=> {
-			dsname	=> 'T_steuer_FB',
-			name	=> 'Raumtemperatur',
-			legend	=> 'T-Raum (FB10/FB100) min\:',
-			thickness => 2,
-			color	=> '8080ff'
-		},
-		# vdef for calculating Maximum, Minimum of 'Raumtemperatur'
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Raumtemperatur_min",
-		vdef	=> "Raumtemperatur,MINIMUM",
-		},
-		gprint		=> {
-			format	=> '%3.1lf',
-			draw	=> 'Raumtemperatur_min',
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Raumtemperatur_max",
-			vdef	=> "Raumtemperatur,MAXIMUM",
-		},
-		comment		=> 'max\:',
-		gprint		=> {
-			format	=> '%3.1lf',
-			draw	=> 'Raumtemperatur_max',
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Raumtemperatur_HK_last",
-			vdef	=> "Raumtemperatur,LAST"
-		},
-		comment		=> '   last\:',
-		gprint		=> {
-			format	=> '%2.1lf\l',
-			draw	=> 'Raumtemperatur_HK_last',
-		},
+####### activate this if you are using a remote-controller #######################
+#		draw		=> {
+#			dsname	=> 'T_steuer_FB',
+#			name	=> 'Raumtemperatur',
+#			legend	=> 'T-Raum (FB10) min\:',
+#			thickness => 2,
+#			color	=> '8080ff'
+#		},
+#		# vdef for calculating Maximum, Minimum of 'Raumtemperatur'
+#		draw		=> {
+#			type	=> "hidden",
+#			name	=> "Raumtemperatur_min",
+#		vdef	=> "Raumtemperatur,MINIMUM",
+#		},
+#		gprint		=> {
+#			format	=> '%3.1lf',
+#			draw	=> 'Raumtemperatur_min',
+#		},
+#		draw		=> {
+#			type	=> "hidden",
+#			name	=> "Raumtemperatur_max",
+#			vdef	=> "Raumtemperatur,MAXIMUM",
+#		},
+#		comment		=> 'max\:',
+#		gprint		=> {
+#			format	=> '%3.1lf',
+#			draw	=> 'Raumtemperatur_max',
+#		},
+#		draw		=> {
+#			type	=> "hidden",
+#			name	=> "Raumtemperatur_HK_last",
+#			vdef	=> "Raumtemperatur,LAST"
+#		},
+#		comment		=> '   last\:',
+#		gprint		=> {
+#			format	=> '%2.1lf\l',
+#			draw	=> 'Raumtemperatur_HK_last',
+#		},
+##############################
 #Rev.:0.1.8 ######### 'Betriebsart' added
+#Rev.:0.2   ######### 'Betriebsart' changed to 'TemperaturNiveau'
 		draw		=> {
-			dsname	=> 'V_betriebs_art',
-			name	=> 'Betriebsart',
-			legend	=> 'Betriebsart (3=Heizen 2=Sparen 1=Frost)\l',
+			dsname	=> 'V_tempera_niveau',
+			name	=> 'TemperaturNiveau',
+			legend	=> 'Temperatur Niveau (3=Heizen 2=Sparen 1=Frost)\l',
 			thickness => 2,
 			color	=> '808080'
 		},
@@ -801,12 +805,12 @@ $rc = $warmwasser_rrdh->graph(
 	},
 	draw		=> {
 		type	=> "hidden",
-		name	=> "BZeit_average",
-		vdef	=> "BZeit,AVERAGE",
+		name	=> "BZeit_last",
+		vdef	=> "BZeit,LAST",
 	},
 	gprint		=> {
-		format	=> '  Betriebszeit  \:%5.lf Minuten',
-		draw	=> 'BZeit_average',
+		format	=> '  Betriebszeit  \:%5.1lf Stunden',
+		draw	=> 'BZeit_last',
 	},
 	comment		=> ' \s',
 	comment		=> ' \s',
@@ -1000,7 +1004,7 @@ $rc = $solar_rrdh->graph(
 #		cdef	=> "pumpenlaufzeit,0.017,*",
 	},
 	gprint		=> {
-		format	=> '  Laufzeit Pumpe    \:%5.0lf Minuten',
+		format	=> '  Laufzeit Pumpe    \:%5.1lf Stunden',
 		draw	=> 'pumpenlauf_draw',
 	},
 	comment		=> ' \s',
