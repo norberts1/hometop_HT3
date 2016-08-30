@@ -31,6 +31,13 @@
  # Ver:0.1.7.1/ Datum 04.03.2015
  #               added   <logging>
  # Ver:0.1.8.2/ Datum 22.02.2016 buscoding update to 1,2,3,4
+ # Ver:0.1.9    Datum 16.05.2016 display- and cause-code added
+ # Ver:0.1.10   Datum 16.08.2016 Temperatur-Niveau and operation_status
+ #                                added for heating-circuits
+ #                           Display-Name changed from:'Speicherladepumpe' to
+ #                            '3-Weg -> WW-Speicher'
+ #                           'buscodierung' removed
+ # Ver:0.2    / Datum 29.08.2016 rev. to 0.2
  #################################################################
  #
  #  Configuration-file for 'HT3_heater'-datalogging to databases.
@@ -62,8 +69,13 @@
     <dbname_sqlite>./var/databases/HT3_db.sqlite</dbname_sqlite>
     <sql-db>
       <enable>on</enable>
+      <!-- autoerase_olddata: 
+        parameter used for auto-erasing the oldest database content(s)
+         if set to:0  autoerasing is disabled.
+         if set to:>0 autoerasing is enabled and done for data older then [value] days.
+      -->
+      <autoerase_olddata>30</autoerase_olddata>
     </sql-db>
-
 
     <!-- rrdtool-database -->
     <dbname_rrd>./var/databases/HT3_db_rrd</dbname_rrd>
@@ -75,6 +87,13 @@
       <enable>on</enable>
       <step_seconds>60</step_seconds>
       <starttime_utc>1344000000</starttime_utc>
+      <!-- autocreate_draw: 
+        parameter used for auto-creating the png-draws from rrdtool-database content.
+         if set to:0 or off autocreating is disabled.
+         if set to:1 or on  autocreating is enabled 
+            (only if database is also set to:<enable>on</enable>)
+      -->
+      <autocreate_draw>on</autocreate_draw>
     </rrdtool-db>
 
     <!-- global configuration-values -->
@@ -113,7 +132,7 @@
     <!-- systempart definitions -->
     <systempart name="heizgeraet">
         <shortname name="HG"/>
-        <hardwaretype>CSW</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <hardwaretype>Junkers</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
         <logitem name="T_vorlauf_soll">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
@@ -121,6 +140,7 @@
             <default>0</default>
             <unit>Grad</unit>
             <displayname>T-Soll (Regelung)</displayname>
+            <accessname>ch_Tflow_desired</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_vorlauf_ist">
             <datatype>REAL</datatype>
@@ -129,6 +149,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Ist (Vorlauf)</displayname>
+            <accessname>ch_Tflow_measured</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_ruecklauf">
             <datatype>REAL</datatype>
@@ -137,6 +158,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Ruecklauf</displayname>
+            <accessname>ch_Treturn</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_mischer">
             <datatype>REAL</datatype>
@@ -144,15 +166,17 @@
             <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
-            <displayname>T-Mischer</displayname>
+            <displayname>T-3Wege Mischer</displayname>
+            <accessname>ch_T3waymixer</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_modus">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
             <maxvalue>1</maxvalue>
             <default>0</default>
-            <unit>(Standby/Heizen/Warmwasser)</unit>
+            <unit></unit>
             <displayname>Betriebsmodus</displayname>
+            <accessname>ch_mode</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_brenner_motor">
             <datatype>INT</datatype>
@@ -161,6 +185,7 @@
             <default>0.0</default>
             <unit></unit>
             <displayname>Brennermotor</displayname>
+            <accessname>ch_burner_fan</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_brenner_flamme">
             <datatype>INT</datatype>
@@ -169,6 +194,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Brennerflamme</displayname>
+            <accessname>ch_burner_operation</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_leistung">
             <datatype>INT</datatype>
@@ -177,6 +203,7 @@
             <default>0</default>
             <unit>%</unit>
             <displayname>Leistung</displayname>
+            <accessname>ch_burner_power</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_heizungs_pumpe">
             <datatype>INT</datatype>
@@ -185,6 +212,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Heizungspumpe</displayname>
+            <accessname>ch_pump_heating</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_zirkula_pumpe">
             <datatype>INT</datatype>
@@ -193,6 +221,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Zirkulationspumpe</displayname>
+            <accessname>ch_pump_circulation</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_speicher_pumpe">
             <datatype>INT</datatype>
@@ -200,7 +229,10 @@
             <maxvalue>1</maxvalue>
             <default>0</default>
             <unit></unit>
-            <displayname>Speicherladepumpe</displayname>
+            <!-- displayname changed but logitem name still the same
+              for backward compatibility -->
+            <displayname>3-Weg -> WW-Speicher</displayname>
+            <accessname>ch_pump_cylinder</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_aussen">
             <datatype>REAL</datatype>
@@ -209,6 +241,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Aussen</displayname>
+            <accessname>ch_Toutside</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="C_betrieb_gesamt">
             <datatype>INT</datatype>
@@ -217,6 +250,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Betrieb Gesamt</displayname>
+            <accessname>ch_runtime_tot</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="C_betrieb_heizung">
             <datatype>INT</datatype>
@@ -225,6 +259,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Betrieb Heizung</displayname>
+            <accessname>ch_runtime_ch</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="C_brenner_gesamt">
             <datatype>INT</datatype>
@@ -233,6 +268,7 @@
             <default>0</default>
             <unit>Zaehler</unit>
             <displayname>Brenner Gesamt Ein</displayname>
+            <accessname>ch_starts_tot</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="C_brenner_heizung">
             <datatype>INT</datatype>
@@ -241,6 +277,25 @@
             <default>0</default>
             <unit>Zaehler</unit>
             <displayname>Brenner Heizung Ein</displayname>
+            <accessname>ch_starts_ch</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_displaycode">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>65535</maxvalue>
+            <default>0</default>
+            <unit>(Errorcode)</unit>
+            <displayname>Displaycode</displayname>
+            <accessname>ch_errorcode</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_causecode">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>65535</maxvalue>
+            <default>0</default>
+            <unit> (Detail)</unit>
+            <displayname>Causecode</displayname>
+            <accessname>ch_causecode</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
@@ -249,14 +304,16 @@
             <default>0</default>
             <unit>%</unit>
             <displayname>Heizpumpenleistung</displayname>
+            <accessname>ch_pump_heating_power</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="hexdump">
             <datatype>TEXT</datatype>
@@ -265,14 +322,14 @@
             <default>""</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
     </systempart>
 
     <systempart name="heizkreis1">
         <shortname name="HK1"/>
-        <hardwaretype>CSW mit FB10</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <hardwaretype>HK1</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
         <unmixed>True</unmixed>   <!-- True/False -->
-        <buscodierung>1</buscodierung>   <!-- 1,2,3,4 -->
         <logitem name="T_soll_HK">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
@@ -280,6 +337,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Soll (gewünscht)</displayname>
+            <accessname>hc1_Tdesired</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_ist_HK">
             <datatype>REAL</datatype>
@@ -287,7 +345,8 @@
             <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
-            <displayname>T-Ist  (Regler/Wand)</displayname>
+            <displayname>T-Ist  (vom Regler)</displayname>
+            <accessname>hc1_Tmeasured</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_steuer_FB">
             <datatype>REAL</datatype>
@@ -296,14 +355,16 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Raum (FB10/FB100)</displayname>
+            <accessname>hc1_Troom</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_betriebs_art">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
             <maxvalue>10</maxvalue>
             <default>0</default>
-            <unit>(Heizen/Sparen/Frost)</unit>
-            <displayname>Betriebsart</displayname>
+            <unit></unit>
+            <displayname>not supported anymore</displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_mischerstellung">
             <datatype>INT</datatype>
@@ -312,6 +373,7 @@
             <default>0</default>
             <unit>%</unit>
             <displayname>Mischerstellung</displayname>
+            <accessname>hc1_mixerpositon</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_vorlauf_misch_HK">
             <datatype>REAL</datatype>
@@ -320,22 +382,43 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Vorlauf Mischer</displayname>
+            <accessname>hc1_Tflow_mixer</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_tempera_niveau">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Temperatur-Niveau</displayname>
+            <accessname>hc1_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_operation_status">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Betriebsstatus</displayname>
+            <accessname>hc1_operationstatus</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname>V1 unbekannt</displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="hexdump">
             <datatype>TEXT</datatype>
@@ -344,14 +427,14 @@
             <default>""</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
     </systempart>
 
     <systempart name="heizkreis2">
         <shortname name="HK2"/>
-        <hardwaretype>IPM2-Modul</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <hardwaretype>HK2</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
         <unmixed>False</unmixed>   <!-- True/False -->
-        <buscodierung>2</buscodierung>   <!-- 1,2,3,4 -->
         <logitem name="T_soll_HK">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
@@ -359,6 +442,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Soll (gewünscht)</displayname>
+            <accessname>hc2_Tdesired</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_ist_HK">
             <datatype>REAL</datatype>
@@ -366,7 +450,8 @@
             <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
-            <displayname>T-Ist  (Regler/Wand)</displayname>
+            <displayname>T-Ist  (vom Regler)</displayname>
+            <accessname>hc2_Tmeasured</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_steuer_FB">
             <datatype>REAL</datatype>
@@ -375,14 +460,16 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Raum (FB10/FB100)</displayname>
+            <accessname>hc2_Troom</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_betriebs_art">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
             <maxvalue>10</maxvalue>
             <default>0</default>
-            <unit>(Heizen/Sparen/Frost)</unit>
-            <displayname>Betriebsart</displayname>
+            <unit></unit>
+            <displayname>not supported anymore</displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_mischerstellung">
             <datatype>INT</datatype>
@@ -391,6 +478,7 @@
             <default>0</default>
             <unit>%</unit>
             <displayname>Mischerstellung</displayname>
+            <accessname>hc2_mixerpositon</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_vorlauf_misch_HK">
             <datatype>REAL</datatype>
@@ -399,22 +487,43 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Vorlauf Mischer</displayname>
+            <accessname>hc2_Tflow_mixer</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_tempera_niveau">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Temperatur-Niveau</displayname>
+            <accessname>hc2_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_operation_status">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Betriebsstatus</displayname>
+            <accessname>hc2_operationstatus</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname>V1 unbekannt</displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="hexdump">
             <datatype>TEXT</datatype>
@@ -423,14 +532,14 @@
             <default>""</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
     </systempart>
 
     <systempart name="heizkreis3">
         <shortname name="HK3"/>
-        <hardwaretype>IPM2-Modul</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <hardwaretype>HK3</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
         <unmixed>False</unmixed>   <!-- True/False -->
-        <buscodierung>3</buscodierung>   <!-- 1,2,3,4 -->
         <logitem name="T_soll_HK">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
@@ -438,6 +547,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Soll (gewünscht)</displayname>
+            <accessname>hc3_Tdesired</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_ist_HK">
             <datatype>REAL</datatype>
@@ -445,7 +555,8 @@
             <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
-            <displayname>T-Ist  (Regler/Wand)</displayname>
+            <displayname>T-Ist  (vom Regler)</displayname>
+            <accessname>hc3_Tmeasured</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_steuer_FB">
             <datatype>REAL</datatype>
@@ -454,14 +565,16 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Raum (FB10/FB100)</displayname>
+            <accessname>hc3_Troom</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_betriebs_art">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
             <maxvalue>10</maxvalue>
             <default>0</default>
-            <unit>(Heizen/Sparen/Frost)</unit>
-            <displayname>Betriebsart</displayname>
+            <unit></unit>
+            <displayname>not supported anymore</displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_mischerstellung">
             <datatype>INT</datatype>
@@ -470,6 +583,7 @@
             <default>0</default>
             <unit>%</unit>
             <displayname>Mischerstellung</displayname>
+            <accessname>hc3_mixerpositon</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_vorlauf_misch_HK">
             <datatype>REAL</datatype>
@@ -478,22 +592,43 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Vorlauf Mischer</displayname>
+            <accessname>hc3_Tflow_mixer</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_tempera_niveau">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Temperatur-Niveau</displayname>
+            <accessname>hc3_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_operation_status">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Betriebsstatus</displayname>
+            <accessname>hc3_operationstatus</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname>V1 unbekannt</displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="hexdump">
             <datatype>TEXT</datatype>
@@ -502,14 +637,14 @@
             <default>""</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
     </systempart>
 
     <systempart name="heizkreis4">
         <shortname name="HK4"/>
-        <hardwaretype>IPM2-Modul</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <hardwaretype>HK4</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
         <unmixed>True</unmixed>   <!-- True/False -->
-        <buscodierung>4</buscodierung>   <!-- 1,2,3,4 -->
         <logitem name="T_soll_HK">
             <datatype>REAL</datatype>
             <datause>GAUGE</datause>
@@ -517,6 +652,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Soll (gewünscht)</displayname>
+            <accessname>hc4_Tdesired</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_ist_HK">
             <datatype>REAL</datatype>
@@ -524,7 +660,8 @@
             <maxvalue>100.0</maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
-            <displayname>T-Ist  (Regler/Wand)</displayname>
+            <displayname>T-Ist  (vom Regler)</displayname>
+            <accessname>hc4_Tmeasured</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_steuer_FB">
             <datatype>REAL</datatype>
@@ -533,14 +670,16 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Raum (FB10/FB100)</displayname>
+            <accessname>hc4_Troom</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_betriebs_art">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
             <maxvalue>10</maxvalue>
             <default>0</default>
-            <unit>(Heizen/Sparen/Frost)</unit>
-            <displayname>Betriebsart</displayname>
+            <unit></unit>
+            <displayname>not supported anymore</displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_mischerstellung">
             <datatype>INT</datatype>
@@ -549,6 +688,7 @@
             <default>0</default>
             <unit>%</unit>
             <displayname>Mischerstellung</displayname>
+            <accessname>hc4_mixerpositon</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_vorlauf_misch_HK">
             <datatype>REAL</datatype>
@@ -557,22 +697,43 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Vorlauf Mischer</displayname>
+            <accessname>hc4_Tflow_mixer</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_tempera_niveau">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Temperatur-Niveau</displayname>
+            <accessname>hc4_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_operation_status">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Betriebsstatus</displayname>
+            <accessname>hc4_operationstatus</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname>V1 unbekannt</displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="hexdump">
             <datatype>TEXT</datatype>
@@ -581,12 +742,13 @@
             <default>""</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
     </systempart>
 
     <systempart name="warmwasser">
         <shortname name="WW"/>
-        <hardwaretype>CSW</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
+        <hardwaretype>Junkers</hardwaretype>   <!-- Wert wird nur in GUI angezeigt -->
         <load_pump>False</load_pump>   <!-- True/False , Lade-Pumpe fuer separaten WarmWasser-Speicher -->
                                        <!--              angesteuert durch Modul IPM2 -->
         <logitem name="T_soll">
@@ -596,6 +758,7 @@
             <default>0</default>
             <unit>Grad</unit>
             <displayname>T-Soll</displayname>
+            <accessname>dhw_Tdesired</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_ist">
             <datatype>REAL</datatype>
@@ -604,6 +767,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Ist</displayname>
+            <accessname>dhw_Tmeasured</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_speicher">
             <datatype>REAL</datatype>
@@ -612,6 +776,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Speicher</displayname>
+            <accessname>dhw_Tcylinder</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="C_betriebs_zeit">
             <datatype>INT</datatype>
@@ -620,6 +785,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Betriebszeit</displayname>
+            <accessname>ch_runtime_dhw</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="C_brenner_ww">
             <datatype>INT</datatype>
@@ -628,6 +794,7 @@
             <default>0</default>
             <unit>Zaehler</unit>
             <displayname>Brenner WarmW Ein</displayname>
+            <accessname>ch_starts_dhw</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_WW_einmalladung">
             <datatype>INT</datatype>
@@ -636,6 +803,7 @@
             <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname>dhw_charge_once</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_WW_desinfekt">
             <datatype>INT</datatype>
@@ -644,6 +812,7 @@
             <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname>dhw_thermal_desinfection</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_WW_erzeugung">
             <datatype>INT</datatype>
@@ -652,6 +821,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Warmwasser-Erzeugung</displayname>
+            <accessname>dhw_generating</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_WW_nachladung">
             <datatype>INT</datatype>
@@ -660,6 +830,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Nachladung</displayname>
+            <accessname>dhw_boost_charge</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_WW_temp_OK">
             <datatype>INT</datatype>
@@ -668,6 +839,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Speichertemperatur OK</displayname>
+            <accessname>dhw_Tok</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_lade_pumpe">
             <datatype>INT</datatype>
@@ -676,6 +848,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Speicherladepumpe</displayname>
+            <accessname>dhw_pump_cylinder</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_zirkula_pumpe">
             <datatype>INT</datatype>
@@ -684,22 +857,25 @@
             <default>0</default>
             <unit></unit>
             <displayname>Zirkulationspumpe</displayname>
+            <accessname>dhw_pump_circulation</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="hexdump">
             <datatype>TEXT</datatype>
@@ -708,6 +884,7 @@
             <default>""</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
     </systempart>
 
@@ -723,6 +900,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Kollektor</displayname>
+            <accessname>sol_Tcollector</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_speicher_unten">
             <datatype>REAL</datatype>
@@ -731,6 +909,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Speicher unten</displayname>
+            <accessname>sol_Tcylinder_bottom</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_ertrag_stunde">
             <datatype>INT</datatype>
@@ -739,6 +918,7 @@
             <default>0</default>
             <unit>Wh</unit>
             <displayname>Ertrag letzte Stunde</displayname>
+            <accessname>sol_yield_last_hour</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_ertrag_2">
             <datatype>INT</datatype>
@@ -747,6 +927,7 @@
             <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname>sol_yield_2</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_solar_pumpe">
             <datatype>INT</datatype>
@@ -755,6 +936,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Solarpumpe</displayname>
+            <accessname>sol_pump</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="C_laufzeit">
             <datatype>INT</datatype>
@@ -763,6 +945,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Laufzeit</displayname>
+            <accessname>sol_runtime</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_ertrag_tag_calc">
             <datatype>INT</datatype>
@@ -771,6 +954,7 @@
             <default>0</default>
             <unit>kWh</unit>
             <displayname></displayname>
+            <accessname>sol_yield_last_day</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_ertrag_sum_calc">
             <datatype>INT</datatype>
@@ -779,6 +963,7 @@
             <default>0</default>
             <unit>kWh</unit>
             <displayname></displayname>
+            <accessname>sol_yield_sum</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_hybrid_buffer">
             <datatype>REAL</datatype>
@@ -787,6 +972,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Zusatzspeicher</displayname>
+            <accessname>sol_Thybrid_buffer</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_hybrid_sysinput">
             <datatype>REAL</datatype>
@@ -795,6 +981,7 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Hydraulische Weiche</displayname>
+            <accessname>sol_Thybrid_sysinput</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_speicher_voll">
             <datatype>INT</datatype>
@@ -803,6 +990,7 @@
             <default>0</default>
             <unit></unit>
             <displayname>Solarspeicher voll</displayname>
+            <accessname>sol_buffer_full</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_kollektor_aus">
             <datatype>INT</datatype>
@@ -811,22 +999,25 @@
             <default>0</default>
             <unit></unit>
             <displayname>Kollektorfeld deaktiv</displayname>
+            <accessname>sol_collector_deactive</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
-            <maxvalue></maxvalue>
-            <default></default>
+            <maxvalue>100</maxvalue>
+            <default>0</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="hexdump">
             <datatype>TEXT</datatype>
@@ -835,6 +1026,7 @@
             <default>""</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
     </systempart>
 
@@ -848,6 +1040,7 @@
             <default>""</default>
             <unit></unit>
             <displayname>System-Datum</displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="Time">
             <datatype>TEXT</datatype>
@@ -856,6 +1049,7 @@
             <default>""</default>
             <unit></unit>
             <displayname>System-Zeit </displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="hexdump">
             <datatype>TEXT</datatype>
@@ -864,6 +1058,7 @@
             <default>""</default>
             <unit></unit>
             <displayname></displayname>
+            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
     </systempart>
 </HT3_db_cfg>
