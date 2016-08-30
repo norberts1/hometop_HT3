@@ -78,7 +78,7 @@
 
     <!-- global configuration-values -->
     <data_interface>
-      <comm_type>ASYNC</comm_type> <!-- communication-types are: 
+      <comm_type>SOCKET</comm_type> <!-- communication-types are: 
                                             ASYNC:=tty/comport; SOCKET:= socket-interface -->
       <proto_type>RAW</proto_type>  <!-- protocoll-types     are: 
                                             RAW:=transparent  ; TRX   :=TBD (transceiver-messages with header) -->
@@ -89,7 +89,7 @@
         <config>"8N1"</config>  <!-- only 8N1 available -->
       </parameter>
       <parameter name="SOCKET">
-        <proxy_config_file>./ht_proxy_cfg_test.xml</proxy_config_file>
+        <proxy_config_file>./../etc/config/4test/ht_proxy_cfg_test.xml</proxy_config_file>
       </parameter>
     </data_interface>
 
@@ -239,6 +239,24 @@
             <unit>Zaehler</unit>
             <displayname>Brenner Heizung Ein</displayname>
         </logitem>
+        <logitem name="V_displaycode">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>65535</maxvalue>
+            <default>0</default>
+            <unit>(Errorcode)</unit>
+            <displayname>Displaycode</displayname>
+            <accessname>ch_errorcode</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_causecode">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>65535</maxvalue>
+            <default>0</default>
+            <unit> (Detail)</unit>
+            <displayname>Causecode</displayname>
+            <accessname>ch_causecode</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
@@ -317,6 +335,24 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Vorlauf Mischer</displayname>
+        </logitem>
+        <logitem name="V_tempera_niveau">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Temperatur-Niveau</displayname>
+            <accessname>hc1_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_operation_status">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Betriebsstatus</displayname>
+            <accessname>hc1_operationstatus</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
@@ -397,6 +433,24 @@
             <unit>Grad</unit>
             <displayname>T-Vorlauf Mischer</displayname>
         </logitem>
+        <logitem name="V_tempera_niveau">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Temperatur-Niveau</displayname>
+            <accessname>hc1_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_operation_status">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Betriebsstatus</displayname>
+            <accessname>hc1_operationstatus</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
@@ -476,6 +530,24 @@
             <unit>Grad</unit>
             <displayname>T-Vorlauf Mischer</displayname>
         </logitem>
+        <logitem name="V_tempera_niveau">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Temperatur-Niveau</displayname>
+            <accessname>hc1_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_operation_status">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Betriebsstatus</displayname>
+            <accessname>hc1_operationstatus</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>
             <datause>GAUGE</datause>
@@ -554,6 +626,24 @@
             <default>0.0</default>
             <unit>Grad</unit>
             <displayname>T-Vorlauf Mischer</displayname>
+        </logitem>
+        <logitem name="V_tempera_niveau">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Temperatur-Niveau</displayname>
+            <accessname>hc1_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+        </logitem>
+        <logitem name="V_operation_status">
+            <datatype>INT</datatype>
+            <datause>GAUGE</datause>
+            <maxvalue>10</maxvalue>
+            <default>0</default>
+            <unit></unit>
+            <displayname>Betriebsstatus</displayname>
+            <accessname>hc1_operationstatus</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_1">
             <datatype>INT</datatype>

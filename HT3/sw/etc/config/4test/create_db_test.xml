@@ -29,6 +29,8 @@
  #               removed <portnumber>
  # Ver:0.1.7.1/ Datum 04.03.2015
  #               added   <logging>
+ # Ver:0.1.10.  Datum 25.08.2016
+ #                autoerase_olddata added
  #################################################################
  #
  #  Configuration-file for 'HT3_heater'-datalogging to databases.
@@ -61,6 +63,12 @@
     <dbname_sqlite>/tmp/db_test.sqlite</dbname_sqlite>
     <sql-db>
       <enable>1</enable>
+      <!-- autoerase_olddata: 
+        parameter used for auto-erasing the oldest database content(s)
+         if set to:0  autoerasing is disabled.
+         if set to:>0 autoerasing is enabled and done for data older then [value] days.
+      -->
+      <autoerase_olddata>1</autoerase_olddata>
     </sql-db>
 
     <dbname_rrd>/tmp/db_test_rrd</dbname_rrd>
@@ -72,6 +80,13 @@
       <enable>on</enable>
       <step_seconds>60</step_seconds>
       <starttime_utc>1344000000</starttime_utc>
+      <!-- autocreate_draw: 
+        parameter used for auto-creating the png-draws from rrdtool-database content.
+         if set to:0 or off autocreating is disabled.
+         if set to:1 or on  autocreating is enabled 
+            (only if database is also set to:<enable>on</enable>)
+      -->
+      <autocreate_draw>on</autocreate_draw>
     </rrdtool-db>
 
     <!-- global configuration-values -->
