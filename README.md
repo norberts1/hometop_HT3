@@ -4,48 +4,50 @@
 Most everything needed for your heater-system to be shown at your 'hometop' -> 
 *pimp your heater*.
 
-This project is limited to the recording/controlling and presentation of heating and solar informations.
-Currently only heater-systems from german manufacturer: **`Junkers`** and system-bus: **'Heatronic/EMS2 (c)'** are supported. 
+This project is limited to recording/controlling and presentation of heating and solar informations.
+Currently only heater-systems from german manufacturer: **`Junkers`** and system-bus: **`Heatronic/EMS2 (c)`** are supported. 
 
 ## Description
 
 This repo can not fulfill all wishes you could have to your 'hometop'.
 Each has his ideas such as the 'home' can be 'Top'. 
 The presentation of informations from the own 'home' with it's heater-system is what this repo will do.
-Other projects are working too on this item, example: [FHEM](www.fhem.de)
+Other projects are working too on this item, example: [FHEM](http://fhem.de/fhem.html)
 
 This repo was started creating some different boards for the RaspberryPi(c).  
-The table shows the currently available boards:
-Board-name       | function | remark
------------------|----------|-------
+The table shows the currently available boards:  
+
+Board-name       | function             | remark
+-----------------|----------------------|-----------------------------------
 HT3_Mini_Adapter | receiving Bus - data | for RaspberryPi, see: [Mini-Adapter](https://www.mikrocontroller.net/topic/317004#3432732)
-HT3_Micro_Adapter| receiving Bus - data *(with UART<->USB converter)* | any USB-hoster, see: [Micro-Adapter](https://www.mikrocontroller.net/topic/317004#3548193)
-ht_piduino       | transmit- and receiving Bus - data *(with ATmega 328)* | for RaspberryPi, see: [ht_piduino](https://www.mikrocontroller.net/topic/317004#3925213)
-ht_pitiny        | transmit- and receiving Bus - data *(with ATtiny 841)* | for RaspberryPi, see: [ht_piduino](https://www.mikrocontroller.net/topic/317004#3925213)
-ht_motherboard   | usb-interface for above boards *(not for 'HT3_Micro_Adapter')* | see: [ht_motherboard](https://www.mikrocontroller.net/topic/317004#3936050)
+HT3_Micro_Adapter| receiving Bus - data | any USB-hoster, see: [Micro-Adapter](https://www.mikrocontroller.net/topic/317004#3548193)
+ht_piduino       | transmit- and receiving Bus - data | for RaspberryPi, see: [ht_piduino](https://www.mikrocontroller.net/topic/317004#3925213)
+ht_pitiny        | transmit- and receiving Bus - data | for RaspberryPi, see: [ht_piduino](https://www.mikrocontroller.net/topic/317004#3925213)
+ht_motherboard   | usb-interface for above boards | see: [ht_motherboard](https://www.mikrocontroller.net/topic/317004#3936050)
 
 
-The **software** is written in **python** and designed for detection, decoding and controlling of HT - busdata with following features:
-Modul-name       | function                                         | remark
------------------|--------------------------------------------------|--------
-create_databases.py  | **tool** for creating databases: sqlite and rrdtool with data from configurationfile.  remark: **run this tool at first before you are starting any other application** | configureable, default: sqlite and rrdtool-db are enabled
-HT3_Analyser.py  | **GUI** for system-data and raw-hexdump of decoded ht - busdata *(App writes it's data also to databases sqlite and rrdtool)* | configureable, default running as ht_proxy.client
-HT3_Systemstatus.py | **GUI** to show system-data only *(App writes it's data also to databases sqlite and rrdtool)* | configureable, default running as ht_proxy.client
-HT3_Logger.py | Running as **daemon** without GUI *(App writes it's data to databases sqlite and rrdtool)* | configureable, default running as ht_proxy.client
-ht_proxy.py | **ht-server** to collect data from serial port and supporting connected clients with raw - busdata *(App is running as daemon)* | configureable, default accepting any client
-ht_netclient.py | **ht-client** sending commands to the heater-bus *(App needs the running ht_proxy.server and one of the boards: ht_pitiny or ht_piduino)* | configureable, default connecting to 'localhost'
-ht_binlogclient.py | **ht-client** acts as logger of binary ht - busdata *(App needs the running ht_proxy.server)* | configureable, default connecting to 'localhost'
-ht_client_example.py | **ht-client** acts as example for your one ht-client *(App needs the running ht_proxy.server)* | configureable, default connecting to 'localhost'
-~/HT3/sw/etc/upgrade_rrdtool_db/ | **upgrade tool** for upgrading your old rrdtool - database to release:**0.2 and above** *(App needs a lot of space in /tmp folder {>1 GB})* | read the 'readme_add_ds_2_rrd.txt' at first for installation of CPAN-moduls. In case of problems you should rename or delete the current databases and create new ones.
+The **software** is written in **python** and designed for detection, decoding and controlling of HT - busdata with following features:  
 
-For project - details see the documentation (folder: **~/HT3/docu** ) and the following links:
+Modul-name         | function                                         | remark
+-------------------|--------------------------------------------------|----------------------------------------
+create_databases.py| **tool** for creating databases: sqlite and rrdtool.| configureable
+HT3_Analyser.py | **GUI** for system-data and raw-hexdump of decoded ht - busdata| configureable, default running as ht_proxy.client
+HT3_Systemstatus.py | **GUI** to show system-data only | configureable, default running as ht_proxy.client
+HT3_Logger.py | Running as **daemon** without GUI | configureable, default running as ht_proxy.client
+ht_proxy.py | **ht-server** to collect data from serial port and supporting connected clients with raw - busdata| configureable, default accepting any client
+ht_netclient.py | **ht-client** sending commands to the heater-bus | configureable, default connecting to 'localhost'
+ht_binlogclient.py | **ht-client** acts as logger of binary ht - busdata | configureable, default connecting to 'localhost'
+ht_client_example.py | **ht-client** acts as example for your one ht-client | configureable, default connecting to 'localhost'
+~/HT3/sw/etc/upgrade_rrdtool_db/ | **upgrade tool** for upgrading your old rrdtool - database to release:**0.2**| read the 'readme_add_ds_2_rrd.txt' at first.
+
+For project - details see the documentation (folder: **`~/HT3/docu`** ) and the following links:
 * RaspberryPi HT-board forum:
 [HT-Boards](https://www.mikrocontroller.net/topic/317004#new)
 * Software-forum:
 [HT-Software](https://www.mikrocontroller.net/topic/324673#new)
 
-The current software can be found in subfolders: **~/HT3/sw/...**  
-Any hardware informations are in subfolders: **~/HT3/hw/...**
+The current software can be found in subfolders: **`~/HT3/sw/...`**  
+Any hardware informations are in subfolders: **`~/HT3/hw/...`**
 
 
 The software is still under development, but any official release should be runable *'out of the box'* under *Linux*.  
@@ -103,7 +105,7 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 `05.08.2016`
 - `never been an official release`. Used only for testpurposes.
 
-## 0.1.9
+## ~~0.1.9~~
 `27.04.2016`
 - `HeizkreisMsg_ID677_max33byte()` corrected.
 - `msg:9x00FF00()` handling with length of 10byte added.
