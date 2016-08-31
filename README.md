@@ -70,6 +70,10 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 ## Changelog
 
+## 0.2.1
+`31.08.2016`
+- `wrong path-extraction:` corrected in modul: ht3_worker.py
+
 ## 0.2
 `29.08.2016`
 - `Complete redesign` of decoder and dispatcher using new modul: `ht_discode.py`.  
