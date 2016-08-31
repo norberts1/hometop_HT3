@@ -29,6 +29,8 @@
 #                               db_info-class - handling removed
 #                               Autoerasing_sqlitedb-handling added
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added
+# Ver:0.2.1  / Datum 31.08.2016 '__Extract_HT3_path_from_AbsPath()' added
+#                               to suppress wrong path-extraction.
 #################################################################
 
 import sys
@@ -217,10 +219,10 @@ class ht3_cworker(object):
             if firstentry_UTC == None:
                 firstentry_UTC = int(time.time())
 
-            debugstr = "autoerasing check; UTCs current:{0}; oldest in db:{1}; limit:{2}".format(int(time.time()), firstentry_UTC, time_limit)
-            self._logging.info(debugstr)
-
             if firstentry_UTC < time_limit:
+                debugstr = "Autoerasing_sqlitedb(); UTCs current:{0}; oldest in db:{1}; limit:{2}".format(int(time.time()), firstentry_UTC, time_limit)
+                self._logging.info(debugstr)
+
                 try:
                     debugstr = "sqlite-db autoerasing started;  time:{0}".format(int(time.time()))
                     self._logging.info(debugstr)
@@ -263,6 +265,14 @@ class ht3_cworker(object):
             rtnvalue = None
         return rtnvalue
 
+    def __Extract_HT3_path_from_AbsPath(self, inpath):
+        rtnpath = os.path.normcase(inpath)
+        searchpath = os.path.normcase('HT3/sw')
+        # check path and remove 'HT3/..' if any entry is found
+        if searchpath in (rtnpath):
+            rtnpath = rtnpath[: rtnpath.rfind(searchpath)]
+        return os.path.abspath(rtnpath)
+
     def __Autocreate_draw(self, path_2_db, path_2_draw, hc_count=1, start_time=None, stoptime=None):
         """
             automatic calling the rrdtool-draw script if rrdtool-db is enabled.
@@ -270,11 +280,8 @@ class ht3_cworker(object):
         debugstr = "Autocreate draw();\n path2db  :{0};\n path2draw:{1};\n hc_count:{2}".format(path_2_db, path_2_draw, hc_count)
         self._logging.debug(debugstr)
         AbsPathandFilename = os.path.abspath(os.path.normcase('./etc/rrdtool_draw.pl'))
-        index2db = path_2_db.find('HT3')
-        Abspath2_db = os.path.abspath(os.path.normcase(path_2_db[:index2db]))
-
-        index2draw = path_2_draw.find('HT3')
-        Abspath_2_draw = os.path.abspath(os.path.normcase(path_2_draw[:index2draw]))
+        Abspath2_db = self.__Extract_HT3_path_from_AbsPath(path_2_db)
+        Abspath_2_draw = self.__Extract_HT3_path_from_AbsPath(path_2_draw)
 
         strsystemcmd = AbsPathandFilename + ' ' + Abspath2_db + ' ' + Abspath_2_draw + ' ' + str(hc_count)
         self._logging.debug(strsystemcmd)
@@ -343,7 +350,7 @@ class ht3_cworker(object):
 
                         if ht3_cworker._gdata.IsAutocreate_draw():
                             (db_path, dbfilename) = ht3_cworker._gdata.db_rrdtool_filepathname()
-                            (html_path, filename) = ht3_cworker._gdata.db_rrdtool_filepathname('./etc/html/index.html')
+                            (html_path, filename) = ht3_cworker._gdata.db_rrdtool_filepathname('.')
                             self.__Autocreate_draw(db_path, html_path, ht3_cworker._gdata.heatercircuits_amount())
 
                         nextTimeStep = time.time() + int(ht3_cworker._gdata.db_rrdtool_stepseconds()) - 5

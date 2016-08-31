@@ -43,6 +43,8 @@
 #               Heater active time changed from minutes to hours.
 #               Display-size corrected.
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added.
+# Ver:0.2.1  / Datum 31.08.2016 correction of wrong path-extraction
+#                               modul: ht3_worker.py.
 #################################################################
 #
 
@@ -58,8 +60,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.2"
-__date__ = "29.08.2016"
+__version__ = "0.2.1"
+__date__ = "31.08.2016"
 
 
 class gui_cworker(ht_utils.clog):
