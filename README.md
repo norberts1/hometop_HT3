@@ -70,6 +70,12 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 ## Changelog
 
+## 0.2.2
+`20.10.2016`
+- `autocreate_draw in minutes:` modified in moduls: ht3_worker.py, data.py, HT3_db_cfg.xml.
+- `3-bytes for solarpump-runtime:` modified in modul: ht_discode.py.
+- `tempniveau for FRxyz-controller:` added in moduls: ht_const.py, ht_yanetcom.py.
+
 ## 0.2.1
 `31.08.2016`
 - `wrong path-extraction:` corrected in modul: ht3_worker.py
