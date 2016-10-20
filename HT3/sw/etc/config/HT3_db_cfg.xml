@@ -38,6 +38,7 @@
  #                            '3-Weg -> WW-Speicher'
  #                           'buscodierung' removed
  # Ver:0.2    / Datum 29.08.2016 rev. to 0.2
+ # Ver:0.2.2  / Datum 19.10.2016 'autocreate_draw' set now to 2 minutes.
  #################################################################
  #
  #  Configuration-file for 'HT3_heater'-datalogging to databases.
@@ -89,11 +90,12 @@
       <starttime_utc>1344000000</starttime_utc>
       <!-- autocreate_draw: 
         parameter used for auto-creating the png-draws from rrdtool-database content.
+	  (value is defined in 'minutes' (> 0) or disabled (== 0))
          if set to:0 or off autocreating is disabled.
-         if set to:1 or on  autocreating is enabled 
-            (only if database is also set to:<enable>on</enable>)
+         if set to:> 0      autocreating is enabled
+            (enabled only if database is also set to:<enable>on</enable>)
       -->
-      <autocreate_draw>on</autocreate_draw>
+      <autocreate_draw>2</autocreate_draw>
     </rrdtool-db>
 
     <!-- global configuration-values -->
