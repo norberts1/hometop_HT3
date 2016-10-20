@@ -23,6 +23,7 @@
 #                              EMS+ typed controller-handling added
 # Ver:0.1.10 / Datum 10.08.2016 set_ecomode() added
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added, minor debugtext-changes.
+# Ver:0.2.2  / Datum 19.10.2016 In 'set_tempniveau()' msgID 377...380 added.
 #################################################################
 
 import time
@@ -30,8 +31,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.2"
-__date__ = "29.08.2016"
+__version__ = "0.2.2"
+__date__ = "19.10.2016"
 
 
 #################################################################
@@ -138,11 +139,13 @@ class cyanetcom():
         return error
 
 
-    def _get_msg_offset_4_settemperatur(self, temperatur_mode):
+    def _get_msg_offset_4_settemperatur(self, temperatur_mode, msg_id=ht_const.ID357_TEMP_NIVEAU_HC1):
         """ Fkt returns msg_offset as integer used for
-            setting temperatur on that assigned mode
+            setting temperatur on that assigned mode.
+            This offset depends also from the msgID and the bus-type.
         """
         _temperatur_mode = temperatur_mode.lower()
+        # Bus-type: EMS2
         if self._ems_bus == True:
             _set_temperatur_msg_offset = {
                 ht_const.EMS_TEMP_MODE_COMFORT1: ht_const.EMS_OFFSET_COMFORT1_SP,
@@ -153,11 +156,34 @@ class cyanetcom():
                 ht_const.EMS_TEMP_MODE_MANUAL: ht_const.EMS_OFFSET_MANUAL_SP}
             return int(_set_temperatur_msg_offset.get(_temperatur_mode))
         else:
-            _set_temperatur_msg_offset = {
-                ht_const.HT_TEMPNIVEAU_FROST: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_FROST,
-                ht_const.HT_TEMPNIVEAU_SPAREN: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_SPAREN,
-                ht_const.HT_TEMPNIVEAU_NORMAL: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_NORMAL,
-                ht_const.HT_TEMPNIVEAU_HEIZEN: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_NORMAL}
+        # Bus-type: Heatronic
+            # offsets for msgIDs: 357...360
+            if msg_id in (ht_const.ID357_TEMP_NIVEAU_HC1,
+                          ht_const.ID358_TEMP_NIVEAU_HC2,
+                          ht_const.ID359_TEMP_NIVEAU_HC3,
+                          ht_const.ID360_TEMP_NIVEAU_HC4):
+                _set_temperatur_msg_offset = {
+                    ht_const.HT_TEMPNIVEAU_FROST: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_FROST,
+                    ht_const.HT_TEMPNIVEAU_SPAREN: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_SPAREN,
+                    ht_const.HT_TEMPNIVEAU_NORMAL: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_NORMAL,
+                    ht_const.HT_TEMPNIVEAU_HEIZEN: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_NORMAL}
+            # offsets for msgIDs: 377...380
+            elif msg_id in (ht_const.ID377_CIRCUIT_TYPE_HC1,
+                            ht_const.ID378_CIRCUIT_TYPE_HC2,
+                            ht_const.ID379_CIRCUIT_TYPE_HC3,
+                            ht_const.ID380_CIRCUIT_TYPE_HC4):
+                _set_temperatur_msg_offset = {
+                    ht_const.HT_TEMPNIVEAU_FROST: ht_const.HT_OFFSET_377_380_TEMPNIVEAU_FROST,
+                    ht_const.HT_TEMPNIVEAU_SPAREN: ht_const.HT_OFFSET_377_380_TEMPNIVEAU_SPAREN,
+                    ht_const.HT_TEMPNIVEAU_NORMAL: ht_const.HT_OFFSET_377_380_TEMPNIVEAU_NORMAL,
+                    ht_const.HT_TEMPNIVEAU_HEIZEN: ht_const.HT_OFFSET_377_380_TEMPNIVEAU_NORMAL}
+            else:
+            # default offsets for msgIDs: 357...360
+                _set_temperatur_msg_offset = {
+                    ht_const.HT_TEMPNIVEAU_FROST: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_FROST,
+                    ht_const.HT_TEMPNIVEAU_SPAREN: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_SPAREN,
+                    ht_const.HT_TEMPNIVEAU_NORMAL: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_NORMAL,
+                    ht_const.HT_TEMPNIVEAU_HEIZEN: ht_const.HT_OFFSET_357_360_TEMPNIVEAU_NORMAL}
             return int(_set_temperatur_msg_offset.get(_temperatur_mode))
 
     def set_tempniveau(self, T_wanted, temperatur_mode, hcircuit_nr=1, controller_adr=0x10):
@@ -183,27 +209,34 @@ class cyanetcom():
             _offset = self._get_msg_offset_4_settemperatur(_temperatur_mode)
             _id = ht_const.ID697_RTSD_HC1 - 1 + hcircuit_nr
             error = self.setup_integer_data(setup_value=t_wanted_4_htbus, msg_id=_id, target_deviceadr=controller_adr, msg_offset=_offset)
-            time.sleep(2.0)
+            time.sleep(1.5)
             if (controller_adr != 0x18):
                 # setup for controller adr 0x18 (CW100 as controller)
                 error = self.setup_integer_data(setup_value=t_wanted_4_htbus, msg_id=_id, target_deviceadr=0x18, msg_offset=_offset)
-                time.sleep(2.0)
+                time.sleep(1.5)
         elif self._ems_bus != True:
-            # handling for Fxyz - typed controller
+            # handling for FWxyz - typed controller
             _temperatur_mode = ht_const.HT_TEMPNIVEAU_NORMAL
             if temperatur_mode.lower() in (ht_const.HT_TEMPNIVEAU_FROST,
                                     ht_const.HT_TEMPNIVEAU_SPAREN,
                                     ht_const.HT_TEMPNIVEAU_NORMAL,
                                     ht_const.HT_TEMPNIVEAU_HEIZEN):
                 _temperatur_mode = temperatur_mode
-            _offset = self._get_msg_offset_4_settemperatur(_temperatur_mode)
             _id = ht_const.ID357_TEMP_NIVEAU_HC1 - 1 + hcircuit_nr
+            _offset = self._get_msg_offset_4_settemperatur(_temperatur_mode, msg_id=_id)
             error = self.setup_integer_data(setup_value=t_wanted_4_htbus, msg_id=_id, target_deviceadr=controller_adr, msg_offset=_offset)
-            time.sleep(2.0)
+            time.sleep(1.5)
+
             if (controller_adr != 0x18):
-                # setup for controller adr 0x18 (CW100 as controller)
+                # setup for controller adr 0x18 (CW100 as controller or FB100 as remote controller)
                 error = self.setup_integer_data(setup_value=t_wanted_4_htbus, msg_id=_id, target_deviceadr=0x18, msg_offset=_offset)
-                time.sleep(2.0)
+                time.sleep(1.5)
+
+            # handling for FRxyz - typed controller
+            _id = ht_const.ID377_CIRCUIT_TYPE_HC1 - 1 + hcircuit_nr
+            _offset = self._get_msg_offset_4_settemperatur(_temperatur_mode, msg_id=_id)
+            error = self.setup_integer_data(setup_value=t_wanted_4_htbus, msg_id=_id, target_deviceadr=controller_adr, msg_offset=_offset)
+            time.sleep(1.5)
         return error
 
     def set_ecomode(self, eco_mode, hcircuit_nr=1, controller_adr=0x10):
