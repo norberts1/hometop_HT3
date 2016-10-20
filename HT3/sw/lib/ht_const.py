@@ -19,6 +19,7 @@
 #################################################################
 # Ver:0.1    / Datum 20.07.2016 first release
 # Ver:0.2    / Datum 29.08.2016
+# Ver:0.2.2  / Datum 19.10.2016 HT_OFFSET_377_380_TEMPNIVEAU... added
 #################################################################
 
 
@@ -44,8 +45,12 @@ HT_OFFSET_357_360_TEMPNIVEAU_NORMAL = 17
 HT_OFFSET_357_360_HEATUP_SPEED      = 18
 HT_OFFSET_357_360_HOLIDAY_OP_MODE   = 19
 
+##### ID377 - ID380 #############################################
+ # msg ID377 to ID380 offsets for heating-circuits
 HT_OFFSET_377_380_OP_MODE_HC         = 4
-
+HT_OFFSET_377_380_TEMPNIVEAU_FROST  =  5
+HT_OFFSET_377_380_TEMPNIVEAU_SPAREN =  6
+HT_OFFSET_377_380_TEMPNIVEAU_NORMAL =  7
 
 HT_TEMPNIVEAU_FROST = "frost"
 HT_TEMPNIVEAU_SPAREN = "sparen"
