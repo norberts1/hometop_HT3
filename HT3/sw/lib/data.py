@@ -31,6 +31,8 @@
 #                               'create_mylogger' added
 #                               'syspartnames()' added
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added
+# Ver:0.2.2  / Datum 05.10.2016 'rrdtool_autocreate_draw'-handling now for 
+#                                 x minutes
 #################################################################
 
 import xml.etree.ElementTree as ET
@@ -166,7 +168,7 @@ class cdata(ht_utils.clog):
         self._heater_bustype = ht_const.BUS_TYPE_HT3
         self._IsSolarAvailable = False
         self._sqlite_autoerase_afterSeconds = 0
-        self._rrdtool_autocreate_draw = False
+        self._rrdtool_autocreate_draw_minutes = 0
 
     def setlogger(self, logger):
         """
@@ -268,13 +270,16 @@ class cdata(ht_utils.clog):
                         self.__rrdtool_starttime_utc = 1344000000
 
                     try:
-                        self._rrdtool_autocreate_draw = rrdtool_part.find('autocreate_draw').text.upper()
-                        if self._rrdtool_autocreate_draw == 'ON' or self._rrdtool_autocreate_draw == '1':
-                            self._rrdtool_autocreate_draw = True
+                        self._rrdtool_autocreate_draw_minutes = 0
+                        autocreate_draw_value = rrdtool_part.find('autocreate_draw').text.upper()
+                        if autocreate_draw_value == 'ON':
+                            self._rrdtool_autocreate_draw_minutes = 2
+                        elif int(autocreate_draw_value) > 0:
+                            self._rrdtool_autocreate_draw_minutes = int(autocreate_draw_value)
                         else:
-                            self._rrdtool_autocreate_draw = False
+                            self._rrdtool_autocreate_draw_minutes = 0
                     except:
-                        self._rrdtool_autocreate_draw = False
+                        self._rrdtool_autocreate_draw_minutes = 0
 
             except:
                 errorstr = "data.read_db_config();Error on db_rrdtool parameter"
@@ -1192,7 +1197,7 @@ class cdata(ht_utils.clog):
         return self._sqlite_autoerase_afterSeconds
 
     def IsAutocreate_draw(self):
-        return self._rrdtool_autocreate_draw
+        return int(self._rrdtool_autocreate_draw_minutes)
 
 #--- class cdata end ---#
 

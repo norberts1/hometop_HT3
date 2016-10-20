@@ -31,6 +31,8 @@
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added
 # Ver:0.2.1  / Datum 31.08.2016 '__Extract_HT3_path_from_AbsPath()' added
 #                               to suppress wrong path-extraction.
+# Ver:0.2.2  / Datum 19.10.2016 rrdtool draw-script call now every x minutes
+#                               if enabled.
 #################################################################
 
 import sys
@@ -304,6 +306,7 @@ class ht3_cworker(object):
         debug = 0
         rrdtooldb = None
         nextTimeStep = time.time()
+        nextTimeautocreate = time.time()
         sqlite_autoerase = False
 
         # get db-instance
@@ -325,6 +328,9 @@ class ht3_cworker(object):
                 self._logging.critical(errorstr)
                 self._logging.info("ht3_cworker.run(); End   ----------------------")
                 quit()
+            # setup first timestep-value for autocreating draw
+            if ht3_cworker._gdata.IsAutocreate_draw() > 0:
+                nextTimeautocreate = time.time() + 240
 
         rawdata = ht_discode.cht_discode(self.__port, ht3_cworker._gdata, debug, self.__filehandle, logger=self._logging)
 
@@ -338,7 +344,10 @@ class ht3_cworker(object):
 
                 if ht3_cworker._gdata.is_db_rrdtool_enabled() and rrdtooldb != None:
                     # write data to rrdtool-db after 'stepseconds' seconds
-                    if time.time() > nextTimeStep:
+                    if time.time() >= nextTimeStep:
+                        # setup next timestep
+                        nextTimeStep = time.time() + int(ht3_cworker._gdata.db_rrdtool_stepseconds())
+                        # update rrdtool database
                         for syspartshortname in rrdtooldb.syspartnames():
                             if syspartshortname.upper() == 'DT':
                                 continue
@@ -348,12 +357,14 @@ class ht3_cworker(object):
                             if error:
                                 self._logging.critical("rrdtooldb.update();Error;syspartname:{0}".format(syspartname))
 
-                        if ht3_cworker._gdata.IsAutocreate_draw():
-                            (db_path, dbfilename) = ht3_cworker._gdata.db_rrdtool_filepathname()
-                            (html_path, filename) = ht3_cworker._gdata.db_rrdtool_filepathname('.')
-                            self.__Autocreate_draw(db_path, html_path, ht3_cworker._gdata.heatercircuits_amount())
-
-                        nextTimeStep = time.time() + int(ht3_cworker._gdata.db_rrdtool_stepseconds()) - 5
+                if ht3_cworker._gdata.is_db_rrdtool_enabled() and ht3_cworker._gdata.IsAutocreate_draw() > 0:
+                    if time.time() >= nextTimeautocreate:
+                        # setup next timestep for autocreating draw
+                        nextTimeautocreate = time.time() + 60 * ht3_cworker._gdata.IsAutocreate_draw()
+                        # create draw calling script
+                        (db_path, dbfilename) = ht3_cworker._gdata.db_rrdtool_filepathname()
+                        (html_path, filename) = ht3_cworker._gdata.db_rrdtool_filepathname('.')
+                        self.__Autocreate_draw(db_path, html_path, ht3_cworker._gdata.heatercircuits_amount())
 
                 if sqlite_autoerase:
                     self.__Autoerasing_sqlitedb(database)

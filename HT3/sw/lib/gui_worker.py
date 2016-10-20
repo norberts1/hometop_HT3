@@ -45,6 +45,8 @@
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added.
 # Ver:0.2.1  / Datum 31.08.2016 correction of wrong path-extraction
 #                               modul: ht3_worker.py.
+# Ver:0.2.2  / Datum 14.10.2016 'ht_discode.py' msgID:259 modified.
+#                              Msg-comment updated in GUI.
 #################################################################
 #
 
@@ -60,8 +62,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.2.1"
-__date__ = "31.08.2016"
+__version__ = "0.2.2"
+__date__ = "14.10.2016"
 
 
 class gui_cworker(ht_utils.clog):
@@ -639,12 +641,18 @@ class gui_cworker(ht_utils.clog):
 
         if self.__current_display == str(self.__gdata.getlongname(nickname)) and self.__hexdump_window:
             self.__text.insert("end", "\n")
-            self.__text.insert("end", "Nr. Msg-Header(hex) Systempart Hardware    Bemerkung\n", "b_gray")
-            self.__text.insert("end", "1   88 00 18 00     Heizgeraet Steuermodul\n")
-            self.__text.insert("end", "2   88 00 19 00     Heizgeraet Steuermodul\n")
+            self.__text.insert("end", "Msg-ID Msg-example(hex)   Systempart Hardware    Comment\n", "b_gray")
+            self.__text.insert("end", "  22   so ta 16 00 P1 P2  heater     heater      2 wire bus\n")
+            self.__text.insert("end", "  24   so ta 18 00 P1 P2  heater     heater      2 wire bus\n")
+            self.__text.insert("end", "  25   so ta 19 00 P1 P2  heater     heater      2 wire bus\n")
+            self.__text.insert("end", "  42   so ta 2A 00 P1 P2  heater     heater      2 wire bus\n")
+            self.__text.insert("end", "       so := source (88)\n")
+            self.__text.insert("end", "          ta := target\n")
+            self.__text.insert("end", "                   P1 := first payload Byte\n")
+            self.__text.insert("end", "                      P2 := second payload Byte\n")
             self.__text.insert("end", "\n")
             if self.__hexdump_window:
-                self.__text.insert("end", " Details siehe 'Info'\n")
+                self.__text.insert("end", " for details press button: 'Info'\n")
 
     def __Heizkreis_button(self):
         """
@@ -719,15 +727,33 @@ class gui_cworker(ht_utils.clog):
         nickname = "HK1"
         if self.__current_display == str(self.__gdata.getlongname(nickname)) and self.__hexdump_window:
             self.__text.insert("end", "\n")
-            self.__text.insert("end", "Nr. Msg-Header(hex) Systempart Hardware    Bemerkung\n", "b_gray")
-            self.__text.insert("end", "1   90 00 FF 00     Heizkreis  Steuermodul\n")
-            self.__text.insert("end", "2   9x 00 FF 00     Heizkreis  FB10/FB100  Systemanhängig\n")
-            self.__text.insert("end", "                                           x := (8 ... F)\n")
-            self.__text.insert("end", "3   Ay 00 FF 00     Heizkreis  IPM1/IPM2   Systemanhängig\n")
-            self.__text.insert("end", "                                           y := (0 ... 7)\n")
+            self.__text.insert("end", "Msg-ID Msg-example(hex)   Systempart     Hardware    Comment\n", "b_gray")
+            self.__text.insert("end", "  26   so ta 1A 00 P1 P2  heating-ciruit Controller  2 wire bus\n")
+            self.__text.insert("end", "  35   so ta 23 00 P1 P2  heating-ciruit Controller  2 wire bus\n")
+            self.__text.insert("end", " 268   so ta FF 00 00 0C  heating-ciruit Controller  2 wire bus\n")
+            self.__text.insert("end", " 357   so ta FF 00 00 65  heating-ciruit Controller  2 wire bus\n")
+            self.__text.insert("end", " ...\n")
+            self.__text.insert("end", " 360   so ta FF 00 00 68  heating-ciruit Controller  2 wire bus\n")
+            self.__text.insert("end", " 367   so ta FF 00 00 6F  heating-ciruit Controller  2 wire bus\n")
+            self.__text.insert("end", " ...\n")
+            self.__text.insert("end", " 370   so ta FF 00 00 72  heating-ciruit Controller  2 wire bus\n")
+            self.__text.insert("end", " 377   so ta FF 00 00 79  heating-ciruit Controller  2 wire bus\n")
+            self.__text.insert("end", " ...\n")
+            self.__text.insert("end", " 380   so ta FF 00 00 7C  heating-ciruit Controller  2 wire bus\n")
+            self.__text.insert("end", " 615   so ta FF 00 01 67  heating-ciruit Controller  EMS2\n")
+            self.__text.insert("end", " 677   so ta FF 00 01 A5  heating-ciruit Controller  EMS2\n")
+            self.__text.insert("end", " ...\n")
+            self.__text.insert("end", " 680   so ta FF 00 01 A8  heating-ciruit Controller  EMS2\n")
+            self.__text.insert("end", " 697   so ta FF 00 01 B9  heating-ciruit Controller  EMS2\n")
+            self.__text.insert("end", " ...\n")
+            self.__text.insert("end", " 704   so ta FF 00 01 C0  heating-ciruit Controller  EMS2\n")
+            self.__text.insert("end", "       so := source (90; 9x with x := 8...F; Ay with y := 0...7)\n")
+            self.__text.insert("end", "          ta := target\n")
+            self.__text.insert("end", "                   P1 := first payload Byte\n")
+            self.__text.insert("end", "                      P2 := second payload Byte\n")
             self.__text.insert("end", "\n")
             if self.__hexdump_window:
-                self.__text.insert("end", " Details siehe 'Info'\n")
+                self.__text.insert("end", " for details press button: 'Info'\n")
 
     def __Warmwasser_button(self):
         """
@@ -814,13 +840,22 @@ class gui_cworker(ht_utils.clog):
 
         if self.__current_display == str(self.__gdata.getlongname(nickname)) and self.__hexdump_window:
             self.__text.insert("end", "\n")
-            self.__text.insert("end", "Nr. Msg-Header(hex) Systempart Hardware    Bemerkung\n", "b_gray")
-            self.__text.insert("end", "1   88 00 34 00     Warmwasser Steuermodul\n")
-            self.__text.insert("end", "2   Ax 00 34 00     Warmwasser IPM1/IPM2   Systemanhängig\n")
-            self.__text.insert("end", "                                           x := (0 ... 7)\n")
+            self.__text.insert("end", "Msg-ID Msg-example(hex)   Systempart Hardware    Comment\n", "b_gray")
+            self.__text.insert("end", "  27   so ta 1B 00 P1 P2  Hotwater   heater      2 wire bus\n")
+            self.__text.insert("end", "  51   so ta 33 00 P1 P2  Hotwater   heater      2 wire bus\n")
+            self.__text.insert("end", "  52   so ta 34 00 P1 P2  Hotwater   heater      2 wire bus\n")
+            self.__text.insert("end", "  53   so ta 35 00 P1 P2  Hotwater   heater      2 wire bus\n")
+            self.__text.insert("end", " 269   so ta FF 00 00 0D  Hotwater   IPM         system dependent\n")
+            self.__text.insert("end", " 467   so ta FF 00 00 D3  Hotwater   heater      2 wire bus\n")
+            self.__text.insert("end", " 468   so ta FF 00 00 D4  Hotwater   heater      2 wire bus\n")
+            self.__text.insert("end", " 797   so ta FF 00 02 1D  Hotwater   Cxyz        EMS2\n")
+            self.__text.insert("end", "       so := source (88; 90; Ax with x := 0...7)\n")
+            self.__text.insert("end", "          ta := target\n")
+            self.__text.insert("end", "                   P1 := first payload Byte\n")
+            self.__text.insert("end", "                      P2 := second payload Byte\n")
             self.__text.insert("end", "\n")
             if self.__hexdump_window:
-                self.__text.insert("end", " Details siehe 'Info'\n")
+                self.__text.insert("end", " for details press button: 'Info'\n")
 
     def __Solar_button(self):
         """
@@ -894,11 +929,23 @@ class gui_cworker(ht_utils.clog):
 
         if self.__current_display == str(self.__gdata.getlongname(nickname)) and self.__hexdump_window:
             self.__text.insert("end", "\n")
-            self.__text.insert("end", "Nr. Msg-Header(hex) Systempart Hardware    Bemerkung\n", "b_gray")
-            self.__text.insert("end", "1   B0 00 FF 00     Solar      ISM1/ISM2   Systemabhängig\n")
+            self.__text.insert("end", "Msg-ID Msg-example(hex)   Systempart Hardware    Comment\n", "b_gray")
+            self.__text.insert("end", " 259   so ta FF 00 00 03  Solar      ISM1/ISM2   2 wire bus\n")
+            self.__text.insert("end", " 260   so ta FF 00 00 04  Solar      ISM1/ISM2   2 wire bus\n")
+            self.__text.insert("end", " 866   so ta FF 00 02 62  Solar      MS100       EMS2\n")
+            self.__text.insert("end", " 867   so ta FF 00 02 63  Solar      MS100       EMS2\n")
+            self.__text.insert("end", " 868   so ta FF 00 02 64  Solar      MS100       EMS2\n")
+            self.__text.insert("end", " 870   so ta FF 00 02 66  Solar      MS100       EMS2\n")
+            self.__text.insert("end", " 872   so ta FF 00 02 68  Solar      MS100       EMS2\n")
+            self.__text.insert("end", " 873   so ta FF 00 02 69  Solar      MS100       EMS2\n")
+            self.__text.insert("end", " 874   so ta FF 00 02 6A  Solar      MS100       EMS2\n")
+            self.__text.insert("end", " 910   so ta FF 00 02 8E  Solar      MS100       EMS2\n")
+            self.__text.insert("end", " 913   so ta FF 00 02 91  Solar      MS100       EMS2\n")
+            self.__text.insert("end", "       so := source (B0)\n")
+            self.__text.insert("end", "          ta := target\n")
             self.__text.insert("end", "\n")
             if self.__hexdump_window:
-                self.__text.insert("end", " Details siehe 'Info'\n")
+                self.__text.insert("end", " for details press button: 'Info'\n")
 
     def __clear(self):
         """
