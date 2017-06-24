@@ -1,0 +1,53 @@
+<?xml version="1.0" ?>
+<collgate_cfg>
+<!--
+ ##
+ #   #################################################################
+ ## Copyright (c) 2017 Norbert S. <junky-zs@gmx.de>
+ #
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+ # the Free Software Foundation, either version 3 of the License, or
+ # (at your option) any later version.
+ #
+ # This program is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ # GNU General Public License for more details.
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with this program. If not, see <http://www.gnu.org/licenses/>.
+ #
+ #################################################################
+ # Ver:0.1.8  / Datum 05.10.2015 first release
+ # Ver:0.2.x  / Datum 09.05.2017 renaming to 'collgate'
+ #################################################################
+ #
+ #  Configuration-file for 'ht_collgate'-daemon and attached clients.
+ #
+ #  The 'ht_collgate-server' is used for reading ht-busdata in RAW-format.
+ #  It's connected as ht_proxy-client to the ht_proxy-server. 
+ #  The server decodes that received data and stores this to memory.
+ #  Depending of interface the decoded data are send to clients.
+ #
+-->
+
+<item>collgate_configuration</item>
+
+<interfaces>
+    <ht_if>
+        <!-- this IF is forced to be on -->
+        <cfg_file>./../etc/config/4test/HT3_4dispatcher_test.xml</cfg_file>
+    </ht_if>
+    <MQTT_client_if>
+        <enable>On</enable>
+        <cfg_file>./../etc/config/mqtt_client_cfg.xml</cfg_file>
+    </MQTT_client_if>
+    <SPS_if>
+        <enable>Off</enable>
+        <cfg_file>./../etc/config/SPS_cfg.xml</cfg_file>
+    </SPS_if>
+</interfaces>
+
+</collgate_cfg>
+
