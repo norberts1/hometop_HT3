@@ -33,7 +33,8 @@ Modul-name         | function                                         | remark
 create_databases.py| **tool** for creating databases: sqlite and rrdtool.| configureable
 HT3_Analyser.py | **GUI** for system-data and raw-hexdump of decoded ht - busdata| configureable, default running as ht_proxy.client
 HT3_Systemstatus.py | **GUI** to show system-data only | configureable, default running as ht_proxy.client
-HT3_Logger.py | Running as **daemon** without GUI | configureable, default running as ht_proxy.client
+~~HT3_Logger.py~~ | ~~Running as daemon without GUI~~    **is replaced with ht_collgate - daemon**  | ~~configureable, default running as ht_proxy.client~~
+ht_collgate.py | Running as **daemon** starting interfaces for ht_data decoding, mqtt-IF and/or SPS-IF, running without GUI | configureable, default running as ht_proxy.client and sqlite = Off; rrdtool = On, mqtt_IF = Off, SPS_IF = Off.
 ht_proxy.py | **ht-server** to collect data from serial port and supporting connected clients with raw - busdata| configureable, default accepting any client
 ht_netclient.py | **ht-client** sending commands to the heater-bus | configureable, default connecting to 'localhost'
 ht_binlogclient.py | **ht-client** acts as logger of binary ht - busdata | configureable, default connecting to 'localhost'
@@ -69,6 +70,12 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 
 ## Changelog
+
+## 0.3
+`24.06.2017`
+- `moduls`: `ht_collgate.py`, `lib/Ccollgate.py`, `lib/mqtt_client_if.py` and `lib/SPS_if.py` added.
+- `modul `: ~~`HT3_Logger.py`~~ and ~~`./etc/sysconfig/ht3_logger`~~ aren't used anymore and renamed to: `*unused`
+- New configuration-files added for ht_collgate, mqtt- and SPS- interfaces.
 
 ## 0.2.2
 `20.10.2016`
