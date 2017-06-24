@@ -55,6 +55,11 @@
 #                               'msgID_51_DomesticHotWater()' added.
 #                               'msgID_296_ErrorMsg()' added.
 #                               'msgID_188_Hybrid()' corrected.
+# Ver:0.2.3  / Datum 17.01.2017 'msgID_52_DomesticHotWater()' corrected.
+#                               MsgID:24 for device:(10)hex added, see:
+#                    https://www.mikrocontroller.net/topic/324673#4864801
+# Ver:0.3    / Datum 19.06.2017 now debug-output in _search_4_transceiver_message().
+#                               controller- and bus-type handling added.
 #################################################################
 
 import serial
@@ -66,8 +71,8 @@ import ht_proxy_if
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.2"
-__date__ = "14.10.2016"
+__version__ = "0.2.3"
+__date__ = "08.11.2016"
 
 
 class cht_decode(ht_utils.cht_utils):
@@ -235,7 +240,13 @@ class cht_decode(ht_utils.cht_utils):
                     # read values from buffer and assign them
                     if raw_index == 4 and msg_bytecount >= 1:
                         i_busteilnehmer = buffer[buffer_index]
-                        if i_busteilnehmer == 95:
+                        if i_busteilnehmer == 78:
+                            str_busteilnehmer = "M400"
+                        elif i_busteilnehmer == 79:
+                            str_busteilnehmer = "M100"
+                        elif i_busteilnehmer == 80:
+                            str_busteilnehmer = "M200"
+                        elif i_busteilnehmer == 95:
                             str_busteilnehmer = "Heatronic3"
                         elif i_busteilnehmer == 100:
                             str_busteilnehmer = "IPM1"
@@ -261,14 +272,30 @@ class cht_decode(ht_utils.cht_utils):
                             str_busteilnehmer = "FB100"
                         elif i_busteilnehmer == 111:
                             str_busteilnehmer = "FR10"
+                        elif i_busteilnehmer == 116:
+                            str_busteilnehmer = "FW500"
+                        elif i_busteilnehmer == 147:
+                            str_busteilnehmer = "FR50"
                         elif i_busteilnehmer == 157:
                             str_busteilnehmer = "CW100"
                         elif i_busteilnehmer == 189:
                             str_busteilnehmer = "Modem(MBLAN/NetCom)"
                         elif i_busteilnehmer == 191:
                             str_busteilnehmer = "FR120"
+                        elif i_busteilnehmer == 192:
+                            str_busteilnehmer = "FW120"
                         else:
-                            str_busteilnehmer = "???"
+                            str_busteilnehmer = ""
+
+                        if len(str_busteilnehmer) == 0:
+                            str_busteilnehmer = str(i_busteilnehmer)
+                        # setup found controller if response is from controller (source: 90h)
+                        if (buffer[0] & 0x7f) == 0x10 or (buffer[0] & 0x7f) == 0x18:
+                            self.__gdata.controller_type(str_busteilnehmer)
+
+                        if (buffer[0] & 0x7f) == 0x08:
+                            self.__gdata.bus_type(str_busteilnehmer)
+
                         debugstr += ";Bus-Response Source:{0}(h) to Target:{1}(h)\n".format(sourcedevicehex, targetdevicehex)
                         debugstr += " ;1.Busteilnehmer:{0};Typ:{1}".format(i_busteilnehmer, str_busteilnehmer)
 
@@ -1518,18 +1545,21 @@ class cht_decode(ht_utils.cht_utils):
             b_decoding = True
 
             # check type of domestic hotwater generation
-            #  0 :=> no hotwater generation is done be this heater, so no further decoding
             if msg_bytecount >= 9:
+                #  (0 :=> no hotwater generation is done be this heater, so no further decoding)
+                # not active anymore, decoding is done anyway.
                 if buffer[12] == 0:
-                    b_decoding = False
+                    #zs#test#               b_decoding = False
+                    pass
+
             # if target-device is controller (wrong detection) then stop decoding
             if buffer[0] == 0x90:
                 b_decoding = False
 
             # at least decode the stuff
-            if b_decoding == True:
-                for buffer_index in range(first_payload_index, length - 2):
-                    temptext += format(buffer[buffer_index], "02x") + " "
+            for buffer_index in range(first_payload_index, length - 2):
+                temptext += format(buffer[buffer_index], "02x") + " "
+                if b_decoding == True:
                     # read values from buffer and assign them
                     if raw_index == 4 and msg_bytecount >= 1:
                         i_Soll = int(buffer[buffer_index])
@@ -1565,12 +1595,13 @@ class cht_decode(ht_utils.cht_utils):
                     if raw_index == 17 and msg_bytecount >= 3:
                         i_brennerww_ein = int(buffer[buffer_index] * 65536 + buffer[buffer_index + 1] * 256 + buffer[buffer_index + 2])
                         self.__gdata.update(nickname, "Cbrenner_ww", i_brennerww_ein)
-
                     raw_index += 1
-                for buffer_index in range(length - 2, length):
-                    temptext += format(buffer[buffer_index], "02x") + " "
-                self.__gdata.update(nickname, "hexdump", temptext)
 
+            for buffer_index in range(length - 2, length):
+                temptext += format(buffer[buffer_index], "02x") + " "
+            self.__gdata.update(nickname, "hexdump", temptext)
+
+            if b_decoding == True:
                 values = self.__gdata.values(nickname)
                 return (nickname, values)
             else:
@@ -2417,8 +2448,6 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
              returns True if found, else False.
         """
         try:
-            tempstr = "cht_discode._search_4_transceiver_message()"
-            self._logging.info(tempstr)
             transceiver_found = False
             self._max_messagesize = 40
             size = self._read_rawdata()
@@ -2436,6 +2465,9 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
             errorstr = "cht_discode._search_4_transceiver_message();Error"
             self._logging.critical(errorstr)
             transceiver_found = False
+        tempstr = "cht_discode._search_4_transceiver_message(); found: {0}".format(transceiver_found)
+        self._logging.debug(tempstr)
+        
         return transceiver_found
 
     ####################################
@@ -2574,7 +2606,7 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
     ####################################
     # device-adr mapped with not valid message-IDs for detailed message - searching
     deviceadr_2msgid_blacklist = {
-        0x10: [11, 12, 46, 47, 64, 100, 106],
+        0x10: [11, 12, 24, 46, 47, 64, 100, 106],
         0x1b: [17, 56, 74, 89],
         0x20: [13, 14, 15, 21, 23, 25, 29, 45, 49, 61, 81, 88, 92, 95, 97, 101, 104, 107],
         0x21: [13, 14, 15, 21, 23, 25, 29, 45, 49, 61, 81, 88, 92, 95, 97, 101, 104, 107],
@@ -2609,6 +2641,8 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
         ############################
         # preset values, runs once
         if self._run_state == cht_discode._STATE_INIT:
+            self._ht_transceiver_header_found = False
+            self._max_messagesize = 40
             # setup next state
             self._run_state = cht_discode._STATE_MESSAGETYPE_SEARCH
 

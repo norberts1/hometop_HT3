@@ -33,6 +33,9 @@
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added
 # Ver:0.2.2  / Datum 05.10.2016 'rrdtool_autocreate_draw'-handling now for 
 #                                 x minutes
+# Ver:0.2.x  / Datum 10.05.2017 'accessname'-handling added
+# Ver:0.3    / Datum 19.06.2017 'set_param' -handling added
+#                               controller_type and bus_type added.
 #################################################################
 
 import xml.etree.ElementTree as ET
@@ -141,8 +144,18 @@ class cdata(ht_utils.clog):
         self.__defaultvalueSO = {}
         self.__defaultvalueDT = {}
         self.__defaultvalueNN = {}
+        # dir's for Logitem: 'accessname'
+        self.__accessnameHG = {}
+        self.__accessnameHK1 = {}
+        self.__accessnameHK2 = {}
+        self.__accessnameHK3 = {}
+        self.__accessnameHK4 = {}
+        self.__accessnameWW = {}
+        self.__accessnameSO = {}
+        self.__accessnameDT = {}
+        self.__accessnameNN = {}
         # other required values
-        self.__accessnames = {}
+        self.__accesscontext = {}
         self.__syspartnames = []
         self.__unmixedHK1_HK4 = {}
         self.__LoadpumpWW = False
@@ -169,6 +182,10 @@ class cdata(ht_utils.clog):
         self._IsSolarAvailable = False
         self._sqlite_autoerase_afterSeconds = 0
         self._rrdtool_autocreate_draw_minutes = 0
+        # system-infos
+        self.__controller_type = "Fxyz"
+        self.__bus_type = "---"
+
 
     def setlogger(self, logger):
         """
@@ -405,8 +422,14 @@ class cdata(ht_utils.clog):
                             except:
                                 accessname = ""
 
+                            try:
+                                set_parameter = logitem.find('set_param').text
+                            except:
+                                set_parameter = ""
+
                             # add itemname and values to table
-                            self.update(shortname, name, default, displayname, unit, hardwaretype, maxvalue, default, accessname)
+                            self.update(shortname, name, default, displayname, unit, hardwaretype,
+                                        maxvalue, default, accessname, set_parameter)
                         else:
                             if not len(logitem):
                                 errorstr = "data.read_db_config();Error;AttributeError(logitem)"
@@ -536,6 +559,7 @@ class cdata(ht_utils.clog):
                                           self.__logitemUnitHG,
                                           self.__maxvalueHG,
                                           self.__defaultvalueHG,
+                                          self.__accessnameHG,
                                           self.__hwtypeHG]})
             elif "HK1" in shortname:
                 self.__data.update({"HK1": [self.__logitemHK1,
@@ -546,6 +570,7 @@ class cdata(ht_utils.clog):
                                           self.__logitemUnitHK1,
                                           self.__maxvalueHK1,
                                           self.__defaultvalueHK1,
+                                          self.__accessnameHK1,
                                           self.__hwtypeHK1]})
             elif "HK2" in shortname:
                 self.__data.update({"HK2": [self.__logitemHK2,
@@ -556,6 +581,7 @@ class cdata(ht_utils.clog):
                                           self.__logitemUnitHK2,
                                           self.__maxvalueHK2,
                                           self.__defaultvalueHK2,
+                                          self.__accessnameHK2,
                                           self.__hwtypeHK2]})
 
             elif "HK3" in shortname:
@@ -567,6 +593,7 @@ class cdata(ht_utils.clog):
                                           self.__logitemUnitHK3,
                                           self.__maxvalueHK3,
                                           self.__defaultvalueHK3,
+                                          self.__accessnameHK3,
                                           self.__hwtypeHK3]})
 
             elif "HK4" in shortname:
@@ -578,6 +605,7 @@ class cdata(ht_utils.clog):
                                           self.__logitemUnitHK4,
                                           self.__maxvalueHK4,
                                           self.__defaultvalueHK4,
+                                          self.__accessnameHK4,
                                           self.__hwtypeHK4]})
 
             elif "WW" in shortname:
@@ -589,6 +617,7 @@ class cdata(ht_utils.clog):
                                           self.__logitemUnitWW,
                                           self.__maxvalueWW,
                                           self.__defaultvalueWW,
+                                          self.__accessnameWW,
                                           self.__hwtypeWW]})
 
             elif "SO" in shortname:
@@ -600,6 +629,7 @@ class cdata(ht_utils.clog):
                                           self.__logitemUnitSO,
                                           self.__maxvalueSO,
                                           self.__defaultvalueSO,
+                                          self.__accessnameSO,
                                           self.__hwtypeSO]})
 
             elif "DT" in shortname:
@@ -611,6 +641,7 @@ class cdata(ht_utils.clog):
                                           self.__logitemUnitDT,
                                           self.__maxvalueDT,
                                           self.__defaultvalueDT,
+                                          self.__accessnameDT,
                                           self.__hwtypeDT]})
 
             else:
@@ -622,6 +653,7 @@ class cdata(ht_utils.clog):
                                           self.__logitemUnitNN,
                                           self.__maxvalueNN,
                                           self.__defaultvalueNN,
+                                          self.__accessnameNN,
                                           self.__hwtypeNN]})
 
         except (NameError, AttributeError) as e:
@@ -683,7 +715,39 @@ class cdata(ht_utils.clog):
                 rtntuple_array.append((itemname, value))
         return rtntuple_array
 
-    def update(self, nickname, logitem, value=0.0, displayname="", unit="", hwtype="", maxvalue=100.0, default=0.0, accessname=""):
+    def getall_sorted_accessnames(self, nickname):
+        """
+        returns sorted list of access-names for the nickname.
+        """
+        nickname = nickname.upper()[0:3]
+        all_sorted_access_names = []
+        length = 0
+        if nickname in self.__nickname:
+            length = len(self.__data[nickname][0])
+            for x in range(0, length):
+                all_sorted_access_names.append("")
+
+            for (key, value) in self.__data[nickname][0].items():
+                accessname = self.__data[nickname][8][key]
+                all_sorted_access_names[int(value)] = accessname
+            return all_sorted_access_names
+        else:
+            errorstr = "getall_sorted_accessnames();Error;nickname'{0}' not found".format(nickname)
+            print(errorstr)
+            self._logging.critical(errorstr)
+            return None
+
+    def getall_accessnames(self):
+        """
+        returns sorted list of access-names for all available nicknames.
+        """
+        all_access_names = {}
+        for nickname in self.__nickname:
+            all_access_names.update({nickname:self.getall_sorted_accessnames(nickname)})
+        return all_access_names
+
+    def update(self, nickname, logitem, value=0.0, displayname="", unit="", hwtype="",
+               maxvalue=100.0, default=0.0, accessname="", set_parameter=""):
         """
         updates an already created data.member (logitem) with the new value or
          will create it, if not yet available.
@@ -694,6 +758,7 @@ class cdata(ht_utils.clog):
                                                                         {itemname:unit},
                                                                         {itemname:maxvalue},
                                                                         {itemname:defaultvalue},
+                                                                        {itemname:accessname},
                                                                         hardwaretype]}
         """
 
@@ -724,8 +789,7 @@ class cdata(ht_utils.clog):
                     if default != 0.0:
                         self.__data[nickname][7][itemname] = default
                     if len(accessname) > 0:
-                        # no update() for this already set value
-                        pass
+                        self.__data[nickname][8][itemname] = accessname
                 else:
                     # add new item and value, index is the current array-length
                     # and is set to dir{itemname:index}
@@ -748,18 +812,25 @@ class cdata(ht_utils.clog):
                     self.__data[nickname][6].update({itemname: maxvalue})
                     self.__data[nickname][7].update({itemname: default})
 
+                    if len(set_parameter) > 0:
+                        cmd_parameter = set_parameter
+                    else:
+                        cmd_parameter = None
                     if not accessname == None and len(accessname) > 0:
                         # setup accessname to tuple: 
-                        #   (nickname, external logitem, internal itemname)
-                        self.__accessnames.update({accessname: (nickname, logitem, itemname)})
+                        #   (nickname, external logitem, internal itemname. command-parameter)
+                        self.__accesscontext.update({accessname: (nickname, logitem, itemname, cmd_parameter)})
                     else:
                         # setup dummy_accessname to tuple:
-                        #   (nickname, external logitem, internal itemname)
-                        dummy_accessname = str(nickname).lower() + "_access_" + str(index)
-                        self.__accessnames.update({dummy_accessname: (nickname, logitem, itemname)})
+                        #   (nickname, external logitem, internal itemname. command-parameter)
+                        accessname = str(nickname).lower() + "_unused_" + str(index)
+                        self.__accesscontext.update({accessname: (nickname, logitem, itemname, cmd_parameter)})
+
+                    self.__data[nickname][8].update({itemname: accessname})
+
 
                 if not hwtype == None and len(hwtype) > 0:
-                    self.__data[nickname][8] = hwtype
+                    self.__data[nickname][9] = hwtype
             else:
                 errorstr = "data.update();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
@@ -952,6 +1023,39 @@ class cdata(ht_utils.clog):
             print(errorstr)
             self._logging.critical(errorstr)
 
+    def accessname(self, nickname, logitem):
+        """
+        returns the 'accessname' for the logitem.
+         Value is set in configuration-file.
+         parameters 'nickname' and 'logitem' are required.
+        """
+        nickname = nickname.upper()[0:3]
+        itemname = logitem.replace("_", "").lower()
+        try:
+            if not len(nickname):
+                errorstr = "data.accessname();Error;nickname: '{0}' undefined".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if not len(logitem):
+                errorstr = "data.accessname();Error;logitem: '{0}' undefined".format(logitem)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if nickname in self.__nickname:
+                if itemname in self.__data[nickname][0]:
+                    return self.__data[nickname][8][itemname]
+                else:
+                    errorstr = "data.accessname();Error;itemname:'{0}' not found".format(logitem)
+                    self._logging.critical(errorstr)
+                    raise NameError(errorstr)
+            else:
+                errorstr = "data.accessname();Error;nickname:'{0}' not found".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+        except(KeyError, NameError, AttributeError) as e:
+            errorstr = "data.accessname();Error;{0}".format(e.args[0])
+            print(errorstr)
+            self._logging.critical(errorstr)
+
     def hardwaretype(self, nickname):
         """
         returns the hardwaretype read from configuration-file.
@@ -963,7 +1067,7 @@ class cdata(ht_utils.clog):
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if nickname in self.__nickname:
-                return str(self.__data[nickname][8])
+                return str(self.__data[nickname][9])
             else:
                 errorstr = "data.hardwaretype();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
@@ -973,27 +1077,46 @@ class cdata(ht_utils.clog):
             self._logging.critical(errorstr)
             print(errorstr)
 
+    def controller_type(self, c_type=""):
+        """returns/sets the found controller-type as string.
+            if heaterbus-type EMS was detected then Cxyz-controller is default set.
+        """
+        if self.HeaterBusType() == ht_const.BUS_TYPE_EMS:
+            self.__controller_type = "Cxyz"
+        if len(c_type) > 0:
+            self.__controller_type = c_type
+        return self.__controller_type
+
+    def bus_type(self, b_type=""):
+        """returns/sets the found bus-type as string."""
+        if len(b_type) > 0:
+            self.__bus_type = b_type
+        return self.__bus_type
 
     def get_access_context(self, accessname):
         """
-        returns the context attached to 'accesname' as tuple.
+        returns the context attached to 'accessname' as tuple.
          accessname-Values are set in configuration-file or set to
          default-values if there aren't any.
          The returned tuple-values are defined as:
            (Systempart-Nickname, logitem, itemname)
              where:
-               'Nickname' is the 'shortname' from configuration-file.
-               'logitem'  is the logitem-name from configuration-file.
-               'itemname' is the internal application-used access-name.
-        returns '("", "", "")' if there isn't any context available.
+               'Nickname'  is the 'shortname' from configuration-file.
+               'logitem'   is the logitem-name from configuration-file.
+               'itemname'  is the internal application-used access-name.
+               'set_param' is the set-parameter from configuration-file.
+        returns '("", "", "", "")' if there isn't any context available.
         """
-        rtntuple = ("", "", "")
+        rtntuple = ("", "", "", "")
         try:
-            if accessname in self.__accessnames:
-                rtntuple = self.__accessnames.get(accessname)
+            if accessname in self.__accesscontext:
+                rtntuple = self.__accesscontext.get(accessname)
         except:
             pass
         return rtntuple
+
+    def get_access_names(self):
+        return self.__accesscontext
 
     def _SetDataIf_async(self):
         """
@@ -1401,10 +1524,10 @@ if __name__ == "__main__":
         print(" -- show all items_with_values of nickname: 'HK1' ---")
         print("{0}".format(data.getall_sorted_items_with_values("HK1")))
 
-        print(""" -- Get access-context for dummy-accessname    ---""")
-        print("""      using dummy access-name: 'hg_access_1'""")
-        (nickname, logitem, itemname) = data.get_access_context("hg_access_1")
+        print(""" -- Get access-context for accessname    ---""")
+        print("""      using access-name: 'ch_Tflow_desired'""")
+        (nickname, logitem, itemname, set_parameter) = data.get_access_context("ch_Tflow_desired")
         if nickname == 'HG' and len(itemname) > 0:
-            print("      Result OK -> Nickname:{0}; Logitem:{1}; Itemname:{2}".format(nickname, logitem, itemname))
+            print("      Result OK -> Nickname:{0}; Logitem:{1}; Itemname:{2}; Set-Parameter:{3}".format(nickname, logitem, itemname, set_parameter))
         else:
-            print("      Failed    -> Nickname:{0}; Logitem:{1}; Itemname:{2}".format(nickname, logitem, itemname))
+            print("      Failed    -> Nickname:{0}; Logitem:{1}; Itemname:{2}; Set-Parameter:{3}".format(nickname, logitem, itemname, set_parameter))

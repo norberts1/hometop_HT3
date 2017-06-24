@@ -24,6 +24,8 @@
 # Ver:0.1.10 / Datum 10.08.2016 set_ecomode() added
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added, minor debugtext-changes.
 # Ver:0.2.2  / Datum 19.10.2016 In 'set_tempniveau()' msgID 377...380 added.
+# Ver:0.3    / Datum 19.06.2017 set_ems_controller() added.
+#                            parameter check added, returns error if unknown.
 #################################################################
 
 import time
@@ -31,8 +33,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.2.2"
-__date__ = "19.10.2016"
+__version__ = "0.3"
+__date__ = "19.06.2017"
 
 
 #################################################################
@@ -68,6 +70,10 @@ class cyanetcom():
         """
         """
         pass
+
+    def set_ems_controller(self):
+        """force controller-type to EMS (not resetable) """
+        self._ems_bus = True
 
     def set_betriebsart(self, betriebsart, hcircuit_nr=1, controller_adr=0x10):
         """ set betriebsart with netcom-like commands
@@ -206,6 +212,10 @@ class cyanetcom():
                                         ht_const.EMS_TEMP_MODE_TEMPORARY,
                                         ht_const.EMS_TEMP_MODE_MANUAL):
                 _temperatur_mode = temperatur_mode
+            else:
+                # error parameter not found
+                return str("cyanetcom.set_tempniveau();Error;wrong input-value:{0}".format(temperatur_mode))
+
             _offset = self._get_msg_offset_4_settemperatur(_temperatur_mode)
             _id = ht_const.ID697_RTSD_HC1 - 1 + hcircuit_nr
             error = self.setup_integer_data(setup_value=t_wanted_4_htbus, msg_id=_id, target_deviceadr=controller_adr, msg_offset=_offset)
@@ -222,6 +232,10 @@ class cyanetcom():
                                     ht_const.HT_TEMPNIVEAU_NORMAL,
                                     ht_const.HT_TEMPNIVEAU_HEIZEN):
                 _temperatur_mode = temperatur_mode
+            else:
+                # error parameter not found
+                return str("cyanetcom.set_tempniveau();Error;wrong input-value:{0}".format(temperatur_mode))
+
             _id = ht_const.ID357_TEMP_NIVEAU_HC1 - 1 + hcircuit_nr
             _offset = self._get_msg_offset_4_settemperatur(_temperatur_mode, msg_id=_id)
             error = self.setup_integer_data(setup_value=t_wanted_4_htbus, msg_id=_id, target_deviceadr=controller_adr, msg_offset=_offset)
@@ -254,6 +268,10 @@ class cyanetcom():
                             ht_const.EMS_ECO_MODE_HOLD_ROOM,
                             ht_const.EMS_ECO_MODE_REDUCED):
                 _eco_mode = eco_mode
+            else:
+                # error parameter not found
+                return str("cyanetcom.set_ecomode();Error;wrong input-value:{0}".format(eco_mode))
+
             _offset = ht_const.EMS_OFFSET_ECO_MODE
             _id = ht_const.ID697_RTSD_HC1 - 1 + hcircuit_nr
             error = self.setup_integer_data(setup_value=_eco_mode, msg_id=_id, target_deviceadr=controller_adr, msg_offset=_offset)

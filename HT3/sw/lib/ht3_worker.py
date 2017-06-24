@@ -33,6 +33,7 @@
 #                               to suppress wrong path-extraction.
 # Ver:0.2.2  / Datum 19.10.2016 rrdtool draw-script call now every x minutes
 #                               if enabled.
+# Ver:0.3    / Datum 19.06.2017 desctructor corrected
 #################################################################
 
 import sys
@@ -126,7 +127,7 @@ class ht3_cworker(object):
         """
         if self.__port != None:
             self.__port.close()
-        self._logging.info("ht3_cworker.run(); End   ----------------------")
+        print("ht3_cworker.run(); End   ----------------------")
 
     def run(self):
         """

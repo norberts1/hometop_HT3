@@ -26,6 +26,8 @@
 #                               'Payload_msg_size'     added
 # Ver:0.2    / Datum 28.08.2016 minor text-adjustments after Pylint
 #                               'Absfilepathname()' added
+# Ver:0.3    / Datum 11.06.2017 'MakeAbsPath2FileName()' added.
+#
 #################################################################
 
 import os
@@ -162,6 +164,26 @@ class cht_utils(object):
         abspath = os.path.abspath(os.path.normcase(path))
         return (abspath, filename)
 
+    def MakeAbsPath2FileName(self, tpl_path_and_filename, find_separator='/sw'):
+        """returns the absolut path attached with filename.
+            is searching for separator in path and cutting the rest of path.
+            if separator is not found then the complete path is used.
+        """
+        (path, filename) = tpl_path_and_filename
+        abs_filepathname = ""
+        if os.path.isabs(path):
+            my_abspath = path
+        else:
+            current_path = os.path.abspath('.')
+            find_index = current_path.find(find_separator)
+            sliced_path = current_path[0:find_index]
+            if find_index > 0 and len(current_path) > 2:
+                sliced_path = current_path[0:find_index + len(find_separator)]
+            my_abspath = os.path.abspath(os.path.join(sliced_path, path))
+
+        abs_filepathname = os.path.join(my_abspath, filename)
+        return abs_filepathname
+
 #--- class cht_utils end ---#
 
 
@@ -176,6 +198,8 @@ class clog(object):
         """
         self._created = False
         self._loglevel = logging.INFO
+        self._fileonly = ""
+        self._pathonly = ""
 
     def create_logfile(self, logfilepath="./default_logfile.log", loglevel=logging.INFO, loggertag="default"):
         """

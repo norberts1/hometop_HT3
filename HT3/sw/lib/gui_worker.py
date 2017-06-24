@@ -47,6 +47,9 @@
 #                               modul: ht3_worker.py.
 # Ver:0.2.2  / Datum 14.10.2016 'ht_discode.py' msgID:259 modified.
 #                              Msg-comment updated in GUI.
+# Ver:0.2.3  / Datum 20.11.2016 'ht_discode.py' msgID:52 modified.
+#                               DHW WW-Betriebzeit always displayed.
+# Ver:0.3    / Datum 19.06.2017 controller- and bus-type added.
 #################################################################
 #
 
@@ -62,8 +65,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.2.2"
-__date__ = "14.10.2016"
+__version__ = "0.3"
+__date__ = "19.06.2017"
 
 
 class gui_cworker(ht_utils.clog):
@@ -315,7 +318,7 @@ class gui_cworker(ht_utils.clog):
         """
             'system'-GUI is displayed.
         """
-        temptext = "{0:13.13}: {1}\n".format("Systemstatus", "Junkers Heatronic")
+        temptext = "{0:13.13}: {1}\n".format("Systemstatus", "Junkers Heatersystem")
         self.__text.insert("end", temptext, "b_ye")
         self.__Info()
         self.__heater_dhw()
@@ -337,6 +340,8 @@ class gui_cworker(ht_utils.clog):
                                                                                 self.__gdata.values(nickname, "Time"),
                                                                                 time.strftime("%H:%M:%S"))
         self.__text.insert("end", uhrzeit)
+        str_controller = " Regler-Typ  : {0:11.11}| Bus-Typ        : {1}\n".format(self.__gdata.controller_type(), self.__gdata.bus_type())
+        self.__text.insert("end", str_controller)
         if (self.__gdata.IsSyspartUpdate(nickname) and self.__hexdump_window):
             temptext = self.__gdata.values(nickname, "hexdump")
             temptext += "\n"
@@ -389,9 +394,9 @@ class gui_cworker(ht_utils.clog):
         temptext = "{0:21.39} {1: ^54.20}\n".format("Heizgeraet", "Warmwasser        ")
 #        self.__text.insert("end", temptext,"b_or")
         self.__text.insert("end", temptext)
-        self.__text.tag_add("heater", "5.0", "5.39")
+        self.__text.tag_add("heater", "6.0", "6.39")
         self.__text.tag_config("heater", background="orange", foreground="black")
-        self.__text.tag_add("water", "5.39", "5.80")
+        self.__text.tag_add("water", "6.39", "6.80")
         self.__text.tag_config("water", background="lightblue", foreground="black")
         # 1. line
         tempvalue = format(float(self.__gdata.values(nickname_HG, "Taussen")), ".1f")
@@ -424,9 +429,8 @@ class gui_cworker(ht_utils.clog):
             temptext = self.__DisplayColumn(nickname_HG, "Truecklauf", Truecklauf, endofline=False)
 
         betriebszeit = float(self.__gdata.values(nickname_WW, "Cbetriebs_zeit"))
-        if self.__IsValueNotZero(betriebszeit):
-            tempvalue = format(betriebszeit, ".1f") + ' Stunden'
-            temptext += self.__DisplayColumn(nickname_WW, "Cbetriebs_zeit", tempvalue, right=True)
+        tempvalue = format(betriebszeit, ".1f") + ' Stunden'
+        temptext += self.__DisplayColumn(nickname_WW, "Cbetriebs_zeit", tempvalue, right=True)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         # 5. line
@@ -436,9 +440,8 @@ class gui_cworker(ht_utils.clog):
             temptext = self.__DisplayColumn(nickname_HG, "Tmischer", Tmischer, endofline=False)
 
         brenner_ww_ein_counter = int(self.__gdata.values(nickname_WW, "Cbrenner_ww"))
-        if self.__IsValueNotZero(brenner_ww_ein_counter):
-            tempvalue = format(brenner_ww_ein_counter, "d")
-            temptext += self.__DisplayColumn(nickname_WW, "Cbrenner_ww", tempvalue, right=True)
+        tempvalue = format(brenner_ww_ein_counter, "d")
+        temptext += self.__DisplayColumn(nickname_WW, "Cbrenner_ww", tempvalue, right=True)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         # 6. line
@@ -789,16 +792,14 @@ class gui_cworker(ht_utils.clog):
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         betriebszeit = float(self.__gdata.values(nickname, "Cbetriebs_zeit"))
-        if self.__IsValueNotZero(betriebszeit):
-            tempvalue = format(betriebszeit, ".1f") + ' Stunden'
-            temptext = self.__DisplayColumn(nickname, "Cbetriebs_zeit", tempvalue)
-            if len(temptext) > 0: self.__text.insert("end", temptext)
+        tempvalue = format(betriebszeit, ".1f") + ' Stunden'
+        temptext = self.__DisplayColumn(nickname, "Cbetriebs_zeit", tempvalue)
+        if len(temptext) > 0: self.__text.insert("end", temptext)
 
         brenner_ww_ein_counter = int(self.__gdata.values(nickname, "Cbrenner_ww"))
-        if self.__IsValueNotZero(brenner_ww_ein_counter):
-            tempvalue = format(brenner_ww_ein_counter, "d")
-            temptext = self.__DisplayColumn(nickname, "Cbrenner_ww", tempvalue)
-            if len(temptext) > 0: self.__text.insert("end", temptext)
+        tempvalue = format(brenner_ww_ein_counter, "d")
+        temptext = self.__DisplayColumn(nickname, "Cbrenner_ww", tempvalue)
+        if len(temptext) > 0: self.__text.insert("end", temptext)
 
         if self.__gdata.IsLoadpump_WW():
             tempvalue = self.__GetStrOnOff(self.__gdata.values(nickname, "Vladepumpe"))
