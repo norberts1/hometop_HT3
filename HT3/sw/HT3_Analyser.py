@@ -21,13 +21,14 @@
 # Ver:0.1.6  / Datum 10.01.2015 'reading configuration changed'
 # Ver:0.1.7.1/ Datum 04.03.2015 'socket option' activated
 #                               logging from ht_utils added
+# Ver:0.3    / Datum 20.06.2017 config-file: HT3_db_off_cfg.xml used.
 #################################################################
 
 import sys
 sys.path.append('lib')
 import ht3_worker
 
-configurationfilename='./etc/config/HT3_db_cfg.xml'
+configurationfilename='./etc/config/HT3_db_off_cfg.xml'
 logfilename="ht_analyser.log"
       #### reconfiguration has to be done in configuration-file ####
 HT3_Analyser=ht3_worker.ht3_cworker(configurationfilename, logfilename_in=logfilename)
