@@ -1,0 +1,62 @@
+<?xml version="1.0" ?>
+<mqtt_client_cfg>
+<!--
+ ##
+ #   #################################################################
+ ## Copyright (c) 2017 Norbert S. <junky-zs@gmx.de>
+ #
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+ # the Free Software Foundation, either version 3 of the License, or
+ # (at your option) any later version.
+ #
+ # This program is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ # GNU General Public License for more details.
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with this program. If not, see <http://www.gnu.org/licenses/>.
+ #
+ #################################################################
+ # Ver:0.1    / Datum 01.06.2017 first release
+ #################################################################
+ #
+ #  Configuration-file for 'mqtt_client'- class.
+ #
+-->
+
+<item>mqtt_client_configuration</item>
+
+    <logging>
+        <path>./var/log</path>
+        <filename>mqtt_client.log</filename>
+        <loglevel>INFO</loglevel>   <!-- loglevel-types are (details see library: logging.py):
+                                        DEBUG    := Debug-Level
+                                        INFO     := Information-Level
+                                        WARNING  := Warning-Level
+                                        ERROR    := Error-Level
+                                        CRITICAL := Critical-Level
+                                  -->
+    </logging>
+
+  <!-- broker-server configuration-values -->
+    <mqtt_broker>
+        <serveraddress>localhost</serveraddress>
+        <portnumber>1883</portnumber>   <!-- Default portnumber for MQTT -->
+        <user></user>
+        <password></password>
+    </mqtt_broker>
+
+  <!-- mqtt-client configuration-values -->
+    <mqtt_client>
+        <topic_root_name>hometop/ht</topic_root_name>
+        <QoS>1</QoS>                            <!-- Quality of Service: 0,1 or 2 -->
+        <CleanSession>False</CleanSession>      <!-- True / False -->
+        <Retain>True</Retain>                   <!-- True / False -->
+        <LastWillRetain>True</LastWillRetain>   <!-- True / False -->
+        <Publish_OnlyNewValues>True</Publish_OnlyNewValues>  <!-- True / False -->
+        <client_id>myHeater_MQTT_Client</client_id> <!-- unique ID for your purposes -->
+    </mqtt_client>
+</mqtt_client_cfg>
+

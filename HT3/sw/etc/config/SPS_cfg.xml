@@ -1,0 +1,52 @@
+<?xml version="1.0" ?>
+<SPS_cfg>
+<!--
+ ##
+ #   #################################################################
+ ## Copyright (c) 2017 Norbert S. <junky-zs@gmx.de>
+ #
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU General Public License as published by
+ # the Free Software Foundation, either version 3 of the License, or
+ # (at your option) any later version.
+ #
+ # This program is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ # GNU General Public License for more details.
+ #
+ # You should have received a copy of the GNU General Public License
+ # along with this program. If not, see <http://www.gnu.org/licenses/>.
+ #
+ #################################################################
+ # Ver:0.2.x  / Datum 08.05.2017 first release
+ #################################################################
+ #
+ #  Configuration-file for 'SPS'-interface.
+ #
+ #  The 'SPS_server' is listening to 'SPS_client' connection-requests.
+ #  The server supports the questening client with decoded heater-data.
+ #  Any received command from a connected sps-client will be parsed
+ #  and the resulting data is returned to the sps-client.
+ #  The configuration-values are stored in section: 'SPS_server'
+ #
+ #  The 'SPS-client' can connect to the SPS-server using the
+ #  configuration-values in this file stored in section: 'SPS_client'
+ #  
+-->
+
+  <item>SPS_configuration</item>
+
+  <!-- sps configuration-values -->
+  <SPS_server>
+    <serveraddress></serveraddress>
+    <portnumber>10001</portnumber>
+  </SPS_server>
+
+  <!-- sps-client configuration-values -->
+  <SPS_client>      
+    <serveraddress>localhost</serveraddress>
+    <portnumber>10001</portnumber>
+  </SPS_client>
+</SPS_cfg>
+
