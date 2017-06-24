@@ -3,8 +3,8 @@
 # Provides:          ht_proxy
 # Required-Start:    $remote_fs $syslog
 # Required-Stop:     $remote_fs $syslog
-# X-Start-Before:    ht3_logger
-# X-Stop-After:      ht3_logger
+# X-Start-Before:    ht_collgate ht3_logger
+# X-Stop-After:      ht_collgate ht3_logger 
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: initscript for ht_transceiver comport<->socket proxy
