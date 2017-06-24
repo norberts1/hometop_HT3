@@ -39,10 +39,12 @@
  #                           'buscodierung' removed
  # Ver:0.2    / Datum 29.08.2016 rev. to 0.2
  # Ver:0.2.2  / Datum 19.10.2016 'autocreate_draw' set now to 2 minutes.
- #################################################################
+ # Ver:0.3    / Datum 19.06.2017 sqlite-db default disabled -> 'OFF'.
+ #                               <accessname> and <set_param> added.
+  #################################################################
  #
- #  Configuration-file for 'HT3_heater'-datalogging to databases.
- #  Values are used for: sqlite- and rrdtool  - databases
+ #  Configuration-file for 'heater' data- decoding and logging to databases and
+ #   supporting other interface with data (MQTT_IF / SPS_IF ...)
  #
  ## Naming conventions (only for readability, not for rrdtool) ##
  # T := Temperatur
@@ -63,13 +65,64 @@
  #   !!! namelength must be 1 to max 18 chars at least !!!
  #   The sqlite   'database-columns' and
  #   the rrdtool 'database-columns' are created with this names.
+ #
+ # Importent notice:
+ #  The parameter 'shortname' and 'logitem' must not be changed after database -
+ #  creation. Also 'logitem' is used decoder-internal and therefore must never
+ #  be changed.
+ ##########
+ #
+ # Different to above parameters the following parameter-contents are changeable.
+ # Only the functionality of heater-system fixed the values of 'set_param' to
+ # the possible setable limits.
+ #
+ # 'accessname'-name is used for accessing the decoded heater-data from external
+ # requesting clients.
+ # Choose this name as you like, keep in mind that it must be system unique
+ #  and should have the systempart in it's name like: 'hc1_anyname'.
+ # Also the commands to the heater-system are using this 'accessname'.
+ #  But there are only a few commands setable and only this one's
+ #  have that 'set_param' qualifier included.
+ #
+ # 'set_param' defines the valid setable parameter for a heater setup-command.
+ # Depending on the logitem and it's functionality the set-parameter must have
+ # diffenrent content.
+ # The valid parameters depends also on the current heater-system
+ # with its's currently running controller.
+ # Particular the difference between the bussystems and the used telegrams make
+ # there the limitation.
+ # example:
+ #   controller-type 'Fxyz' againsed 'Cxyz' make the difference in the
+ #   usable commands like: 'heizen', 'sparen', 'frost' against 'comfort2' or 'eco'.
+ #
+ # The rules for building this set-parameter are:
+ #     1. using strings, separated with ','.
+ #     2. optional parameters can be separated with '|'.
+ #     3. no white-spaces should be included.
+ #     4. parameters are case-sensitive.
+ #     5. One example and it's meaning is:
+ #          <set_param>Tdesired,3,1,T,heizen|sparen|frost</set_param>
+ #      5.1 short name                     := Tdesired
+ #      5.2 amount of following parameters := 3
+ #          The followers are the possible parameter, at least amount of two is required.
+ #      5.3 parameter1: heater-circuit number in range 1...4.
+ #      5.4 parameter2: a tag for the handling with it := T -> received parameter is used
+ #           for temperatur.
+ #      5.5 parameterN: optional more parameters if required, in this example it is:
+ #           'heizen' or 'sparen' or 'frost'.
+ #
+ # Keep in mind that this is still under development and not yet everything will work
+ # already.
+ # My aim is to make it more general, but the manufacturer is very creative and make
+ # this happen more complicated. But at least, we are the winner (I'll hope so :-)
+ # 
  ##
 -->
     <item>HT3_database_configuration</item>
     <!-- sql-database -->
     <dbname_sqlite>./var/databases/HT3_db.sqlite</dbname_sqlite>
     <sql-db>
-      <enable>on</enable>
+      <enable>off</enable>
       <!-- autoerase_olddata: 
         parameter used for auto-erasing the oldest database content(s)
          if set to:0  autoerasing is disabled.
@@ -90,7 +143,7 @@
       <starttime_utc>1344000000</starttime_utc>
       <!-- autocreate_draw: 
         parameter used for auto-creating the png-draws from rrdtool-database content.
-	  (value is defined in 'minutes' (> 0) or disabled (== 0))
+        (value is defined in 'minutes' (> 0) or disabled (== 0))
          if set to:0 or off autocreating is disabled.
          if set to:> 0      autocreating is enabled
             (enabled only if database is also set to:<enable>on</enable>)
@@ -340,6 +393,8 @@
             <unit>Grad</unit>
             <displayname>T-Soll (gewünscht)</displayname>
             <accessname>hc1_Tdesired</accessname>	<!-- name for data-exchange with interfaces -->
+             <!-- set-parameter for this item -->
+            <set_param>Tdesired,3,1,T,heizen|sparen|frost||temporary|comfort1|comfort2|comfort3|eco|manual</set_param>
         </logitem>
         <logitem name="T_ist_HK">
             <datatype>REAL</datatype>
@@ -394,6 +449,8 @@
             <unit></unit>
             <displayname>Temperatur-Niveau</displayname>
             <accessname>hc1_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+            <!-- set-parameter for this item -->
+            <set_param>Tniveau,2,1,auto|heizen|sparen|frost||auto|manual</set_param>
         </logitem>
         <logitem name="V_operation_status">
             <datatype>INT</datatype>
@@ -445,6 +502,8 @@
             <unit>Grad</unit>
             <displayname>T-Soll (gewünscht)</displayname>
             <accessname>hc2_Tdesired</accessname>	<!-- name for data-exchange with interfaces -->
+            <!-- set-parameter for this item -->
+            <set_param>Tdesired,3,2,T,heizen|sparen|frost||temporary|comfort1|comfort2|comfort3|eco|manual</set_param>
         </logitem>
         <logitem name="T_ist_HK">
             <datatype>REAL</datatype>
@@ -499,6 +558,8 @@
             <unit></unit>
             <displayname>Temperatur-Niveau</displayname>
             <accessname>hc2_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+            <!-- set-parameter for this item -->
+            <set_param>Tniveau,2,2,auto|heizen|sparen|frost||auto|manual</set_param>
         </logitem>
         <logitem name="V_operation_status">
             <datatype>INT</datatype>
@@ -550,6 +611,8 @@
             <unit>Grad</unit>
             <displayname>T-Soll (gewünscht)</displayname>
             <accessname>hc3_Tdesired</accessname>	<!-- name for data-exchange with interfaces -->
+            <!-- set-parameter for this item -->
+            <set_param>Tdesired,3,3,T,heizen|sparen|frost||temporary|comfort1|comfort2|comfort3|eco|manual</set_param>
         </logitem>
         <logitem name="T_ist_HK">
             <datatype>REAL</datatype>
@@ -604,6 +667,8 @@
             <unit></unit>
             <displayname>Temperatur-Niveau</displayname>
             <accessname>hc3_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+            <!-- set-parameter for this item -->
+            <set_param>Tniveau,2,3,auto|heizen|sparen|frost||auto|manual</set_param>
         </logitem>
         <logitem name="V_operation_status">
             <datatype>INT</datatype>
@@ -655,6 +720,8 @@
             <unit>Grad</unit>
             <displayname>T-Soll (gewünscht)</displayname>
             <accessname>hc4_Tdesired</accessname>	<!-- name for data-exchange with interfaces -->
+            <!-- set-parameter for this item -->
+            <set_param>Tdesired,3,4,T,heizen|sparen|frost||temporary|comfort1|comfort2|comfort3|eco|manual</set_param>
         </logitem>
         <logitem name="T_ist_HK">
             <datatype>REAL</datatype>
@@ -709,6 +776,8 @@
             <unit></unit>
             <displayname>Temperatur-Niveau</displayname>
             <accessname>hc4_Tniveau</accessname>	<!-- name for data-exchange with interfaces -->
+            <!-- set-parameter for this item -->
+            <set_param>Tniveau,2,4,auto|heizen|sparen|frost||auto|manual</set_param>
         </logitem>
         <logitem name="V_operation_status">
             <datatype>INT</datatype>
