@@ -18,6 +18,7 @@
 #
 #################################################################
 # Ver:0.1    / Datum 15.06.2017 first release
+# Ver:0.2    / Datum 20.08.2017 waiting max 120 seconds in broker_available()
 #################################################################
 
 import xml.etree.ElementTree as ET
@@ -32,8 +33,8 @@ import paho.mqtt.client as paho
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.1"
-__date__    = "15.06.2017"
+__version__ = "0.2"
+__date__    = "20.08.2017"
 
 """
 #################################################################
@@ -353,7 +354,11 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
         """overwrite this methode for your own message-handling."""
 
     def broker_available(self):
-        """checking availability of broker."""
+        """checking availability of broker.
+            waiting at least for 120 seconds for availability of
+            the mqtt-broker server.
+            mainly used once at startup of the mqtt-client.
+        """
         rtnvalue = False
         import socket
         my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -361,13 +366,24 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
         address = (self.cfg_brokeraddress(), self.cfg_portnumber())
         loop = 0
         try:
-            while loop < 10:
+            infostr = "mqtt-broker server availability check:{0}".format(address)
+            self.cfg_logging().info(infostr)
+            infostr = ""
+            dotstr = ""
+            # waiting 120 seconds at least for connection
+            while loop < 120:
                 connect_status = my_socket.connect_ex(address)
                 if connect_status == 0:
                     rtnvalue = True
                     break
                 loop += 1
-                time.sleep(0.5)
+                dotstr = dotstr + "."
+                if not (loop % 5):
+                    infostr = " waiting" + dotstr + "{0} seconds".format(loop)
+                    self.cfg_logging().info(infostr)
+                    infostr = ""
+                    dotstr = ""
+                time.sleep(1.0)
         except:
             rtnvalue = False
         my_socket.close()
@@ -377,6 +393,7 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
         """initialisation of mqtt-client with values from cfg-file."""
         rtnvalue = False
         #check broker availability at first
+        self.cfg_logging().info("-----------------------------")
         if not self.broker_available():
             errorstr = """cmqtt_baseclass.mqtt_init() broker not available:{0}; port:{1}""".format(self.cfg_brokeraddress(),
                                                                                                   self.cfg_portnumber())
@@ -402,8 +419,7 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
                 if len(self.cfg_username()) > 0 and len(self.cfg_password()) > 0:
                     self.__client.username_pw_set(self.cfg_username(), self.cfg_password())
                 #connect to broker
-                self.cfg_logging().info("-----------------------------")
-                infostr = "MQTT Pub-Client try to connected to address:{0}; port:{1}".format(self.cfg_brokeraddress(),
+                infostr = "MQTT Pub-Client try to connected to MQTT-broker at address:{0}; port:{1}".format(self.cfg_brokeraddress(),
                                                                                         self.cfg_portnumber())
                 self.cfg_logging().info(infostr)
                 self.__client.connect(host=self.cfg_brokeraddress(), port=self.cfg_portnumber(), keepalive=60)
