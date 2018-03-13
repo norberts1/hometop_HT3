@@ -29,6 +29,7 @@
 #               Display: All 'Minutes' changed to 'hours':=Stunden.
 #               'BZeit' changed to:LAST (from AVERAGE).
 #               FB10 remote-controller deactivated.
+# Ver:0.3    / Datum 10.03.2018 integer-format draw corrected
 #################################################################
 
 #
@@ -156,7 +157,7 @@ $rc = $heizgeraet_rrdh->graph(
 	},
 	comment		=> '                       last\:',
 	gprint		=> {
-		format	=> '%2.lf\l',
+		format	=> '%2.0lf\l',
 		draw	=> 'Brennerleistung_last',
 	},
 	draw		=> {
@@ -172,7 +173,7 @@ $rc = $heizgeraet_rrdh->graph(
 	},
 	comment		=> '                         last\:',
 	gprint		=> {
-		format	=> '%2.lf\l',
+		format	=> '%2.0lf\l',
 		draw	=> 'TSoll_last',
 	},
 	draw		=> {
@@ -240,7 +241,7 @@ $rc = $heizgeraet_rrdh->graph(
 	},
 	comment		=> '                last\:',
 	gprint		=> {
-		format	=> '%2.lf\l',
+		format	=> '%2.0lf\l',
 		draw	=> 'HP_Leistung_last',
 	},
 #Rev.:0.1.7 ######### deaktiviert
@@ -314,7 +315,7 @@ $rc = $heizgeraet_rrdh->graph(
 		vdef	=> "brennereinheiz,LAST",
 	},
 	gprint		=> {
-		format	=> '  Brenner ein         \: %6.lf Zähler',
+		format	=> '  Brenner ein         \: %6.0lf Zähler',
 		draw	=> 'brennereinheiz_last',
 	},
 	comment		=> ' \s',
