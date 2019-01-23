@@ -31,11 +31,15 @@
 #                               'create_mylogger' added
 #                               'syspartnames()' added
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added
-# Ver:0.2.2  / Datum 05.10.2016 'rrdtool_autocreate_draw'-handling now for 
+# Ver:0.2.2  / Datum 05.10.2016 'rrdtool_autocreate_draw'-handling now for
 #                                 x minutes
 # Ver:0.2.x  / Datum 10.05.2017 'accessname'-handling added
 # Ver:0.3    / Datum 19.06.2017 'set_param' -handling added
 #                               controller_type and bus_type added.
+# Ver:0.3.1  / Datum 17.01.2019 'controller_type_nr()' added
+#                               'GetAllMixedFlags()' added
+#                               'IsTempSensor_Hydrlic_Switch()' added.
+#                               'IsSecondCollectorValue_SO()' added.
 #################################################################
 
 import xml.etree.ElementTree as ET
@@ -161,6 +165,8 @@ class cdata(ht_utils.clog):
         self.__LoadpumpWW = False
         self.__SecondHeaterSO = False
         self.__SecondBufferSO = False
+        self.__SecondCollect_ValueSO = False
+        self.__TempSensor_HydraulicSwitch = 0
         self.__data = {}
         self.__thread_lock = _thread.allocate_lock()
         self.__newdata_available = False
@@ -183,7 +189,8 @@ class cdata(ht_utils.clog):
         self._sqlite_autoerase_afterSeconds = 0
         self._rrdtool_autocreate_draw_minutes = 0
         # system-infos
-        self.__controller_type = "Fxyz"
+        self.__controller_type = ht_const.CONTROLLER_TYPE_STR_Fxyz
+        self.__controller_type_nr = ht_const.CONTROLLER_TYPE_NR_Fxyz
         self.__bus_type = "---"
 
 
@@ -817,7 +824,7 @@ class cdata(ht_utils.clog):
                     else:
                         cmd_parameter = None
                     if not accessname == None and len(accessname) > 0:
-                        # setup accessname to tuple: 
+                        # setup accessname to tuple:
                         #   (nickname, external logitem, internal itemname. command-parameter)
                         self.__accesscontext.update({accessname: (nickname, logitem, itemname, cmd_parameter)})
                     else:
@@ -1082,10 +1089,19 @@ class cdata(ht_utils.clog):
             if heaterbus-type EMS was detected then Cxyz-controller is default set.
         """
         if self.HeaterBusType() == ht_const.BUS_TYPE_EMS:
-            self.__controller_type = "Cxyz"
+            self.__controller_type = ht_const.CONTROLLER_TYPE_STR_Cxyz
+            self.controller_type_nr(ht_const.CONTROLLER_TYPE_NR_Cxyz)
         if len(c_type) > 0:
             self.__controller_type = c_type
         return self.__controller_type
+
+    def controller_type_nr(self, i_type = -1):
+        """returns/sets the controller-type-number as int.
+        """
+        if (i_type != -1):
+            self.__controller_type_nr = int(i_type)
+        return int(self.__controller_type_nr)
+
 
     def bus_type(self, b_type=""):
         """returns/sets the found bus-type as string."""
@@ -1272,6 +1288,19 @@ class cdata(ht_utils.clog):
             self.__unmixedHK1_HK4.update({nickname: unmixed})
         return bool(self.__unmixedHK1_HK4.get(nickname))
 
+    def GetAllMixerFlags(self):
+        """
+        returns True-values if heater-circuits has a mixer, else False.
+         a list of 4 values will be returned (HK1...4)
+        """
+        mixed_flags = []
+        for HeizkreisNummer in range(1, 5):
+            nickname = "HK" + str(HeizkreisNummer)
+            mixed = 1 if not bool(self.UnmixedFlagHK(nickname)) else 0
+            # set result to tuple rtn-values, starting with index:=0
+            mixed_flags.append(mixed)
+        return mixed_flags
+
     def IsLoadpump_WW(self):
         """
         returns True, if heater-external water-loadpump is available else False.
@@ -1293,13 +1322,36 @@ class cdata(ht_utils.clog):
         """
         return self.__SecondBufferSO
 
+    def IsSecondCollectorValue_SO(self, SecondValue=None):
+        """
+        returns True, if second collector values are available else False.
+         Value is set during decoding of MsgID 260.
+        """
+        if SecondValue != None:
+            self.__SecondCollect_ValueSO = bool(SecondValue)
+        return bool(self.__SecondCollect_ValueSO)
+
+    def IsTempSensor_Hydrlic_Switch(self, SensorAvailable=None):
+        """
+        returns 1, if the Temperatursensor at Hydraulic Switch is available else 0.
+         Value is set during decoding of MsgID 25 and 30.
+        """
+        if SensorAvailable != None:
+            self.__TempSensor_HydraulicSwitch = int(SensorAvailable)
+        return int(self.__TempSensor_HydraulicSwitch)
+
     def HeaterBusType(self, bustype=None):
         """
         returns and setup the heater-bustype.
          The available values are defined in: ht_const.py.
+         If bus-telegrams are EMS-types, then Cxyz controllertypes are set.
         """
         if not bustype == None:
             self._heater_bustype = bustype
+
+        if self._heater_bustype == ht_const.BUS_TYPE_EMS:
+            self.__controller_type    = ht_const.CONTROLLER_TYPE_STR_Cxyz
+            self.__controller_type_nr = ht_const.CONTROLLER_TYPE_NR_Cxyz
         return self._heater_bustype
 
     def IsSolarAvailable(self, available=None):
