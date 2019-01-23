@@ -34,6 +34,7 @@
 # Ver:0.2.2  / Datum 19.10.2016 rrdtool draw-script call now every x minutes
 #                               if enabled.
 # Ver:0.3    / Datum 19.06.2017 desctructor corrected
+# Ver:0.3.1  / Datum 08.01.2019 __Autocreate_draw() removed, db_rrdtool.create_draw() replacement
 #################################################################
 
 import sys
@@ -50,6 +51,7 @@ import ht_utils
 import logging
 import db_rrdtool
 import time
+import ht_const
 
 
 class ht3_cworker(object):
@@ -268,36 +270,6 @@ class ht3_cworker(object):
             rtnvalue = None
         return rtnvalue
 
-    def __Extract_HT3_path_from_AbsPath(self, inpath):
-        rtnpath = os.path.normcase(inpath)
-        searchpath = os.path.normcase('HT3/sw')
-        # check path and remove 'HT3/..' if any entry is found
-        if searchpath in (rtnpath):
-            rtnpath = rtnpath[: rtnpath.rfind(searchpath)]
-        return os.path.abspath(rtnpath)
-
-    def __Autocreate_draw(self, path_2_db, path_2_draw, hc_count=1, start_time=None, stoptime=None):
-        """
-            automatic calling the rrdtool-draw script if rrdtool-db is enabled.
-        """
-        debugstr = "Autocreate draw();\n path2db  :{0};\n path2draw:{1};\n hc_count:{2}".format(path_2_db, path_2_draw, hc_count)
-        self._logging.debug(debugstr)
-        AbsPathandFilename = os.path.abspath(os.path.normcase('./etc/rrdtool_draw.pl'))
-        Abspath2_db = self.__Extract_HT3_path_from_AbsPath(path_2_db)
-        Abspath_2_draw = self.__Extract_HT3_path_from_AbsPath(path_2_draw)
-
-        strsystemcmd = AbsPathandFilename + ' ' + Abspath2_db + ' ' + Abspath_2_draw + ' ' + str(hc_count)
-        self._logging.debug(strsystemcmd)
-        try:
-            #execute perl-script for drawing 'rrdtool' dbinfos
-            error = os.system(strsystemcmd)
-            if error:
-                errorstr = "ht3_cworker.__Autocreate_draw();Error:{0}; cmd:{1}".format(error, strsystemcmd)
-                self._logging.critical(errorstr)
-        except:
-            errorstr = "ht3_cworker.__Autocreate_draw();Error; os.system-call"
-            self._logging.critical(errorstr)
-
     def __DispatchThread(self, parameter):
         """
             Dispatch-Thread: open databases if required and storing the results in db.
@@ -365,8 +337,13 @@ class ht3_cworker(object):
                         # create draw calling script
                         (db_path, dbfilename) = ht3_cworker._gdata.db_rrdtool_filepathname()
                         (html_path, filename) = ht3_cworker._gdata.db_rrdtool_filepathname('.')
-                        self.__Autocreate_draw(db_path, html_path, ht3_cworker._gdata.heatercircuits_amount())
-
+                        rrdtooldb.create_draw(db_path, html_path,
+                                              ht3_cworker._gdata.heatercircuits_amount(),
+                                              ht3_cworker._gdata.controller_type_nr(),
+                                              ht3_cworker._gdata.GetAllMixerFlags(),
+                                              int(ht3_cworker._gdata.IsTempSensor_Hydrlic_Switch()),
+                                              int(ht3_cworker._gdata.IsSolarAvailable()),
+                                              int(ht3_cworker._gdata.IsSecondCollectorValue_SO()))
                 if sqlite_autoerase:
                     self.__Autoerasing_sqlitedb(database)
 
