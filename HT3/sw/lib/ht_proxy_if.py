@@ -30,10 +30,10 @@ import ht_utils, logging
 import xml.etree.ElementTree as ET
 import time, os
 
-__author__  = "Norbert S <junky-zs@gmx.de>"
+__author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.1.7.1"
-__date__    = "04 Maerz 2015"
+__version__ = "0.1.7.2"
+__date__    = "31.10.2015"
 
 #---------------------------------------------------------------------------
 #   targettype related stuff
@@ -106,7 +106,7 @@ class cportread(threading.Thread):
 
     def __del__(self):
         self.stop()
-        
+
     def run(self):
         _ClientHandler.log_info("cportread() ;thread start; devicetype:{0}".format(self.__devicetype))
         while self.__threadrun:
@@ -145,11 +145,11 @@ class cportwrite(threading.Thread, ht_utils.cht_utils):
         self.__port=port
         self.__devicetype=devicetype
         self.__queueprio=INT_PRIO_MEDIUM
-        
+
 
     def __del__(self):
         self.stop()
-        
+
     def run(self):
         """bytes are read from queue, searched for start-tag '#' and length of
             following bytes. Then all bytes are written to comport
@@ -181,7 +181,7 @@ class cportwrite(threading.Thread, ht_utils.cht_utils):
                             except:
                                 # timeout occured-> no exception
                                 pass
-                            
+
                     # 2. now get msg-length from stream (over all length including headerbytes but without starttag)
                     if self.__starttag_found and len(readbuffer) > 1:
                         self.__length=readbuffer[1]
@@ -197,14 +197,14 @@ class cportwrite(threading.Thread, ht_utils.cht_utils):
                             self.__length = 0
                     else:
                         self.__starttag_found=False
-                        
+
                     self.__msgbytes=[]
                     try:
                         if self.__starttag_found and self.__length > 0:
                             self.__msgbytes.extend(readbuffer[5:self.__length+5])
                     except:
                         raise
-                        
+
                     # 4. send message-class/detail/option and (data-bytes if available) to transceiver_if
                     if self.__starttag_found:
                         try:
@@ -217,7 +217,7 @@ class cportwrite(threading.Thread, ht_utils.cht_utils):
                     _ClientHandler.log_info("Client-ID:{0};cportwrite();couldn't read from queue".format(clientQueue[0]))
             else:
                 time.sleep(0.2)
-            
+
         _ClientHandler.log_critical("cportwrite();thread end; devicetype:{0}".format(self.__devicetype))
 
     def stop(self):
@@ -268,7 +268,7 @@ class cht_transceiver_if(threading.Thread):
         self.__devicetype   = devicetype
         self.__port=None
         self.__threadrun=True
-    
+
     def __del__(self):
         self.stop()
         if self.__port != None:
@@ -283,12 +283,12 @@ class cht_transceiver_if(threading.Thread):
             _ClientHandler.log_critical("cht_transceiver_if();Error;couldn't open requested device:{0}".format(self.__serialdevice))
             self.__threadrun=False
             raise
-        
+
         self.__comtx_thread=cportwrite(self.__port, self.__devicetype)
         self.__comtx_thread.start()
         self.__comrx_thread=cportread(self.__port, self.__devicetype)
         self.__comrx_thread.start()
-        
+
         while self.__threadrun:
             time.sleep(1)
 
@@ -296,7 +296,7 @@ class cht_transceiver_if(threading.Thread):
         self.__com_txthread.stop()
         self.__com_rxthread.stop()
         self.__threadrun=False
-               
+
 
 class csocketsendThread(threading.Thread):
     """class 'csocketsendThread' used for sending data from queue to
@@ -334,9 +334,9 @@ class csocketsendThread(threading.Thread):
                 self.__threadrun=False
                 _ClientHandler.log_critical("csocketsendThread();Error on socket.send")
                 raise
-                                        
+
         _ClientHandler.log_info("csocketsendThread(); socket.send thread terminated")
-        
+
     def stop(self):
         self.__threadrun=False
 
@@ -349,30 +349,30 @@ class cClientHandling(threading.Thread, ht_utils.clog):
         # init/setup logging-file
         ht_utils.clog.__init__(self)
         self._logging=ht_utils.clog.create_logfile(self, logfilepath=logfilepath, loglevel=loglevel, loggertag=tcp_ip_type)
-        
+
         self._indexcounter=0
         self._clientcounter=0
         self._lock=threading.Lock()
         self._rxqueue={}
         self._txqueue={}
         self._thread={}
-        
+
     def log_critical(self, logmessage):
         self._logging.critical(logmessage)
-        
-        
+
+
     def log_error(self, logmessage):
         self._logging.error(logmessage)
-        
+
     def log_warning(self, logmessage):
         self._logging.warning(logmessage)
-        
+
     def log_info(self, logmessage):
         self._logging.info(logmessage)
-        
+
     def log_debug(self, logmessage):
         self._logging.debug(logmessage)
-        
+
     def inc_indexcounter(self):
         self._lock.acquire()
         self._indexcounter+=1
@@ -403,7 +403,7 @@ class cClientHandling(threading.Thread, ht_utils.clog):
     def add_client(self, clientID, request):
         self._rxqueue.update({clientID:queue.Queue()})
         self._txqueue.update({clientID:queue.Queue()})
-        
+
         txThread=csocketsendThread(request, self._txqueue.get(clientID))
         self._thread.update({clientID:txThread})
         txThread.start()
@@ -444,7 +444,7 @@ class cht_RequestHandler(socketserver.BaseRequestHandler):
         # add client and start threads
         _ClientHandler.add_client(self._myownID, self.request)
         self._rxqueue=_ClientHandler._rxqueue.get(self._myownID)
-        
+
         _ClientHandler.log_info("Client-ID:{0}; cht_RequestHandler(); socket.receive thread start".format(self._myownID))
         while True:
             try:
@@ -482,13 +482,13 @@ class cht_RequestHandler(socketserver.BaseRequestHandler):
             raise
         finally:
             self.request.settimeout(None)
-            
-        
+
+
     def setup(self):
         _ClientHandler.inc_indexcounter()
         _ClientHandler.inc_clientcounter()
         self._myownID=_ClientHandler.get_indexcounter()
-        
+
     def finish(self):
         _ClientHandler.dec_clientcounter()
         _ClientHandler.remove_client(self._myownID)
@@ -511,7 +511,7 @@ class cproxyconfig():
         #
     """
     global _ClientHandler
-    
+
     _configdata={}
     _configtransceiver={}
     _configtransceiver_devicenames={}
@@ -520,7 +520,7 @@ class cproxyconfig():
         self.__root = None
         self.__configtarget  = config_target.upper()
         self.__devicetype    = devicetype
-        
+
     def read_config(self,xmlconfigpathname):
         try:
             self.__configfilename=xmlconfigpathname
@@ -529,14 +529,14 @@ class cproxyconfig():
 ##            print("cproxyconfig().read_config();Error;{0} on file:'{1}'".format(e.args[0], self.__configfilename))
             _ClientHandler.log_critical("cproxyconfig().read_config();Error;{0} on file:'{1}'".format(e, self.__configfilename))
             raise
-        else:            
+        else:
             try:
                 self.__root = self.__tree.getroot()
                 self.__transceiver_numbers=int(self.__root.find('transceiver_numbers').text)
                 # currently limited to 1
                 if self.__transceiver_numbers > 1:
                     self.__transceiver_numbers = 1
-                    
+
                 # find server-/client-configuration values
                 if self.__configtarget in (TT_SERVER):
                     searchtarget='proxy_server'
@@ -556,11 +556,11 @@ class cproxyconfig():
                             storetarget=DT_MODEM
                         else:
                             storetarget=DT_RX
-                            
+
                         cproxyconfig._configdata.update({storetarget:[{}]})
                         cproxyconfig._configdata[storetarget][0].update({str(item).upper():devicetype})
-                        
-                        
+
+
                     item='serveraddress'
                     cproxyconfig._configdata[storetarget][0].update({str(item).upper():proxy_part.find(item).text})
                     item='servername'
@@ -586,25 +586,25 @@ class cproxyconfig():
                             cproxyconfig._configtransceiver[devicename][0].update({str(item).upper():parameter.find(item).text})
                             item='config'
                             cproxyconfig._configtransceiver[devicename][0].update({str(item).upper():parameter.find(item).text})
-                            
+
                         item='devicetype'
                         cproxyconfig._configtransceiver[devicename][0].update({str(item).upper():ht_transceiver.find(item).text})
 
                         item='deviceaddress_hex'
                         if devicename.upper() != 'RX':
                             cproxyconfig._configtransceiver[devicename][0].update({str(item).upper():ht_transceiver.find(item).text})
-                        else:                                    
+                        else:
                             cproxyconfig._configtransceiver[devicename][0].update({str(item).upper():'None'})
             except:
                 raise
-            
+
     def serveraddress(self):
         try:
             rtn=cproxyconfig._configdata[self.__devicetype][0].get('SERVERADDRESS')
         except:
             rtn=None
         return rtn
-    
+
     def servername(self):
         try:
             rtn=cproxyconfig._configdata[self.__devicetype][0].get('SERVERNAME')
@@ -666,7 +666,7 @@ class cproxyconfig():
         except:
             rtn=None
         return rtn
-    
+
     def transceiver_deviceaddress(self, devicename=None):
         try:
             if devicename==None:
@@ -690,7 +690,7 @@ class cht_proxy_daemon(threading.Thread, cproxyconfig):
        ip_address and port_number comes from configuration-file.
     """
     global _ClientHandler
-    
+
     def __init__(self, configfile="./etc/config/ht_proxy_cfg.xml", loglevel=logging.INFO):
         threading.Thread.__init__(self)
         tcp_ip_type=TT_SERVER
@@ -701,7 +701,7 @@ class cht_proxy_daemon(threading.Thread, cproxyconfig):
         self._port_number=8088
         self._server=None
         self._ht_transceiver_if=[]
-        
+
         #read configfile
         try:
             self.read_config(self._configfile)
@@ -725,8 +725,8 @@ class cht_proxy_daemon(threading.Thread, cproxyconfig):
                     print(" Can't write to that folder: {0}".format(abs_pathonly))
                     print(" The Best and the Rest I can do -> fire and forget !")
                     raise
-                    
-                    
+
+
             global _ClientHandler
             _ClientHandler=cClientHandling(self._logfile, loglevel=loglevel)
             _ClientHandler.log_info("----------------------")
@@ -768,12 +768,12 @@ class cht_proxy_daemon(threading.Thread, cproxyconfig):
                     self._ht_transceiver_if.append(transceiver_if)
                     transceiver_if.setDaemon(True)
                     transceiver_if.start()
-                    
+
                 #set initialise-flag for devicename
                 self.devicename_initflag(devicename, 1)
 
-                
-        
+
+
         try:
             self._server=socketserver.ThreadingTCPServer((self._ip_address, self._port_number), cht_RequestHandler)
             self._server.serve_forever()
@@ -784,7 +784,7 @@ class cht_proxy_daemon(threading.Thread, cproxyconfig):
             _ClientHandler.log_critical("cht_proxy_daemon terminated")
             _ClientHandler.log_info("---------------------------")
             raise
-        
+
     def get_indexcounter(self):
         global _ClientHandler
         return _ClientHandler.get_indexcounter()
@@ -793,7 +793,7 @@ class cht_proxy_daemon(threading.Thread, cproxyconfig):
         global _ClientHandler
         return _ClientHandler.get_clientcounter()
 
-    
+
 
 #--- class cht_proxy_if end ---#
 
@@ -812,7 +812,7 @@ class cht_socket_client(cproxyconfig, ht_utils.clog):
         self._loglevel   = loglevel
         self._loggertag  = tcp_ip_type
         self._clientID   =0
-        
+
         self._socket=None
         #read configfile
         try:
@@ -825,10 +825,10 @@ class cht_socket_client(cproxyconfig, ht_utils.clog):
             self._logging     = logging.getLogger(tcp_ip_type)
             self._logging.addHandler(_handler)
             self._logging.setLevel(loglevel)
-            
+
             self.log_critical("cht_socket_client();error can't get configurationvalues")
             raise
-        
+
         try:
             self._port_number = self.portnumber()
             self._logfile     = self.logfilepath()
@@ -836,7 +836,7 @@ class cht_socket_client(cproxyconfig, ht_utils.clog):
             # setup logging-file using class: ht_utils.clog
             ht_utils.clog.__init__(self)
             self._logging=self.create_logfile(self._logfile, self._loglevel, self._loggertag)
-            
+
             self.log_info("----------------------")
             self.log_info("cht_socket_client init")
             if not self.servername() == None:
@@ -847,7 +847,7 @@ class cht_socket_client(cproxyconfig, ht_utils.clog):
                 else:
                     self.log_critical("cht_socket_client.__init__(); error:no serveraddress defined")
                     raise ValueError("cht_socket_client.__init__(); error:no serveraddress defined")
-                
+
         except:
             self.log_critical("cht_socket_client();error can't set configurationvalues")
             raise
@@ -864,7 +864,7 @@ class cht_socket_client(cproxyconfig, ht_utils.clog):
         #send registration to proxy-server and receive client-related informations from server
         self.__registration();
         self.log_info("Client-ID:{0}; registered with devicetype:'{1}'".format(self._clientID, self._devicetype))
-        
+
     def __del__(self):
         if self._socket != None:
             self._socket.close()
@@ -875,7 +875,7 @@ class cht_socket_client(cproxyconfig, ht_utils.clog):
             # send devicetype to server
             devicetype=bytearray(self._devicetype.encode("utf-8"))
             self.write(devicetype)
-            
+
             # read answer from server (client-ID) and store it
             self._clientID=self._socket.recv(10).decode('utf-8')
             ## only for test## print("client got ID:{0}".format(self._clientID))
@@ -914,15 +914,15 @@ class cht_socket_client(cproxyconfig, ht_utils.clog):
             except:
                 self._socket.close()
                 self.log_critical("Client-ID:{0}; cht_socket_client.read(); error on socket.recv".format(self._clientID))
-                raise 
-            
+                raise
+
             if not buffer:
                 self._socket.close()
                 self.log_critical("Client-ID:{0}; cht_socket_client.read(); peer closed socket".format(self._clientID))
-                raise 
+                raise
             else:
                 read.extend(buffer)
-        
+
         return bytes(read)
 
     def write(self, data):
@@ -937,39 +937,39 @@ class cht_socket_client(cproxyconfig, ht_utils.clog):
         except:
             self.log_critical("Client-ID:{0}; cht_socket_client.write(); error on socket.sendall".format(self._clientID))
             raise
-            
+
     def log_critical(self, logmessage):
         self._logging.critical(logmessage)
-        
+
     def log_error(self, logmessage):
         self._logging.error(logmessage)
-        
+
     def log_warning(self, logmessage):
         self._logging.warning(logmessage)
-        
+
     def log_info(self, logmessage):
         self._logging.info(logmessage)
-        
+
     def log_debug(self, logmessage):
         self._logging.debug(logmessage)
-        
+
 #--- class cht_socket_client end ---#
-            
-    
-    
+
+
+
 ################################################
 
 if __name__ == "__main__":
     import time
 
     configfile="./../etc/config/4test/ht_proxy_cfg_test.xml"
-    
+
     print("----- do some daemon-server-checks with connected client -----")
     print("   -- start socket.server --")
     ht_proxy=cht_proxy_daemon(configfile)
     ht_proxy.start()
     print("   -- start socket.client --")
-    client=cht_socket_client(configfile, devicetype=DT_MODEM) 
+    client=cht_socket_client(configfile, devicetype=DT_MODEM)
     time.sleep(1)
     # data-stream send to ht_transceifer_if: '#' ,'!' ,'S',option, length(payload)
     #   data = [0x23,0x21,0x53,0,0]
@@ -978,7 +978,7 @@ if __name__ == "__main__":
     data = [0x23,3,0x21,0x53,0]
     client.write(data)
     time.sleep(1)
-    
+
     print("     -- cylic send reconfigure-commands to transceiver_if --")
     # data-stream send to ht_transceifer_if: '#' ,'!' ,'M', 0xF0, 0
     #   data = [0x23,0x21,0x53,0xF0,0]
