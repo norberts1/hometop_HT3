@@ -26,6 +26,7 @@
 # Ver:0.2.2  / Datum 19.10.2016 In 'set_tempniveau()' msgID 377...380 added.
 # Ver:0.3    / Datum 19.06.2017 set_ems_controller() added.
 #                            parameter check added, returns error if unknown.
+# Ver:0.3.1  / Datum 21.08.2018 Fkt. setup_2byte_data() added.
 #################################################################
 
 import time
@@ -33,8 +34,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.3"
-__date__ = "19.06.2017"
+__version__ = "0.3.1"
+__date__ = "21.08.2018"
 
 
 #################################################################
@@ -546,6 +547,38 @@ class cyanetcom():
             self._clienthandle.write(block)
         except:
             error = str("cyanetcom.setup_integer_data();Error;could not write byte-array() to socket")
+            return error
+
+        time.sleep(1)
+        return error
+
+    def setup_2byte_data(self, setup_value, msg_id=697, target_deviceadr=0x10, msg_offset=0):
+        """ setup data for 2byte size to target using offset and setup_value
+        """
+        if msg_id > 255:
+            # calculate high,low byte from msg_id
+            Lowbyte = int(msg_id % 256)
+            Highbyte = int(msg_id / 256)
+            if Highbyte > 0:
+                Highbyte -= 1
+        if (msg_offset > 21):
+            msg_offset = 21
+        setup_Highbyte = int(setup_value / 256)
+        setup_Lowbyte  = int(setup_value % 256)
+        error = None
+        try:
+            # send to transceiver
+            if msg_id > 255:
+                data = [target_deviceadr, 0xff, msg_offset, Highbyte, Lowbyte, int(setup_Highbyte), int(setup_Lowbyte)]
+            else:
+                data = [target_deviceadr, msg_id, msg_offset, int(setup_Highbyte), int(setup_Lowbyte)]
+
+            # header   :  '#',<length>,'!','S',0x11
+            header = [0x23, (len(data) + 3), 0x21, 0x53, 0x11]
+            block = header + data
+            self._clienthandle.write(block)
+        except:
+            error = str("cyanetcom.setup_2byte_data();Error;could not write byte-array() to socket")
             return error
 
         time.sleep(1)
