@@ -50,6 +50,16 @@
 # Ver:0.2.3  / Datum 20.11.2016 'ht_discode.py' msgID:52 modified.
 #                               DHW WW-Betriebzeit always displayed.
 # Ver:0.3    / Datum 19.06.2017 controller- and bus-type added.
+# Ver:0.3.1  / Datum 20.01.2019 T-Soll Vorlauf im HK added.
+#                               T-Hydraulische Weiche added.
+#                               __MakeDisplaycodeString() added,
+#                                update of displaycode-handling.
+#                               IsSecondCollectorValue_SO() handling added,
+#                                SO:V_spare_1 & SO:V_spare_2 used now.
+#                               Display of SO:V_ertrag_sum_calc ('TotalSolarGain') and
+#                                SO:V_ertrag_tag_calc ('DalySolarGain') added.
+#                               Betriebszeit Gesamt und Heizung im Heizgeraet-Anzeigemode korrigiert.
+#                               Unit 'Stunden' - String entfernt -> jetzt aus Cfg-file.
 #################################################################
 #
 
@@ -65,8 +75,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.3"
-__date__ = "19.06.2017"
+__version__ = "0.3.1"
+__date__ = "20.01.2019"
 
 
 class gui_cworker(ht_utils.clog):
@@ -429,7 +439,7 @@ class gui_cworker(ht_utils.clog):
             temptext = self.__DisplayColumn(nickname_HG, "Truecklauf", Truecklauf, endofline=False)
 
         betriebszeit = float(self.__gdata.values(nickname_WW, "Cbetriebs_zeit"))
-        tempvalue = format(betriebszeit, ".1f") + ' Stunden'
+        tempvalue = format(betriebszeit, ".1f")
         temptext += self.__DisplayColumn(nickname_WW, "Cbetriebs_zeit", tempvalue, right=True)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
@@ -490,13 +500,13 @@ class gui_cworker(ht_utils.clog):
 
         # 13. line
         betrieb_gesamt_ein = float(self.__gdata.values(nickname_HG, "Cbetrieb_gesamt"))
-        tempvalue = format(betrieb_gesamt_ein, ".1f") + ' Stunden'
+        tempvalue = format(betrieb_gesamt_ein, ".1f")
         temptext = self.__DisplayColumn(nickname_HG, "Cbetrieb_gesamt", tempvalue)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         # 14. line
         betrieb_heizung_ein = float(self.__gdata.values(nickname_HG, "Cbetrieb_heizung"))
-        tempvalue = format(betrieb_heizung_ein, ".1f") + ' Stunden'
+        tempvalue = format(betrieb_heizung_ein, ".1f")
         temptext = self.__DisplayColumn(nickname_HG, "Cbetrieb_heizung", tempvalue)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
@@ -517,19 +527,27 @@ class gui_cworker(ht_utils.clog):
 
         # 18. line
         # show:display-code and cause-code if errors
-        displaycode_int = int(format(self.__gdata.values(nickname_HG, "Vdisplaycode")))
-        if displaycode_int == 0:
-            displaycode = "--"
+        displaycode = int(self.__gdata.values(nickname_HG, "Vdisplaycode"))
+        if displaycode > 0:
+            displaycode_str = self.__MakeDisplaycodeString(displaycode)
         else:
-            upper_part = int(displaycode_int / 256)
-            lower_part = int(displaycode_int % 256)
-            displaycode = "{0:c}{1:c}".format(upper_part, lower_part)
-        temptext = self.__DisplayColumn(nickname_HG, "Vdisplaycode", displaycode)
+            displaycode_str = "---"
+
+        temptext = self.__DisplayColumn(nickname_HG, "Vdisplaycode", displaycode_str)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         causecode = str(format(self.__gdata.values(nickname_HG, "Vcausecode")))
         temptext = self.__DisplayColumn(nickname_HG, "Vcausecode", causecode)
         if len(temptext) > 0: self.__text.insert("end", temptext)
+
+        # 19. line
+        # if setup flag for Hydraulic Switch is True, then display T-value
+        if self.__gdata.IsTempSensor_Hydrlic_Switch():
+            Thydraulic_switch = format(float(self.__gdata.values(nickname_HG, "Vspare2")), ".1f")
+            if self.__IsTemperaturValid(Thydraulic_switch):
+                temptext = self.__DisplayColumn(nickname_HG, "Vspare2", Thydraulic_switch)
+                if len(temptext) > 0: self.__text.insert("end", temptext)
+
 
         if (self.__gdata.IsSyspartUpdate(nickname_HG) and self.__hexdump_window):
             temptext = self.__gdata.values(nickname_HG, "hexdump")
@@ -599,13 +617,13 @@ class gui_cworker(ht_utils.clog):
             temptext = self.__DisplayColumn(nickname, "Vspeicher_pumpe", tempvalue)
             if len(temptext) > 0: self.__text.insert("end", temptext)
 
-        betrieb_gesamt_ein = int(self.__gdata.values(nickname, "Cbetrieb_gesamt"))
-        tempvalue = format(int(betrieb_gesamt_ein / 60), ".0f") + ' Stunden'
+        betrieb_gesamt_ein = float(self.__gdata.values(nickname, "Cbetrieb_gesamt"))
+        tempvalue = format(betrieb_gesamt_ein, ".1f")
         temptext = self.__DisplayColumn(nickname, "Cbetrieb_gesamt", tempvalue)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
-        betrieb_heizung_ein = int(self.__gdata.values(nickname, "Cbetrieb_heizung"))
-        tempvalue = format(int(betrieb_heizung_ein / 60), ".0f") + ' Stunden'
+        betrieb_heizung_ein = float(self.__gdata.values(nickname, "Cbetrieb_heizung"))
+        tempvalue = format(betrieb_heizung_ein, ".1f")
         temptext = self.__DisplayColumn(nickname, "Cbetrieb_heizung", tempvalue)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
@@ -623,19 +641,26 @@ class gui_cworker(ht_utils.clog):
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         # show:display-code and cause-code if errors
-        displaycode_int = int(format(self.__gdata.values(nickname, "Vdisplaycode")))
-        if displaycode_int == 0:
-            displaycode = "--"
+        displaycode = int(self.__gdata.values(nickname, "Vdisplaycode"))
+        if displaycode > 0:
+            displaycode_str = self.__MakeDisplaycodeString(displaycode)
         else:
-            upper_part = int(displaycode_int / 256)
-            lower_part = int(displaycode_int % 256)
-            displaycode = "{0:c}{1:c}".format(upper_part, lower_part)
-        temptext = self.__DisplayColumn(nickname, "Vdisplaycode", displaycode)
+            displaycode_str = "---"
+
+        temptext = self.__DisplayColumn(nickname, "Vdisplaycode", displaycode_str)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         causecode_int = int(format(self.__gdata.values(nickname, "Vcausecode")))
         temptext = self.__DisplayColumn(nickname, "Vcausecode", causecode_int)
         if len(temptext) > 0: self.__text.insert("end", temptext)
+
+        # 19. line
+        # if setup flag for Hydraulic Switch is True, then display T-value
+        if self.__gdata.IsTempSensor_Hydrlic_Switch():
+            Thydraulic_switch = format(float(self.__gdata.values(nickname, "Vspare2")), ".1f")
+            if self.__IsTemperaturValid(Thydraulic_switch):
+                temptext = self.__DisplayColumn(nickname, "Vspare2", Thydraulic_switch)
+                if len(temptext) > 0: self.__text.insert("end", temptext)
 
         if (self.__gdata.IsSyspartUpdate(nickname) and self.__hexdump_window):
             temptext = self.__gdata.values(nickname, "hexdump")
@@ -648,6 +673,7 @@ class gui_cworker(ht_utils.clog):
             self.__text.insert("end", "  22   so ta 16 00 P1 P2  heater     heater      2 wire bus\n")
             self.__text.insert("end", "  24   so ta 18 00 P1 P2  heater     heater      2 wire bus\n")
             self.__text.insert("end", "  25   so ta 19 00 P1 P2  heater     heater      2 wire bus\n")
+            self.__text.insert("end", "  30   so ta 1E 00 P1 P2  heater     heater      2 wire bus\n")
             self.__text.insert("end", "  42   so ta 2A 00 P1 P2  heater     heater      2 wire bus\n")
             self.__text.insert("end", "       so := source (88)\n")
             self.__text.insert("end", "          ta := target\n")
@@ -699,6 +725,11 @@ class gui_cworker(ht_utils.clog):
             temptext = self.__DisplayColumn(nickname, "Voperation_status", tempvalue)
             if len(temptext) > 0: self.__text.insert("end", temptext)
 
+            # logitem HK:'Vspare1' used here as 'T-Soll (Vorlauf)'
+            tempvalue = format(int(self.__gdata.values(nickname, "Vspare1")), "d")
+            temptext = self.__DisplayColumn(nickname, "Vspare1", tempvalue)
+            if len(temptext) > 0: self.__text.insert("end", temptext)
+
             tempvalue = format(float(self.__gdata.values(nickname, "Tsoll_HK")), ".1f")
             temptext = self.__DisplayColumn(nickname, "Tsoll_HK", tempvalue)
             if len(temptext) > 0: self.__text.insert("end", temptext)
@@ -712,6 +743,10 @@ class gui_cworker(ht_utils.clog):
                 tempvalue = format(TsteuerFB, ".1f")
                 temptext = self.__DisplayColumn(nickname, "Tsteuer_FB", tempvalue)
                 if len(temptext) > 0: self.__text.insert("end", temptext)
+
+            tempvalue = self.__GetStrOnOff(self.__gdata.values(nickname, "Vspare2"))
+            temptext = self.__DisplayColumn(nickname, "Vspare2", tempvalue)
+            if len(temptext) > 0: self.__text.insert("end", temptext)
 
             if ungemischt == False:
                 tempvalue = format(float(self.__gdata.values(nickname, "Tvorlaufmisch_HK")), ".1f")
@@ -792,7 +827,7 @@ class gui_cworker(ht_utils.clog):
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         betriebszeit = float(self.__gdata.values(nickname, "Cbetriebs_zeit"))
-        tempvalue = format(betriebszeit, ".1f") + ' Stunden'
+        tempvalue = format(betriebszeit, ".1f")
         temptext = self.__DisplayColumn(nickname, "Cbetriebs_zeit", tempvalue)
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
@@ -802,10 +837,6 @@ class gui_cworker(ht_utils.clog):
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         if self.__gdata.IsLoadpump_WW():
-            tempvalue = self.__GetStrOnOff(self.__gdata.values(nickname, "Vladepumpe"))
-            temptext = self.__DisplayColumn(nickname, "Vladepumpe", tempvalue)
-            if len(temptext) > 0: self.__text.insert("end", temptext)
-
             tempvalue = self.__GetStrOnOff(self.__gdata.values(nickname, "Vladepumpe"))
             temptext = self.__DisplayColumn(nickname, "Vladepumpe", tempvalue)
             if len(temptext) > 0: self.__text.insert("end", temptext)
@@ -897,8 +928,18 @@ class gui_cworker(ht_utils.clog):
             temptext = self.__DisplayColumn(nickname, "V_ertrag_stunde", tempvalue)
             if len(temptext) > 0: self.__text.insert("end", temptext)
 
+            # if Controller is 'Cxyz'-type then display: 'DalySolarGain' and 'TotalSolarGain'
+            if self.__gdata.controller_type_nr() == ht_const.CONTROLLER_TYPE_NR_Cxyz:
+                tempvalue = format(float(self.__gdata.values(nickname, "V_ertrag_tag_calc")), ".1f")
+                temptext = self.__DisplayColumn(nickname, "V_ertrag_tag_calc", tempvalue)
+                if len(temptext) > 0: self.__text.insert("end", temptext)
+
+                tempvalue = format(float(self.__gdata.values(nickname, "V_ertrag_sum_calc")), ".1f")
+                temptext = self.__DisplayColumn(nickname, "V_ertrag_sum_calc", tempvalue)
+                if len(temptext) > 0: self.__text.insert("end", temptext)
+
             f_laufzeit_stunden = float(self.__gdata.values(nickname, "Claufzeit"))
-            tempvalue = format(f_laufzeit_stunden, ".1f") + ' Stunden'
+            tempvalue = format(f_laufzeit_stunden, ".1f")
             temptext = self.__DisplayColumn(nickname, "Claufzeit", tempvalue)
             if len(temptext) > 0: self.__text.insert("end", temptext)
 
@@ -921,6 +962,15 @@ class gui_cworker(ht_utils.clog):
 
                 tempvalue = self.__GetStrJaNein(self.__gdata.values(nickname, "Vspeicher_voll"))
                 temptext = self.__DisplayColumn(nickname, "Vspeicher_voll", tempvalue)
+                if len(temptext) > 0: self.__text.insert("end", temptext)
+
+            if self.__gdata.IsSecondCollectorValue_SO():
+                tempvalue = format(float(self.__gdata.values(nickname, "V_spare_1")), ".1f")
+                temptext = self.__DisplayColumn(nickname, "V_spare_1", tempvalue)
+                if len(temptext) > 0: self.__text.insert("end", temptext)
+
+                tempvalue = self.__GetStrOnOff(self.__gdata.values(nickname, "V_spare_2"))
+                temptext = self.__DisplayColumn(nickname, "V_spare_2", tempvalue)
                 if len(temptext) > 0: self.__text.insert("end", temptext)
 
             if (self.__gdata.IsSyspartUpdate(nickname) and self.__hexdump_window):
@@ -1106,6 +1156,19 @@ class gui_cworker(ht_utils.clog):
                 if not self.__g_i_hexheader_counter % 40:
                     self.__Hextext_bytecomment()
             self.__gdata.UpdateRead()
+
+    def __MakeDisplaycodeString(self, displaycode):
+        """
+            Generate display-code string from integer-value.
+        """
+        if displaycode == 0:
+            code = "---"
+        else:
+            code1 = int((displaycode & 0xff0000) / 65536)
+            code2 = int((displaycode & 0x00ff00) / 256)
+            code3 = int((displaycode & 0x0000ff))
+            code = "{1:c}{2:c}{3:c}".format(displaycode, code1,code2,code3)
+        return code
 
 #--- class gui_cworker end ---#
 
