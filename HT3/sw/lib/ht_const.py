@@ -20,6 +20,7 @@
 # Ver:0.1    / Datum 20.07.2016 first release
 # Ver:0.2    / Datum 29.08.2016
 # Ver:0.2.2  / Datum 19.10.2016 HT_OFFSET_377_380_TEMPNIVEAU... added
+# Ver:0.3.1  / Datum 28.11.2018 Controller-nr and -str added for Fxyz and Cxyz
 #################################################################
 
 
@@ -29,6 +30,11 @@ BUS_TYPE_EMS = 1
 BUS_TYPE_HT2 = 2    # not supported
 BUS_TYPE_HT3 = 3
 BUS_TYPE_CAN = 4    # not supported
+
+CONTROLLER_TYPE_STR_Fxyz = "Fxyz"
+CONTROLLER_TYPE_STR_Cxyz = "Cxyz"
+CONTROLLER_TYPE_NR_Fxyz = 1
+CONTROLLER_TYPE_NR_Cxyz = 2
 
 
 #### Heatronic -typed constants ####
