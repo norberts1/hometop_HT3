@@ -60,6 +60,28 @@
 #                    https://www.mikrocontroller.net/topic/324673#4864801
 # Ver:0.3    / Datum 19.06.2017 now debug-output in _search_4_transceiver_message().
 #                               controller- and bus-type handling added.
+# Ver:0.3.1  / Datum 18.01.2019 modified 'deviceadr_2msgid_blacklist[]'
+#                               modified msgID_22_Heaterdevice()
+#                               msgID_26_HeatingCircuit_HK1() updated and renamed
+#                               msgID_30_T_HydraulischeWeiche() THydr.Device added
+#                               msgID_35_HydraulischeWeiche() updated with hc_pump
+#                               msgID_51_DomesticHotWater() saving data on target:= 0 only
+#                               msgID_596_HeatingCircuit() added
+#                               msgID_597_HeatingCircuit() added
+#                               msgID_697_704_HeatingCircuit() Tsoll_HK
+#                               msgID_727_734_HeatingCircuit() added
+#                               msgID_737_744_HeatingCircuit() added
+#                               msgID_747_754_HeatingCircuit() Frostdanger added
+#                               _IsRequestCall() and _RequestCall() added
+#                               msgID_569_HeatingCircuit() added
+#                               msgID_52_DomesticHotWater() modified for tempsensor failure detection
+#                               msgID_30_T_HydraulischeWeiche() modified for 'ch_Thdrylic_switch'
+#                                using logitem HG:V_spare2.
+#                               msgID_25_Heaterdevice() 'ch_Thdrylic_switch' (V_spare2) added.
+#                               update of display errorcode-handling.
+#                               modified 'msgID_260_Solar()', SO:V_spare_1 & SO:V_spare_2 used now.
+#                               SO:'V_ertrag_sum_calc' used now for SO:'Ertrag Summe'
+#                               msgID_52_DomesticHotWater() storing data only if valid.
 #################################################################
 
 import serial
@@ -71,8 +93,8 @@ import ht_proxy_if
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.2.3"
-__date__ = "08.11.2016"
+__version__ = "0.3.1"
+__date__ = "18.01.2019"
 
 
 class cht_decode(ht_utils.cht_utils):
@@ -210,6 +232,29 @@ class cht_decode(ht_utils.cht_utils):
                 msgid = int(payloadheader[2])
             #  take Byte 3 as msg-offset
         return (msgid, payloadheader[3])
+
+    def _IsRequestCall(self, buffer):
+        """
+            returns True if requestflag is set on TargetDevice-Byte, else False
+        """
+        # if request-flag set, then make only hexdump
+        if (buffer[1] & 0x80) > 0:
+            return True
+        else:
+            return False
+
+    def _RequestCall(self, msgtuple, buffer, length):
+        """
+            hexdump is created and returns (nickname,values) -tuple
+        """
+        (msgid, offset) = msgtuple
+        nickname = "DT"
+        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, "req")
+        for buffer_index in range(0, length):
+            temptext += format(buffer[buffer_index], "02x") + " "
+        self.__gdata.update(nickname, "hexdump", temptext)
+        values = self.__gdata.values(nickname)
+        return (nickname, values)
 
     def msgID_2_BusInfo(self, msgtuple, buffer, length):
         """
@@ -421,6 +466,9 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "DT"
         (msgid, offset) = msgtuple
+        if self._IsRequestCall(buffer):
+            return self._RequestCall(msgtuple, buffer, length)
+
         temptext = "{0:4}_{1:<2}:".format(msgid, offset)
         # check if source-device-adr | 0x80 := buffer[0]
         if (buffer[0] == 0x88):
@@ -442,41 +490,87 @@ class cht_decode(ht_utils.cht_utils):
         """
             decoding of msgID:22 -> Heaterdevice message.
         """
-        nickname = "HG"
         (msgid, offset) = msgtuple
+        Sourcedevice = buffer[0]
+        Targetdevice = buffer[1]
+        TargetdeviceNr = (Targetdevice & 0x7f)
+        # if request-flag set, then make only hexdump
+        if self._IsRequestCall(buffer):
+            return self._RequestCall(msgtuple, buffer, length)
+
+        nickname = "HG"
+        self.__currentHK_nickname = nickname
+
         temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-
-        #TBD under developement
-        i_heater_enable = 1 if int(buffer[4]) == 0xff else 0
-        i_heater_maxtempvorlauf = int(buffer[5])
-        i_heater_maxpower = int(buffer[6])
-        i_heater_minpower = int(buffer[7])
-        i_heater_offhysterese = int(buffer[8])
-        i_heater_onhysterese = int(buffer[9]) - 255
-        i_heater_taktsperre_time = int(buffer[10])
-        i_heater_pumpmodus = int(buffer[11])
-        i_heater_maxpumppower = int(buffer[13])
-        i_heater_minpumppower = int(buffer[14])
-        debugstr1 = """{0:4}_{1:<2}_1;heatOn:{2};tempsel:{3};heatmaxp:{4};heatminp:{5};offhys:{6}""".format(msgid, offset,
-                                                                                i_heater_enable,
-                                                                                i_heater_maxtempvorlauf,
-                                                                                i_heater_maxpower,
-                                                                                i_heater_minpower,
-                                                                                i_heater_offhysterese)
-        debugstr2 = """{0:4}_{1:<2}_2;onhys:{2};antitakt:{3};pumpmodus:{4};pumpmaxpow:{5};pumpminpow:{6}""".format(msgid, offset,
-                                                                                i_heater_onhysterese,
-                                                                                i_heater_taktsperre_time,
-                                                                                i_heater_pumpmodus,
-                                                                                i_heater_maxpumppower,
-                                                                                i_heater_minpumppower)
-        self._logging.debug(debugstr1)
-        self._logging.debug(debugstr2)
-
-        for x in range(0, length):
+        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
+        first_payload_index = 4
+        for x in range(0, first_payload_index):
             temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
-        values = self.__gdata.values(nickname)
-        return (nickname, values)
+        # length > first index + crc-byte + break-byte
+        if length > first_payload_index + 2:
+            # init values
+            raw_index = offset + first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+            for buffer_index in range(first_payload_index, length - 2):
+                temptext += format(buffer[buffer_index], "02x") + " "
+                # read values from buffer and assign them
+                if raw_index == 4 and msg_bytecount >= 1:
+                    heater_enable = buffer[buffer_index]
+                    heater_enable_str="Off"
+                    if (heater_enable == 255):
+                        heater_enable_str="On"
+                    debugstr += ";heat_enable:{0};TargetDevice(dez.):{1}".format(heater_enable_str, Targetdevice)
+
+                if raw_index == 5 and msg_bytecount >= 1:
+                    i_heater_maxtempvorlauf = int(buffer[buffer_index])
+                    debugstr += ";MaxT_Vorlauf:{0}".format(i_heater_maxtempvorlauf)
+
+                if raw_index == 6 and msg_bytecount >= 1:
+                    i_heater_maxpower = int(buffer[buffer_index])
+                    debugstr += ";heatmaxp:{0}".format(i_heater_maxpower)
+
+                if raw_index == 7 and msg_bytecount >= 1:
+                    i_heat_limit = int(buffer[buffer_index])
+                    debugstr += ";heatlimit_enable:{0}".format(i_heat_limit)
+
+                if raw_index == 8 and msg_bytecount >= 1:
+                    i_heater_offhysterese = int(buffer[buffer_index])
+                    debugstr += ";offhys:{0}".format(i_heater_offhysterese)
+
+                if raw_index == 9 and msg_bytecount >= 1:
+                    i_heater_onhysterese = int(buffer[buffer_index])  - 255
+                    debugstr += ";offhys:{0}".format(i_heater_onhysterese)
+
+                if raw_index == 10 and msg_bytecount >= 1:
+                    i_heater_taktsperre_time = int(buffer[buffer_index])
+                    debugstr += ";Time_taktsperre:{0}".format(i_heater_taktsperre_time)
+
+                if raw_index == 11 and msg_bytecount >= 1:
+                    i_heater_pumpmodus = int(buffer[buffer_index])
+                    debugstr += ";pumpmodus:{0}".format(i_heater_pumpmodus)
+
+                if raw_index == 12 and msg_bytecount >= 1:
+                    i_nachlaufzeit_pumpe = int(buffer[buffer_index])
+                    debugstr += ";pump_nachlaufzeit:{0}".format(i_nachlaufzeit_pumpe)
+
+                if raw_index == 13 and msg_bytecount >= 1:
+                    i_heater_maxpumppower = int(buffer[buffer_index])
+                    debugstr += ";pumpmaxpow:{0}".format(i_heater_maxpumppower)
+
+                if raw_index == 14 and msg_bytecount >= 1:
+                    i_heater_minpumppower = int(buffer[buffer_index])
+                    debugstr += ";pumpminpow:{0}".format(i_heater_minpumppower)
+
+                raw_index += 1
+
+            for buffer_index in range(length - 2, length):
+                temptext += format(buffer[buffer_index], "02x") + " "
+            self.__gdata.update(nickname, "hexdump", temptext)
+            self._logging.debug(debugstr)
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
 
     def msgID_24_Heaterdevice(self, msgtuple, buffer, length):
         """
@@ -593,12 +687,14 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";pressure:{0}".format(i_systempressure)
 
                 if raw_index == 22 and msg_bytecount >= 2:
-                    displaycode = int((buffer[buffer_index] * 256) + buffer[buffer_index + 1])
-                    self.__gdata.update(nickname, "V_displaycode", displaycode)
+                    displaycode = buffer[buffer_index]*65536 + buffer[buffer_index+1]*256
+                    if displaycode > 0:
+                        self.__gdata.update(nickname, "V_displaycode", displaycode)
 
                 if raw_index == 24 and msg_bytecount >= 2:
                     causecode = int((buffer[buffer_index] * 256) + buffer[buffer_index + 1])
-                    self.__gdata.update(nickname, "V_causecode", causecode)
+                    if causecode > 0:
+                        self.__gdata.update(nickname, "V_causecode", causecode)
 
                 if raw_index == 26 and msg_bytecount >= 1:
                     i_WWflow = int(buffer[buffer_index])
@@ -644,7 +740,6 @@ class cht_decode(ht_utils.cht_utils):
                 temptext += format(buffer[buffer_index], "02x") + " "
             self.__gdata.update(nickname, "hexdump", temptext)
             self._logging.debug(debugstr)
-
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -709,6 +804,14 @@ class cht_decode(ht_utils.cht_utils):
                     i_brenner_heizung_ein = int(buffer[buffer_index] * 65536 + buffer[buffer_index + 1] * 256 + buffer[buffer_index + 2])
                     self.__gdata.update(nickname, "Cbrenner_heizung", i_brenner_heizung_ein)
 
+                if raw_index == 29 and msg_bytecount >= 2:
+                    # TIst an der hydraulischen Weiche
+                    f_THydrWeiche = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
+                    if self.__IsTempInRange(f_THydrWeiche):
+                        self.__gdata.update(nickname, "V_spare2", self.__Check4MaxValue(nickname, "V_spare2", f_THydrWeiche))
+                        # setup flag for Hydraulic Switch available, used in GUI
+                        self.__gdata.IsTempSensor_Hydrlic_Switch(True)
+
                 raw_index += 1
             for buffer_index in range(length - 2, length):
                 temptext += format(buffer[buffer_index], "02x") + " "
@@ -732,6 +835,50 @@ class cht_decode(ht_utils.cht_utils):
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
+    def msgID_30_T_HydraulischeWeiche(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:30 -> Temperatur on Hydraulic device.
+             This values are send by IPM/MM Powermoduls to heater-controller,
+             the assignment is to systempart "HG".
+        """
+        nickname = "HG"
+        (msgid, offset) = msgtuple
+        self.__currentHK_nickname = nickname
+
+        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
+        first_payload_index = 4
+        for x in range(0, first_payload_index):
+            temptext += format(buffer[x], "02x") + " "
+        # length > first index + crc-byte + break-byte
+        if length > first_payload_index + 2:
+            # init values
+            raw_index = offset + first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+            for buffer_index in range(first_payload_index, length - 2):
+                temptext += format(buffer[buffer_index], "02x") + " "
+                # read values from buffer and assign them
+                if raw_index == 4 and msg_bytecount >= 2:
+                    # TIst an der hydraulischen Weiche
+                    f_THydrWeiche = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
+                    if self.__IsTempInRange(f_THydrWeiche):
+                        self.__gdata.update(nickname, "V_spare2", self.__Check4MaxValue(nickname, "V_spare2", f_THydrWeiche))
+                        # setup flag for Hydraulic Switch available, used in GUI
+                        self.__gdata.IsTempSensor_Hydrlic_Switch(True)
+                    debugstr += ";T_HydraulicDevice:{0}".format(f_THydrWeiche)
+
+                raw_index += 1
+            for buffer_index in range(length - 2, length):
+                temptext += format(buffer[buffer_index], "02x") + " "
+            self.__gdata.update(nickname, "hexdump", temptext)
+            # not yet written to database, only for debug-purposes
+            self._logging.debug(debugstr)
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
+
+
     def msgID_35_HydraulischeWeiche(self, msgtuple, buffer, length):
         """
             decoding of msgID:35 -> Hydraulic device message.
@@ -749,6 +896,7 @@ class cht_decode(ht_utils.cht_utils):
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
 
+            pump_running_flag = 0
             for buffer_index in range(first_payload_index, length - 2):
                 temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
@@ -756,11 +904,16 @@ class cht_decode(ht_utils.cht_utils):
                     # TSoll hinter der hydraulischen Weiche
                     i_tsoll = buffer[buffer_index]
                     debugstr += ";TSoll:{0}".format(i_tsoll)
+                # if msg-bytes [5] or [6] are > 0 then hc_pump is running
                 if raw_index == 5 and msg_bytecount >= 1:
                     i_leistung_soll = buffer[buffer_index]
+                    if i_leistung_soll > 0:
+                        pump_running_flag += 1
                     debugstr += ";Leistung:{0}".format(i_leistung_soll)
-                if raw_index == 6 and msg_bytecount >= 2:
-                    i_drehzahl_pumpe_soll = buffer[buffer_index] + buffer[buffer_index + 1]
+                if raw_index == 6 and msg_bytecount >= 1:
+                    i_drehzahl_pumpe_soll = buffer[buffer_index]
+                    if i_drehzahl_pumpe_soll > 0:
+                        pump_running_flag += 1
                     debugstr += ";Drehzahl:{0}".format(i_drehzahl_pumpe_soll)
                 if raw_index == 8 and msg_bytecount >= 1:
                     i_betriebsart_heizung = buffer[buffer_index]
@@ -770,6 +923,12 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";TSoll_erweitert:{0}".format(i_erweiterter_tsoll)
 
                 raw_index += 1
+
+            if pump_running_flag > 0:
+                self.__gdata.update(nickname, "V_spare2", 1)
+            else:
+                self.__gdata.update(nickname, "V_spare2", 0)
+
             for buffer_index in range(length - 2, length):
                 temptext += format(buffer[buffer_index], "02x") + " "
             self.__gdata.update(nickname, "hexdump", temptext)
@@ -810,9 +969,9 @@ class cht_decode(ht_utils.cht_utils):
         """
             decoding of msgID:162 -> Display-code message.
         """
-        nickname = "DT"
+        nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, "sys")
+        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         for x in range(0, length):
             temptext = temptext + format(buffer[x], "02x") + " "
         first_payload_index = 4
@@ -821,7 +980,7 @@ class cht_decode(ht_utils.cht_utils):
             # init values
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
-            displaycode = "--"
+            displaycode = 0
             causecode = 0
 
             for buffer_index in range(first_payload_index, length - 2):
@@ -829,14 +988,11 @@ class cht_decode(ht_utils.cht_utils):
                 # read values from buffer and assign them
                 if raw_index == 4 and msg_bytecount >= 3:
                     # Auswertung display-code
-                    if (buffer[buffer_index] != 0 and
-                        buffer[buffer_index + 1] != 0 and
-                        buffer[buffer_index + 2] != 0):
-                        displaycode = str(buffer[buffer_index]) + str(buffer[buffer_index + 1]) + str(buffer[buffer_index + 2])
-
+                    displaycode = buffer[buffer_index]*65536 + buffer[buffer_index+1]*256 + buffer[buffer_index+2]
+                    self.__gdata.update(nickname, "V_displaycode", displaycode)
                 if raw_index == 7 and msg_bytecount >= 2:
                     causecode = buffer[buffer_index] * 256 + buffer[buffer_index + 1]
-
+                    self.__gdata.update(nickname, "V_causecode", causecode)
                 raw_index += 1
             for buffer_index in range(length - 2, length):
                 temptext += format(buffer[buffer_index], "02x") + " "
@@ -911,11 +1067,28 @@ class cht_decode(ht_utils.cht_utils):
 #   ### Heating Circuit   ##
 ############################
     # ## HeatingCircuit 1 ... 4 supported ##
-    def msgID_26_HeatingCircuit_HK1(self, msgtuple, buffer, length):
+    def msgID_26_HeatingCircuit(self, msgtuple, buffer, length):
         """
             decoding of msgID:26 -> heating circuit 1 message.
         """
         nickname = "HK1"
+        (msgid, offset) = msgtuple
+        if buffer[0] == 0x88 or buffer[0] == 0x90 or buffer[0] == 0x98 or buffer[0] == 0xa0:
+            nickname = "HK1"
+        elif buffer[0] == 0x89 or buffer[0] == 0x99 or buffer[0] == 0xa1:
+            nickname = "HK2"
+        elif buffer[0] == 0x9a or buffer[0] == 0xa2:
+            nickname = "HK3"
+        elif buffer[0] == 0x9b or buffer[0] == 0xa3:
+            nickname = "HK4"
+        else:
+            nickname = "HK1"
+        self.__currentHK_nickname = nickname
+
+        # If PowerModul in system, then the values are NOT written to database
+        IPM_MM_Modul_Flag = False
+        if buffer[0] == 0xa0 or buffer[0] == 0xa1 or buffer[0] == 0xa2 or buffer[0] == 0xa3:
+            IPM_MM_Modul_Flag = True
 
         temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 4
@@ -927,12 +1100,30 @@ class cht_decode(ht_utils.cht_utils):
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
 
+            pump_running_flag = 0
+
             for buffer_index in range(first_payload_index, length - 2):
                 temptext += format(buffer[buffer_index], "02x") + " "
                 if raw_index == 4 and msg_bytecount >= 1:
-                    i_tvorlauf_soll = int(buffer[4])
-                    self.__gdata.update(nickname, "Tvorlauf_soll", self.__Check4MaxValue(nickname, "Tvorlauf_soll", i_tvorlauf_soll))
+                    i_tvorlauf_soll = int(buffer[buffer_index])
+                    if (IPM_MM_Modul_Flag == False):
+                        self.__gdata.update(nickname, "V_spare1", self.__Check4MaxValue(nickname, "V_spare1", i_tvorlauf_soll))
+                # if msg-bytes [5] or [6] are > 0 then hc_pump is running
+                if raw_index == 5 and msg_bytecount >= 1:
+                    if int(buffer[buffer_index]) > 0:
+                        pump_running_flag += 1
+                if raw_index == 6 and msg_bytecount >= 1:
+                    if int(buffer[buffer_index]) > 0:
+                        pump_running_flag += 1
+
                 raw_index += 1
+
+            if (IPM_MM_Modul_Flag == False):
+                if pump_running_flag > 0:
+                    self.__gdata.update(nickname, "V_spare2", 1)
+                else:
+                    self.__gdata.update(nickname, "V_spare2", 0)
+
             for buffer_index in range(length - 2, length):
                 temptext += format(buffer[buffer_index], "02x") + " "
             self.__gdata.update(nickname, "hexdump", temptext)
@@ -947,9 +1138,9 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
-        if buffer[0] == 0x98 or buffer[0] == 0xa0:
+        if buffer[0] == 0x88 or buffer[0] == 0x98 or buffer[0] == 0xa0:
             nickname = "HK1"
-        elif buffer[0] == 0x99 or buffer[0] == 0xa1:
+        elif buffer[0] == 0x89 or buffer[0] == 0x99 or buffer[0] == 0xa1:
             nickname = "HK2"
             self.__gdata.heatercircuits_amount(2)
         elif buffer[0] == 0x9a or buffer[0] == 0xa2:
@@ -1150,8 +1341,103 @@ class cht_decode(ht_utils.cht_utils):
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
+    def msgID_596_HeatingCircuit(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:596 -> heating circuit message.
+        """
+        nickname = "HK1"
+        (msgid, offset) = msgtuple
+        self.__currentHK_nickname = nickname
+        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
+
+        first_payload_index = 6
+        for x in range(0, first_payload_index):
+            temptext += format(buffer[x], "02x") + " "
+
+        # length > first index + payload-bytes + crc-byte + break-byte
+        #  at least there must be 5 payload-bytes for decoding
+        if (length > first_payload_index + 6):
+            # init values
+            raw_index = first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+
+            for buffer_index in range(first_payload_index, length - 2):
+                temptext += format(buffer[buffer_index], "02x")+" "
+                #  596_0_0 Measured Temp (2 Bytes)
+                #  596_2_0 Measured Temp high resolution (2 Bytes)
+                #  596_4_0 Valid Flag for temp's
+
+                # check validity at first
+                if bool(buffer[first_payload_index + 4]) == True:
+                # read values from buffer and assign them
+                    if raw_index == 6 and msg_bytecount >= 2:
+                        f_Ist_HK = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
+                        self.__gdata.update(nickname, "Tist_HK", self.__Check4MaxValue(nickname, "Tist_HK", f_Ist_HK))
+
+                        debugstr += ";Tist:{0}".format(f_Ist_HK)
+                raw_index += 1
+            for buffer_index in range(length - 2, length):
+                temptext += format(buffer[buffer_index], "02x") + " "
+            self.__gdata.update(nickname, "hexdump", temptext)
+            if bool(buffer[first_payload_index + 4]) == True:
+                self._logging.debug(debugstr)
+            else:
+                self._logging.debug(temptext)
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
+
+
+    def msgID_597_HeatingCircuit(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:597 -> heating circuit message.
+        """
+        nickname = "HK1"
+        (msgid, offset) = msgtuple
+        Sourcedevice = buffer[0]
+        if Sourcedevice == 0xa0:
+            nickname = "HK1"
+        if Sourcedevice == 0xa1:
+            nickname = "HK2"
+        if Sourcedevice == 0xa2:
+            nickname = "HK3"
+        if Sourcedevice == 0xa3:
+            nickname = "HK4"
+        self.__currentHK_nickname = nickname
+        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
+
+        first_payload_index = 6
+        for x in range(0, first_payload_index):
+            temptext += format(buffer[x], "02x") + " "
+
+        # length > first index + crc-byte + break-byte and send to 'all' targetdevices
+        if (length > first_payload_index + 2):
+            # init values
+            raw_index = first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+
+            for buffer_index in range(first_payload_index, length - 2):
+                temptext += format(buffer[buffer_index], "02x")+" "
+                # read values from buffer and assign them
+                if raw_index == 6 and msg_bytecount >= 1:
+                    i_value = int(buffer[buffer_index])
+                    debugstr += ";value:{0}".format(i_value)
+                raw_index += 1
+
+            for buffer_index in range(length - 2, length):
+                temptext += format(buffer[buffer_index], "02x") + " "
+            self.__gdata.update(nickname, "hexdump", temptext)
+            self._logging.debug(debugstr)
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
+
     def msgID_615_HeatingCircuit(self, msgtuple, buffer, length):
-        """ 
+        """
             decoding of msgID:615 -> for drymode status
                 615_0_0 -> current status
                 615_1_0 -> flow setpoint temperature
@@ -1233,6 +1519,7 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+        Targetdevice = buffer[1]
         if not self.__DeviceIsModem(buffer[0]):
             self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
         if msgid == 697:
@@ -1248,11 +1535,200 @@ class cht_decode(ht_utils.cht_utils):
             self.__gdata.heatercircuits_amount(4)
         self.__currentHK_nickname = nickname
         temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        for x in range(0, length):
+
+        first_payload_index = 6
+        for x in range(0, first_payload_index):
             temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
-        values = self.__gdata.values(nickname)
-        return (nickname, values)
+
+        # length > first index + crc-byte + break-byte and send to 'all' targetdevices
+        if (length > first_payload_index + 2) and Targetdevice == 0:
+            # init values
+            raw_index = first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+
+            for buffer_index in range(first_payload_index, length - 2):
+                temptext += format(buffer[buffer_index], "02x")+" "
+                # read values from buffer and assign them
+                if raw_index == 6 and msg_bytecount >= 1 and offset in range(1,4):
+                    # offset        Temperatur-type
+                    #  1            comfort3
+                    #  2            comfort2
+                    #  3            comfort1
+                    #  4            ECO
+                    f_Soll = float(buffer[buffer_index]) / 2
+                    if self.__IsTempInRange(f_Soll):
+                        self.__gdata.update(nickname, "Tsoll_HK", f_Soll)
+                raw_index += 1
+
+            for buffer_index in range(length - 2, length):
+                temptext += format(buffer[buffer_index], "02x") + " "
+            self.__gdata.update(nickname, "hexdump", temptext)
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
+
+    def msgID_727_734_HeatingCircuit(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:727 until 730 -> heating circuit (1...4) message.
+              Message used with Cxyz-controller types.
+        """
+        nickname = "HK1"
+        (msgid, offset) = msgtuple
+        if not self.__DeviceIsModem(buffer[0]):
+            self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+        if msgid == 727:
+            nickname = "HK1"
+        if msgid == 728:
+            nickname = "HK2"
+            self.__gdata.heatercircuits_amount(2)
+        if msgid == 729:
+            nickname = "HK3"
+            self.__gdata.heatercircuits_amount(3)
+        if msgid == 730:
+            nickname = "HK4"
+            self.__gdata.heatercircuits_amount(4)
+        self.__currentHK_nickname = nickname
+        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        first_payload_index = 6
+        for x in range(0, first_payload_index):
+            temptext += format(buffer[x], "02x") + " "
+        # length > first index + crc-byte + break-byte
+        if length > first_payload_index + 2:
+            # init values
+            raw_index = offset + first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+
+            for buffer_index in range(first_payload_index, length - 2):
+                temptext += format(buffer[buffer_index], "02x")+" "
+                # read values from buffer and assign them
+                if raw_index == 6 and msg_bytecount >= 1:
+                    i_HK_FlowPump = int(buffer[buffer_index])
+                    self.__gdata.update(nickname, "V_spare2", i_HK_FlowPump)
+                if raw_index == 7 and msg_bytecount >= 1:
+                    i_HK_MixerRequest = int(buffer[buffer_index])
+                    if (i_HK_MixerRequest > 0):
+                        self.__gdata.UnmixedFlagHK(nickname, False)
+                if raw_index == 8 and msg_bytecount >= 1:
+                    i_IPM_Mischerstellung = int(buffer[buffer_index])
+                    self.__gdata.update(nickname, "VMischerstellung", i_IPM_Mischerstellung)
+                if raw_index == 9 and msg_bytecount >= 2:
+                    f_IPM_VorlaufTemp = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
+                    if self.__IsTempInRange(f_IPM_VorlaufTemp):
+                        self.__gdata.update(nickname, "Tvorlaufmisch_HK", self.__Check4MaxValue(nickname, "Tvorlaufmisch_HK", f_IPM_VorlaufTemp))
+                if raw_index == 11 and msg_bytecount >= 1:
+                    # V-Spare-1 benutzt fuer 'T-Soll (Vorlauf)'
+                    i_tvorlauf_soll = int(buffer[buffer_index])
+                    self.__gdata.update(nickname, "V_spare1", self.__Check4MaxValue(nickname, "V_spare1", i_tvorlauf_soll))
+                raw_index += 1
+            for buffer_index in range(length - 2, length):
+                temptext += format(buffer[buffer_index], "02x") + " "
+            self.__gdata.update(nickname, "hexdump", temptext)
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
+
+    def msgID_737_744_HeatingCircuit(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:737 until 740 -> heating circuit (1...4) message.
+              Message used with Cxyz-controller types.
+        """
+        nickname = "HK1"
+        (msgid, offset) = msgtuple
+        if not self.__DeviceIsModem(buffer[0]):
+            self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+        if msgid == 737:
+            nickname = "HK1"
+        if msgid == 738:
+            nickname = "HK2"
+            self.__gdata.heatercircuits_amount(2)
+        if msgid == 739:
+            nickname = "HK3"
+            self.__gdata.heatercircuits_amount(3)
+        if msgid == 740:
+            nickname = "HK4"
+            self.__gdata.heatercircuits_amount(4)
+        self.__currentHK_nickname = nickname
+        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
+        first_payload_index = 6
+        for x in range(0, first_payload_index):
+            temptext += format(buffer[x], "02x") + " "
+        # length > first index + crc-byte + break-byte
+        if length > first_payload_index + 2:
+            # init values
+            raw_index = offset + first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+
+            for buffer_index in range(first_payload_index, length - 2):
+                temptext += format(buffer[buffer_index], "02x")+" "
+                # read values from buffer and assign them
+                if raw_index == 6 and msg_bytecount >= 1:
+                    i_req_season = int(buffer[buffer_index])
+                    debugstr += ";season:{0}".format(i_req_season)
+                if raw_index == 7 and msg_bytecount >= 1:
+                    i_supply_temp = int(buffer[buffer_index])
+                    debugstr += ";supply_T:{0}".format(i_supply_temp)
+                if raw_index == 8 and msg_bytecount >= 1:
+                    i_req_power = int(buffer[buffer_index])
+                    debugstr += ";power:{0}".format(i_req_power)
+                if raw_index == 9 and msg_bytecount >= 1:
+                    i_fast_mode = int(buffer[buffer_index])
+                    debugstr += ";fast_mode:{0}".format(i_fast_mode)
+                if raw_index == 10 and msg_bytecount >= 1:
+                    i_prio = int(buffer[buffer_index])
+                    debugstr += ";Prio:{0}".format(i_prio)
+                raw_index += 1
+            for buffer_index in range(length - 2, length):
+                temptext += format(buffer[buffer_index], "02x") + " "
+            self.__gdata.update(nickname, "hexdump", temptext)
+            self._logging.debug(debugstr)
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
+
+    def msgID_747_754_HeatingCircuit(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:747 until 750 -> heating circuit (1...4) message.
+              Message used with Cxyz-controller types.
+              (Frostdanger message)
+        """
+        nickname = "HK1"
+        (msgid, offset) = msgtuple
+        if not self.__DeviceIsModem(buffer[0]):
+            self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+        if msgid == 747:
+            nickname = "HK1"
+        if msgid == 748:
+            nickname = "HK2"
+            self.__gdata.heatercircuits_amount(2)
+        if msgid == 749:
+            nickname = "HK3"
+            self.__gdata.heatercircuits_amount(3)
+        if msgid == 750:
+            nickname = "HK4"
+            self.__gdata.heatercircuits_amount(4)
+        self.__currentHK_nickname = nickname
+        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        first_payload_index = 6
+        for x in range(0, first_payload_index):
+            temptext += format(buffer[x], "02x") + " "
+        # length > first index + crc-byte + break-byte
+        if length > first_payload_index + 2:
+            # init values
+            raw_index = offset + first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+
+            for buffer_index in range(first_payload_index, length):
+                temptext += format(buffer[buffer_index], "02x")+" "
+
+            self.__gdata.update(nickname, "hexdump", temptext)
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
 
     def msgID_290_RemoteController_FB10(self, msgtuple, buffer, length):
         """
@@ -1403,6 +1879,22 @@ class cht_decode(ht_utils.cht_utils):
         else:
             return ("", None)
 
+    def msgID_569_HeatingCircuit(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:569 message.
+        """
+        nickname = "HK1"
+        (msgid, offset) = msgtuple
+        temptext = "{0:4}_{1:<2}:{2:<3}:".format(msgid, offset, systempart_tag)
+        for x in range(0, length):
+            temptext += format(buffer[x], "02x") + " "
+        self.__gdata.update(nickname, "hexdump", temptext)
+        self._logging.debug(temptext)
+
+        values = self.__gdata.values(nickname)
+        return (nickname, values)
+
+
     def msgID_188_Hybrid(self, msgtuple, buffer, length):
         """
             decoding of msgID:188 -> hybrid message for mixed heater-systems.
@@ -1502,6 +1994,7 @@ class cht_decode(ht_utils.cht_utils):
         nickname = "WW"
         (msgid, offset) = msgtuple
         temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        Targetadress = buffer[1]
         first_payload_index = 4
         for x in range(0, first_payload_index):
             temptext += format(buffer[x], "02x") + " "
@@ -1512,10 +2005,16 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
             for buffer_index in range(first_payload_index, length - 2):
                 temptext += format(buffer[buffer_index], "02x") + " "
-                # read values from buffer and assign them
-                if raw_index == 6 and msg_bytecount >= 1:
-                    i_Soll = int(buffer[buffer_index])
-                    self.__gdata.update(nickname, "Tsoll", self.__Check4MaxValue(nickname, "Tsoll", i_Soll))
+                #saving data only if target-adresse is := 0
+                if(Targetadress == 0):
+                    # read values from buffer and assign them
+                    if raw_index == 4 and msg_bytecount >= 1:
+                    # kennzahl bussystem; 8:=EMS, 0:=NN
+                        if int(buffer[buffer_index]) == 8:
+                            self.__gdata.bus_type("EMS")
+                    if raw_index == 6 and msg_bytecount >= 1:
+                        i_Soll = int(buffer[buffer_index])
+                        self.__gdata.update(nickname, "Tsoll", self.__Check4MaxValue(nickname, "Tsoll", i_Soll))
                 raw_index += 1
 
             for buffer_index in range(length - 2, length):
@@ -1556,6 +2055,16 @@ class cht_decode(ht_utils.cht_utils):
             if buffer[0] == 0x90:
                 b_decoding = False
 
+            if length > 10:
+                # if MsgId:52_1_0-Value or 52_3_0-Value >= 0x7000 Tempsensor failure or not connected ->
+                #      no decoding done then
+                MsgID_52_1_0 = float(buffer[5] * 256 + buffer[6])
+                MsgID_52_3_0 = float(buffer[7] * 256 + buffer[8])
+                if MsgID_52_1_0 > 0x7000 or MsgID_52_3_0 > 0x7000:
+                    b_decoding = False
+            else:
+                b_decoding = False
+
             # at least decode the stuff
             for buffer_index in range(first_payload_index, length - 2):
                 temptext += format(buffer[buffer_index], "02x") + " "
@@ -1589,12 +2098,16 @@ class cht_decode(ht_utils.cht_utils):
                         self.__gdata.update(nickname, "V_lade_pumpe", i_lade_pump_ein)
                         self.__gdata.update(nickname, "V_zirkula_pumpe", i_zirkula_pump_ein)
                     if raw_index == 14 and msg_bytecount >= 3:
-                        i_betriebszeit = int(buffer[buffer_index] * 65536 + buffer[buffer_index + 1] * 256 + buffer[buffer_index + 2])
-                        f_betriebszeit_stunden = float(i_betriebszeit / 60)
+                        # checking of wrong values, store only if valid
+                        if buffer[14] != 0x89:
+                            i_betriebszeit = int(buffer[buffer_index] * 65536 + buffer[buffer_index + 1] * 256 + buffer[buffer_index + 2])
+                            f_betriebszeit_stunden = float(i_betriebszeit / 60)
                         self.__gdata.update(nickname, "Cbetriebs_zeit", f_betriebszeit_stunden)
                     if raw_index == 17 and msg_bytecount >= 3:
-                        i_brennerww_ein = int(buffer[buffer_index] * 65536 + buffer[buffer_index + 1] * 256 + buffer[buffer_index + 2])
-                        self.__gdata.update(nickname, "Cbrenner_ww", i_brennerww_ein)
+                        # checking of wrong values, store only if valid
+                        if buffer[17] != 0x89:
+                            i_brennerww_ein = int(buffer[buffer_index] * 65536 + buffer[buffer_index + 1] * 256 + buffer[buffer_index + 2])
+                            self.__gdata.update(nickname, "Cbrenner_ww", i_brennerww_ein)
                     raw_index += 1
 
             for buffer_index in range(length - 2, length):
@@ -1719,6 +2232,7 @@ class cht_decode(ht_utils.cht_utils):
         nickname = "SO"
         (msgid, offset) = msgtuple
         temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
         first_payload_index = 6
         for x in range(0, first_payload_index):
             temptext += format(buffer[x], "02x") + " "
@@ -1744,11 +2258,18 @@ class cht_decode(ht_utils.cht_utils):
                     f_speicherunten = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
                     self.__gdata.update(nickname, "Tspeicher_unten", self.__Check4MaxValue(nickname, "Tspeicher_unten", f_speicherunten))
 
+                # secondary collector-filed temperatur
+                if raw_index == 12 and msg_bytecount >= 2:
+                    f_second_kollektor = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
+                    debugstr += ";second Tcollector:{0}".format(f_second_kollektor)
+                    if not self.__IsTempInRange(f_second_kollektor):
+                        debugstr += " -> not available"
+
                 raw_index += 1
             for buffer_index in range(length - 2, length):
                 temptext += format(buffer[buffer_index], "02x") + " "
             self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(temptext)
+            self._logging.debug(temptext) if offset > 10 else self._logging.debug(debugstr)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -1868,6 +2389,20 @@ class cht_decode(ht_utils.cht_utils):
                                                   buffer[buffer_index + 3]) / 10
                     self.__gdata.update(nickname, "V_ertrag_stunde", f_ertrag_letztestunde)
 
+                if raw_index == 10 and msg_bytecount >= 4:
+                    f_ertrag_day = float(buffer[buffer_index] * 1048576 +
+                                              buffer[buffer_index + 1] * 65536 +
+                                              buffer[buffer_index + 2] * 256 +
+                                              buffer[buffer_index + 3]) / 1000
+                    self.__gdata.update(nickname, "V_ertrag_tag_calc", f_ertrag_day)
+
+                if raw_index == 14 and msg_bytecount >= 4:
+                    f_ertrag_gesamt = float(buffer[buffer_index] * 1048576 +
+                                            buffer[buffer_index + 1] * 65536 +
+                                            buffer[buffer_index + 2] * 256 +
+                                            buffer[buffer_index + 3]) / 10
+                    self.__gdata.update(nickname, "V_ertrag_sum_calc", f_ertrag_gesamt)
+
                 raw_index += 1
             for buffer_index in range(length - 2, length):
                 temptext += format(buffer[buffer_index], "02x") + " "
@@ -1957,14 +2492,14 @@ class cht_decode(ht_utils.cht_utils):
                                               buffer[buffer_index + 1] * 65536 +
                                               buffer[buffer_index + 2] * 256 +
                                               buffer[buffer_index + 3]) / 1000
-                    self.__gdata.update(nickname, "V_ertrag_2", f_ertrag_day)
+                    self.__gdata.update(nickname, "V_ertrag_tag_calc", f_ertrag_day)
                     debugstr += ";tag:{0}kWh".format(f_ertrag_day)
                 if raw_index == 14 and msg_bytecount >= 4:
                     f_ertrag_total = float(buffer[buffer_index] * 1048576 +
                                               buffer[buffer_index + 1] * 65536 +
                                               buffer[buffer_index + 2] * 256 +
                                               buffer[buffer_index + 3]) / 10
-                    self.__gdata.update(nickname, "V_spare1", f_ertrag_total)
+                    self.__gdata.update(nickname, "V_ertrag_sum_calc", f_ertrag_total)
                     debugstr += ";gesamt:{0}kWh".format(f_ertrag_total)
 
                 raw_index += 1
@@ -2042,7 +2577,6 @@ class cht_decode(ht_utils.cht_utils):
             f_kollektor = 0.0
             f_speicherunten = 0.0
             i_ertrag_letztestunde = 0
-            i_ertrag_2 = 0
             b_pumpe = 0
             i_laufzeit_minuten = 0
             i_laufzeit_stunden = 0
@@ -2052,10 +2586,15 @@ class cht_decode(ht_utils.cht_utils):
             for buffer_index in range(first_payload_index, length - 2):
                 temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
-                if raw_index == 6 and msg_bytecount >= 2:
-                    # Optimierungsfaktor f. WW und solarer Unterstuetzung  Bytes: 6-7
-                    i_ertrag_2 = int(buffer[buffer_index] * 256 + buffer[buffer_index + 1])
-                    self.__gdata.update(nickname, "V_ertrag_2", i_ertrag_2)
+                if raw_index == 6 and msg_bytecount >= 1:
+                    # Optimierungsfaktor f. WW und solarer Unterstuetzung  Byte: 6
+                    i_ofaktorWW = int(buffer[buffer_index])
+                    debugstr += ";Optim.Faktor_WW:{0}".format(i_ofaktorWW)
+
+                if raw_index == 7 and msg_bytecount >= 1:
+                    # Optimierungsfaktor f. HG und solarer Unterstuetzung  Byte: 7
+                    i_ofaktorHG = int(buffer[buffer_index])
+                    debugstr += ";Optim.Faktor_HG:{0}".format(i_ofaktorHG)
 
                 if raw_index == 8 and msg_bytecount >= 2:
                     i_ertrag_letztestunde = int(buffer[buffer_index] * 256 + buffer[buffer_index + 1])
@@ -2077,7 +2616,7 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";Tspeicher:{0}".format(f_speicherunten)
 
                 if raw_index == 14 and msg_bytecount >= 1:
-                    # Auswertung der Solarertrag letzte Stunde Bytes: 8-9
+                    # Auswertung solar-pump status
                     b_pumpe = 1 if (buffer[buffer_index] & 0x01) else 0
                     self.__gdata.update(nickname, "Vsolar_pumpe", b_pumpe)
                     debugstr += ";pump status:{0}".format(b_pumpe)
@@ -2116,6 +2655,7 @@ class cht_decode(ht_utils.cht_utils):
         nickname = "SO"
         (msgid, offset) = msgtuple
         temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
         first_payload_index = 6
         for x in range(0, first_payload_index):
             temptext += format(buffer[x], "02x") + " "
@@ -2131,16 +2671,35 @@ class cht_decode(ht_utils.cht_utils):
                 if raw_index == 6 and msg_bytecount >= 2:
                     f_t41 = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
                     self.__gdata.update(nickname, "Thybrid_buffer", f_t41)
+                    debugstr += ";T3 hybrid_buffer:{0}".format(f_t41)
 
                 if raw_index == 8 and msg_bytecount >= 2:
                     f_t42 = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
                     self.__gdata.update(nickname, "Thybrid_sysinput", f_t42)
+                    debugstr += ";T heizruecklauf:{0}".format(f_t42)
+
+                if raw_index == 14 and msg_bytecount >= 2:
+                    f_t2collectorfeld = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
+                    if self.__IsTempInRange(f_t2collectorfeld):
+                        self.__gdata.update(nickname, "V_spare_1", f_t2collectorfeld)
+                        #setup flag for 2.collector-field values and GUI
+                        self.__gdata.IsSecondCollectorValue_SO(True)
+                        debugstr += "; 2.Coll_feld Temperatur:{0}".format(f_t2collectorfeld)
+
+                if raw_index == 16 and msg_bytecount >= 2:
+                    f_t3pufferspeicher = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
+                    debugstr += ";TB buffer_zell top:{0}".format(f_t3pufferspeicher)
+
+                if raw_index == 22 and msg_bytecount >= 1:
+                    so_pump_2collector = 1 if (buffer[buffer_index] & 0x04) else 0
+                    self.__gdata.update(nickname, "V_spare_2", so_pump_2collector)
+                    debugstr += "; 2.Coll_feld PumpStatus:{0}".format(so_pump_2collector)
 
                 raw_index += 1
             for buffer_index in range(length - 2, length):
                 temptext += format(buffer[buffer_index], "02x") + " "
             self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(temptext)
+            self._logging.debug(debugstr)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2370,7 +2929,7 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
                         del self._rawdata[0:(found_index + compare_counter)]
 
     def _IsValidMessageID(self, deviceaddress, msgid):
-        """ 
+        """
             checking msgid, must be > 0 and is compared to predefinitions.
         """
         isvalid = False
@@ -2467,7 +3026,7 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
             transceiver_found = False
         tempstr = "cht_discode._search_4_transceiver_message(); found: {0}".format(transceiver_found)
         self._logging.debug(tempstr)
-        
+
         return transceiver_found
 
     ####################################
@@ -2488,9 +3047,10 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
         22: cht_decode.msgID_22_Heaterdevice,
         24: cht_decode.msgID_24_Heaterdevice,
         25: cht_decode.msgID_25_Heaterdevice,
-        26: cht_decode.msgID_26_HeatingCircuit_HK1,
+        26: cht_decode.msgID_26_HeatingCircuit,
         27: cht_decode.msgID_27_DomesticHotWater,
         28: cht_decode.msgID_28_Service,
+        30: cht_decode.msgID_30_T_HydraulischeWeiche,
         35: cht_decode.msgID_35_HydraulischeWeiche,
         36: cht_decode.msgID_36_Heater_Configuration,
         42: cht_decode.msgID_42_Heaterdevice,
@@ -2529,6 +3089,9 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
         380: cht_decode.msgID_377_380_HeatingCircuit,
         467: cht_decode.msgID_467_468_DomesticHotWater_System1_2,
         468: cht_decode.msgID_467_468_DomesticHotWater_System1_2,
+        569: cht_decode.msgID_569_HeatingCircuit,
+        596: cht_decode.msgID_596_HeatingCircuit,
+        597: cht_decode.msgID_597_HeatingCircuit,
         615: cht_decode.msgID_615_HeatingCircuit,
         660: cht_decode.msgID_AnyMessage,
         661: cht_decode.msgID_AnyMessage,
@@ -2548,6 +3111,18 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
         702: cht_decode.msgID_697_704_HeatingCircuit,
         703: cht_decode.msgID_697_704_HeatingCircuit,
         704: cht_decode.msgID_697_704_HeatingCircuit,
+        727: cht_decode.msgID_727_734_HeatingCircuit,
+        728: cht_decode.msgID_727_734_HeatingCircuit,
+        729: cht_decode.msgID_727_734_HeatingCircuit,
+        730: cht_decode.msgID_727_734_HeatingCircuit,
+        737: cht_decode.msgID_737_744_HeatingCircuit,
+        738: cht_decode.msgID_737_744_HeatingCircuit,
+        739: cht_decode.msgID_737_744_HeatingCircuit,
+        740: cht_decode.msgID_737_744_HeatingCircuit,
+        747: cht_decode.msgID_747_754_HeatingCircuit,
+        748: cht_decode.msgID_747_754_HeatingCircuit,
+        749: cht_decode.msgID_747_754_HeatingCircuit,
+        750: cht_decode.msgID_747_754_HeatingCircuit,
         787: cht_decode.msgID_787_788_extDHWhandling,
         788: cht_decode.msgID_787_788_extDHWhandling,
         797: cht_decode.msgID_797_DomesticHotWoter,
@@ -2604,14 +3179,16 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
                                 0x30, 0x31, 0x48]
 
     ####################################
-    # device-adr mapped with not valid message-IDs for detailed message - searching
+    # device-adr mapped with not valid message-IDs for detailed message - searching.
+    #  1.modification reagarding:
+    #   https://www.mikrocontroller.net/topic/324673#5169108
     deviceadr_2msgid_blacklist = {
         0x10: [11, 12, 24, 46, 47, 64, 100, 106],
         0x1b: [17, 56, 74, 89],
-        0x20: [13, 14, 15, 21, 23, 25, 29, 45, 49, 61, 81, 88, 92, 95, 97, 101, 104, 107],
-        0x21: [13, 14, 15, 21, 23, 25, 29, 45, 49, 61, 81, 88, 92, 95, 97, 101, 104, 107],
-        0x22: [13, 14, 15, 21, 23, 25, 29, 45, 49, 61, 81, 88, 92, 95, 97, 101, 104, 107],
-        0x23: [13, 14, 15, 21, 23, 25, 29, 45, 49, 61, 81, 88, 92, 95, 97, 101, 104, 107],
+        0x20: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
+        0x21: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
+        0x22: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
+        0x23: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
     }
 
     ####################################
