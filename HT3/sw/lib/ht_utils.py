@@ -27,6 +27,7 @@
 # Ver:0.2    / Datum 28.08.2016 minor text-adjustments after Pylint
 #                               'Absfilepathname()' added
 # Ver:0.3    / Datum 11.06.2017 'MakeAbsPath2FileName()' added.
+# Ver:0.3.1  / Datum 29.11.2018 'Extract_HT3_path_from_AbsPath()' added.
 #
 #################################################################
 
@@ -183,6 +184,15 @@ class cht_utils(object):
 
         abs_filepathname = os.path.join(my_abspath, filename)
         return abs_filepathname
+
+    def Extract_HT3_path_from_AbsPath(self, inpath):
+        """extract the HT3 path from 'inpath' if available."""
+        rtnpath = os.path.normcase(inpath)
+        searchpath = os.path.normcase('HT3/sw')
+        # check path and remove 'HT3/..' if any entry is found
+        if searchpath in (rtnpath):
+            rtnpath = rtnpath[: rtnpath.rfind(searchpath)]
+        return os.path.abspath(rtnpath)
 
 #--- class cht_utils end ---#
 
