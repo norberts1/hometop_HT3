@@ -22,6 +22,7 @@
 # Ver:0.1.8  / Datum 16.09.2015 repeat call 'os.system()'on error
 # Ver:0.1.10 / Datum 28.08.2016 code-adjustment after pylint
 # Ver:0.2    / Datum 29.08.2016 added info-text
+# Ver:0.3    / Datum 18.01.2019 create_draw() added
 #################################################################
 #
 
@@ -31,6 +32,7 @@ import xml.etree.ElementTree as ET
 import time
 import ht_utils
 import logging
+import ht_const
 
 
 class cdb_rrdtool(ht_utils.clog):
@@ -354,6 +356,45 @@ class cdb_rrdtool(ht_utils.clog):
                 errorstr = 'db_rrdtool.createdb_rrdtool();Error;<{0}>'.format(e.args[0])
                 self._logging.critical(errorstr)
                 print(errorstr)
+
+    def create_draw(self, path_2_db, path_2_draw,
+                    hc_count=1,
+                    controller_type_nr=ht_const.CONTROLLER_TYPE_NR_Fxyz,
+                    mixer_flags=[0, 0, 0, 0],
+                    hydsw=0,
+                    solar_flag=1,
+                    second_source_flag=0
+                    ):
+        """calling the rrdtool-draw script to create rrdtool-drawings"""
+        [hc1_mixer, hc2_mixer, hc3_mixer, hc4_mixer] = mixer_flags
+        debugstr = """cdb_rrdtool.create_draw();\n
+                    path2db  :{0};\n
+                    path2draw:{1};\n
+                    hc_count:{2};\n
+                    Contr.type:{3};\n
+                    mixer_flags:{4};\n
+                    hydrlic_sw:{5};\n
+                    solar_flag:{6};\n
+                    second_source:{7}\n""".format(path_2_db, path_2_draw, hc_count, controller_type_nr, mixer_flags, hydsw, solar_flag, second_source_flag)
+        self._logging.debug(debugstr)
+        AbsPathandFilename = os.path.abspath(os.path.normcase('./etc/rrdtool_draw.pl'))
+        Abspath2_db = ht_utils.cht_utils.Extract_HT3_path_from_AbsPath(self, path_2_db)
+        Abspath_2_draw = ht_utils.cht_utils.Extract_HT3_path_from_AbsPath(self, path_2_draw)
+
+
+        strsystemcmd1 = AbsPathandFilename+' '+Abspath2_db+' '+Abspath_2_draw+' '+str(hc_count)+' '
+        strsystemcmd2 = str(controller_type_nr)+' '+str(hc1_mixer)+' '+str(hc2_mixer)+' '+str(hc3_mixer)+' '+str(hc4_mixer)
+        strsystemcmd = strsystemcmd1 + strsystemcmd2 +' '+str(hydsw) +' '+str(solar_flag)+' '+str(second_source_flag)
+        self._logging.debug(strsystemcmd)
+        try:
+            #execute perl-script for drawing 'rrdtool' dbinfos
+            error = os.system(strsystemcmd)
+            if error:
+                errorstr = "cdb_rrdtool.create_draw();Error:{0}; cmd:{1}".format(error, strsystemcmd)
+                self._logging.critical(errorstr)
+        except:
+            errorstr = "cdb_rrdtool.create_draw();Error; os.system-call"
+            self._logging.critical(errorstr)
 
     def __define_rrd_fileheader(self):
         """
