@@ -71,6 +71,11 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 ## Changelog
 
+## 0.3.1
+`20.01.2019`
+- `moduls`: modified for new log-values, decoding upgraded for Cxyz Controller. See modul-header for details.
+- minor modifications in configuration-files, already used databases (from 0.3) can be used further on.
+
 ## 0.3
 `24.06.2017`
 - `moduls`: `ht_collgate.py`, `lib/Ccollgate.py`, `lib/mqtt_client_if.py` and `lib/SPS_if.py` added.
