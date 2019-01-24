@@ -20,6 +20,8 @@
  #
  #################################################################
  # Ver:0.1.7  / Datum 25.02.2015 first release
+ # Ver:0.2    / Datum 20.01.2019 log-path corrected.
+ #                               <serveraddress> set to 'localhost'.
  #################################################################
  #
  #  Configuration-file for 'ht_proxy'-daemon and attached clients.
@@ -39,22 +41,22 @@
  #  Importend:
  #   If you are using the ht_proxy - Server, then the interface has
  #   has to be set to: SOCKET
- #    see config-file: HT3_db_cfg.xml 
+ #    see config-file: HT3_db_cfg.xml
  #     and paramter  :<comm_type>SOCKET</comm_type>
  #
  #  required comport-configurations for 'proxy-server'
  #   1. If you use a 'ht_transceiver'-board (ht_piduino or ht_pitiny)
- #      you have to configure: 
+ #      you have to configure:
  #        <baudrate>19200</baudrate>
  #        <serialdevice>/dev/ttyAMA0</serialdevice>   (for RaspberryPi UART)
  #
  #   2. If you use a 'HT3_miniAdapter'-board
- #      you have to configure: 
+ #      you have to configure:
  #        <baudrate>9600</baudrate>
  #        <serialdevice>/dev/ttyAMA0</serialdevice>   (for RaspberryPi UART)
  #
  #   3. If you use a 'HT3_microAdapter'-board with USB<->UART interface
- #      you have to configure: 
+ #      you have to configure:
  #        <baudrate>9600</baudrate>
  #        <serialdevice>/dev/ttyUSBx</serialdevice>   (for any USB-Port x)
  #
@@ -72,7 +74,7 @@
     <serveraddress></serveraddress>
     <servername></servername>
     <portnumber>8088</portnumber>
-    <logfilepath>./var/log/ht_proxy.log</logfilepath>
+    <logfilepath>./../var/log/ht_proxy.log</logfilepath>
     <ht_transceiver_if devicename="RX">
       <parameter>
         <serialdevice>/dev/ttyAMA0</serialdevice>
@@ -101,19 +103,19 @@
    #   limited by the used hardware (RaspberryPi). In this case only
    #   2 Clients shoud be connected simultaneously (performance-reason).
   -->
-  <proxy_client devicename="RX">      
-    <serveraddress>192.168.178.10</serveraddress>
+  <proxy_client devicename="RX">
+    <serveraddress>localhost</serveraddress>
     <servername></servername>
     <portnumber>8088</portnumber>
-    <logfilepath>./var/log/ht_client_rx.log</logfilepath>
+    <logfilepath>./../var/log/ht_client_rx.log</logfilepath>
     <devicetype>RX</devicetype>
   </proxy_client>
 
-  <proxy_client devicename="MODEM">      
-    <serveraddress>192.168.178.10</serveraddress>
+  <proxy_client devicename="MODEM">
+    <serveraddress>localhost</serveraddress>
     <servername></servername>
     <portnumber>8088</portnumber>
-    <logfilepath>./var/log/ht_client_modem.log</logfilepath>
+    <logfilepath>./../var/log/ht_client_modem.log</logfilepath>
     <devicetype>MODEM</devicetype>
   </proxy_client>
 </ht_proxy_cfg>
