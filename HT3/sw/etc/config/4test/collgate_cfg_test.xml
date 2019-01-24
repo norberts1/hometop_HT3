@@ -19,16 +19,16 @@
  # along with this program. If not, see <http://www.gnu.org/licenses/>.
  #
  #################################################################
- # Ver:0.1.8  / Datum 05.10.2015 first release
- # Ver:0.2.x  / Datum 09.05.2017 renaming to 'collgate'
+ # Ver:0.1    / Datum 15.06.2017 first release
+ # Ver:0.2    / Datum 20.01.2019 update to HT3_db_cfg_test.xml
  #################################################################
  #
  #  Configuration-file for 'ht_collgate'-daemon and attached clients.
  #
  #  The 'ht_collgate-server' is used for reading ht-busdata in RAW-format.
- #  It's connected as ht_proxy-client to the ht_proxy-server. 
+ #  It's connected as ht_proxy-client to the ht_proxy-server.
  #  The server decodes that received data and stores this to memory.
- #  Depending of interface the decoded data are send to clients.
+ #  Depending on 'enable-flag' the decoded data are send to interface  clients.
  #
 -->
 
@@ -37,10 +37,10 @@
 <interfaces>
     <ht_if>
         <!-- this IF is forced to be on -->
-        <cfg_file>./../etc/config/4test/HT3_4dispatcher_test.xml</cfg_file>
+        <cfg_file>./../etc/config/4test/HT3_db_cfg_test.xml</cfg_file>
     </ht_if>
     <MQTT_client_if>
-        <enable>On</enable>
+        <enable>Off</enable>
         <cfg_file>./../etc/config/mqtt_client_cfg.xml</cfg_file>
     </MQTT_client_if>
     <SPS_if>
