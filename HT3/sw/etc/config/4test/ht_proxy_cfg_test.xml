@@ -20,7 +20,7 @@
  #
  #################################################################
  # Ver:0.1.7  / Datum 25.02.2015 first release
- # Ver:0.2    / Datum 20.01.2019 log-path corrected.
+ # Ver:0.2    / Datum 20.01.2019 log-path modified.
  #                               <serveraddress> set to 'localhost'.
  #################################################################
  #
@@ -107,7 +107,7 @@
     <serveraddress>localhost</serveraddress>
     <servername></servername>
     <portnumber>8088</portnumber>
-    <logfilepath>./../var/log/ht_client_rx.log</logfilepath>
+    <logfilepath>./var/log/ht_client_rx.log</logfilepath>
     <devicetype>RX</devicetype>
   </proxy_client>
 
@@ -115,7 +115,7 @@
     <serveraddress>localhost</serveraddress>
     <servername></servername>
     <portnumber>8088</portnumber>
-    <logfilepath>./../var/log/ht_client_modem.log</logfilepath>
+    <logfilepath>./var/log/ht_client_modem.log</logfilepath>
     <devicetype>MODEM</devicetype>
   </proxy_client>
 </ht_proxy_cfg>
