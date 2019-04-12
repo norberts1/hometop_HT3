@@ -177,7 +177,7 @@ class cht_utils(object):
         else:
             current_path = os.path.abspath('.')
             find_index = current_path.find(find_separator)
-            sliced_path = current_path[0:find_index]
+            sliced_path = current_path
             if find_index > 0 and len(current_path) > 2:
                 sliced_path = current_path[0:find_index + len(find_separator)]
             my_abspath = os.path.abspath(os.path.join(sliced_path, path))
