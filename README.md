@@ -71,6 +71,10 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 ## Changelog
 
+## 0.3.2
+`03.12.2019`
+- `moduls`: Issue: Deprecated property InterCharTimeout #7; port.setInterCharTimeout() removed.
+
 ## 0.3.1
 `20.01.2019`
 - `moduls`: modified for new log-values, decoding upgraded for Cxyz Controller. See modul-header for details.
