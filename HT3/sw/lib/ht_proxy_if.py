@@ -22,6 +22,8 @@
 #              logging-handling added from ht_utils
 # Ver:0.1.7.2/ Datum 31.10.2015 __waitfor_client_register method changed
 #              for handling clients which not sending the devicetype
+# Ver:0.1.7.3/ Datum 03.12.2019 Issue:'Deprecated property InterCharTimeout #7'
+#                                port.setInterCharTimeout() removed
 #################################################################
 
 import socketserver, socket, serial
@@ -32,8 +34,8 @@ import time, os
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.1.7.2"
-__date__    = "31.10.2015"
+__version__ = "0.1.7.3"
+__date__    = "03.12.2019"
 
 #---------------------------------------------------------------------------
 #   targettype related stuff
@@ -278,7 +280,6 @@ class cht_transceiver_if(threading.Thread):
         #open serial port for reading HT-data
         try:
             self.__port = serial.Serial(self.__serialdevice, self.__baudrate)
-            #disabeld, no timeout  self.__port.setInterCharTimeout(0.1) #VTIME; set to 0.1*1sec
         except:
             _ClientHandler.log_critical("cht_transceiver_if();Error;couldn't open requested device:{0}".format(self.__serialdevice))
             self.__threadrun=False

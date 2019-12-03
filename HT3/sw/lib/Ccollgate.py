@@ -20,6 +20,8 @@
 # Ver:0.1    / Datum 15.06.2017 first release
 # Ver:0.2    / Datum 29.11.2018 __Extract_HT3_path_from_AbsPath() replaced with ht_utils
 #                               __Autocreate_draw() removed, db_rrdtool.create_draw() replacement
+# Ver:0.3    / Datum 03.12.2019 Issue:'Deprecated property InterCharTimeout #7'
+#                                port.setInterCharTimeout() removed
 #################################################################
 
 import sys
@@ -40,8 +42,8 @@ import ht_const
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.2"
-__date__    = "29.11.2018"
+__version__ = "0.3"
+__date__    = "03.12.2019"
 
 """
 #################################################################
@@ -484,7 +486,6 @@ class cht_if_worker(threading.Thread):
             #open serial port for reading HT-data
             try:
                 self.__port = serial.Serial(self.__serialdevice, self.__baudrate )
-                self.__port.setInterCharTimeout(0.1) #VTIME; set to 0.1*1sec
                 self.__data_input_mode="ASYNC"
             except:
                 errorstr="cht_if_worker();Error;couldn't open requested device:{0}".format(self.__serialdevice)

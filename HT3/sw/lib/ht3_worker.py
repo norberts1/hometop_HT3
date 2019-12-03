@@ -35,6 +35,8 @@
 #                               if enabled.
 # Ver:0.3    / Datum 19.06.2017 desctructor corrected
 # Ver:0.3.1  / Datum 08.01.2019 __Autocreate_draw() removed, db_rrdtool.create_draw() replacement
+# Ver:0.3.2  / Datum 03.12.2019 Issue:'Deprecated property InterCharTimeout #7'
+#                                port.setInterCharTimeout() removed
 #################################################################
 
 import sys
@@ -172,7 +174,6 @@ class ht3_cworker(object):
                 #open serial port for reading HT3-data
                 try:
                     self.__port = serial.Serial(self.__serialdevice, self.__baudrate)
-                    self.__port.setInterCharTimeout(0.1)  # VTIME; set to 0.1*1sec
                     self.__gui_titel_input = "ASYNC"
                 except:
                     errorstr = "ht3_cworker();Error;couldn't open requested device:{0}".format(self.__serialdevice)

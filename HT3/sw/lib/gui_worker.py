@@ -60,6 +60,8 @@
 #                                SO:V_ertrag_tag_calc ('DalySolarGain') added.
 #                               Betriebszeit Gesamt und Heizung im Heizgeraet-Anzeigemode korrigiert.
 #                               Unit 'Stunden' - String entfernt -> jetzt aus Cfg-file.
+# Ver:0.3.2  / Datum 03.12.2019 Issue:'Deprecated property InterCharTimeout #7'
+#                                port.setInterCharTimeout() removed
 #################################################################
 #
 
@@ -75,8 +77,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.3.1"
-__date__ = "20.01.2019"
+__version__ = "0.3.2"
+__date__ = "03.12.2019"
 
 
 class gui_cworker(ht_utils.clog):
