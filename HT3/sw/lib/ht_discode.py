@@ -82,6 +82,9 @@
 #                               modified 'msgID_260_Solar()', SO:V_spare_1 & SO:V_spare_2 used now.
 #                               SO:'V_ertrag_sum_calc' used now for SO:'Ertrag Summe'
 #                               msgID_52_DomesticHotWater() storing data only if valid.
+# Ver:0.3.2  / Datum 08.09.2020 modified 'msgID_51_DomesticHotWater' for storing 'T-Soll max'
+#                               no decoding if length is <= 8 for EMS2 heating-circuit messages.
+#                               'msgID_52_DomesticHotWater()' modified handling for not available sensor-values.
 #################################################################
 
 import serial
@@ -93,8 +96,8 @@ import ht_proxy_if
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.3.1"
-__date__ = "18.01.2019"
+__version__ = "0.3.2"
+__date__ = "08.09.2020"
 
 
 class cht_decode(ht_utils.cht_utils):
@@ -1138,6 +1141,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         if buffer[0] == 0x88 or buffer[0] == 0x98 or buffer[0] == 0xa0:
             nickname = "HK1"
         elif buffer[0] == 0x89 or buffer[0] == 0x99 or buffer[0] == 0xa1:
@@ -1211,6 +1219,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         if msgid == 357:
             nickname = "HK1"
         if msgid == 358:
@@ -1259,6 +1272,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         if msgid == 367:
             nickname = "HK1"
         if msgid == 368:
@@ -1459,19 +1477,25 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         if not self.__DeviceIsModem(buffer[0]):
-            self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
         if msgid == 677:
-            nickname = "HK1"
+          nickname = "HK1"
         if msgid == 678:
-            nickname = "HK2"
-            self.__gdata.heatercircuits_amount(2)
+          nickname = "HK2"
+          self.__gdata.heatercircuits_amount(2)
         if msgid == 679:
-            nickname = "HK3"
-            self.__gdata.heatercircuits_amount(3)
+          nickname = "HK3"
+          self.__gdata.heatercircuits_amount(3)
         if msgid == 680:
-            nickname = "HK4"
-            self.__gdata.heatercircuits_amount(4)
+          nickname = "HK4"
+          self.__gdata.heatercircuits_amount(4)
+
         self.__currentHK_nickname = nickname
         temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
 
@@ -1519,6 +1543,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         Targetdevice = buffer[1]
         if not self.__DeviceIsModem(buffer[0]):
             self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
@@ -1575,6 +1604,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         if not self.__DeviceIsModem(buffer[0]):
             self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
         if msgid == 727:
@@ -1636,6 +1670,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         if not self.__DeviceIsModem(buffer[0]):
             self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
         if msgid == 737:
@@ -1697,6 +1736,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         if not self.__DeviceIsModem(buffer[0]):
             self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
         if msgid == 747:
@@ -1736,6 +1780,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         if buffer[0] == 0x98:
             nickname = "HK1"
@@ -1763,6 +1812,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         if buffer[0] == 0x98:
             nickname = "HK1"
         elif buffer[0] == 0x99:
@@ -1810,6 +1864,11 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
+
+        #check buffer-length, if to short return with no data
+        if length <= 8:
+            return ("", None)
+
         if msgid == 377:
             nickname = "HK1"
         if msgid == 378:
@@ -2005,8 +2064,8 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
             for buffer_index in range(first_payload_index, length - 2):
                 temptext += format(buffer[buffer_index], "02x") + " "
-                #saving data only if target-adresse is := 0
-                if(Targetadress == 0):
+                #saving data only if target-adresse is := 0, service-key or modem device-ID
+                if(Targetadress in [0, 0x0a, 0x0b, 0x0d, 0x48]):
                     # read values from buffer and assign them
                     if raw_index == 4 and msg_bytecount >= 1:
                     # kennzahl bussystem; 8:=EMS, 0:=NN
@@ -2014,7 +2073,8 @@ class cht_decode(ht_utils.cht_utils):
                             self.__gdata.bus_type("EMS")
                     if raw_index == 6 and msg_bytecount >= 1:
                         i_Soll = int(buffer[buffer_index])
-                        self.__gdata.update(nickname, "Tsoll", self.__Check4MaxValue(nickname, "Tsoll", i_Soll))
+                        #modified 08.09.2020: 'T-Soll max' used now for manual dhw-setup on the heater-device
+                        self.__gdata.update(nickname, "V_spare_1", self.__Check4MaxValue(nickname, "V_spare_1", i_Soll))
                 raw_index += 1
 
             for buffer_index in range(length - 2, length):
@@ -2043,26 +2103,8 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
             b_decoding = True
 
-            # check type of domestic hotwater generation
-            if msg_bytecount >= 9:
-                #  (0 :=> no hotwater generation is done be this heater, so no further decoding)
-                # not active anymore, decoding is done anyway.
-                if buffer[12] == 0:
-                    #zs#test#               b_decoding = False
-                    pass
-
             # if target-device is controller (wrong detection) then stop decoding
             if buffer[0] == 0x90:
-                b_decoding = False
-
-            if length > 10:
-                # if MsgId:52_1_0-Value or 52_3_0-Value >= 0x7000 Tempsensor failure or not connected ->
-                #      no decoding done then
-                MsgID_52_1_0 = float(buffer[5] * 256 + buffer[6])
-                MsgID_52_3_0 = float(buffer[7] * 256 + buffer[8])
-                if MsgID_52_1_0 > 0x7000 or MsgID_52_3_0 > 0x7000:
-                    b_decoding = False
-            else:
                 b_decoding = False
 
             # at least decode the stuff
@@ -2071,14 +2113,24 @@ class cht_decode(ht_utils.cht_utils):
                 if b_decoding == True:
                     # read values from buffer and assign them
                     if raw_index == 4 and msg_bytecount >= 1:
+                      # if 52_8_0 := 0 (boiler without dhw-generating) then
+                      #  don't use that desired temperatur value 52_0_0
+                      #  if the message is send by the boiler := 0x88
+                      if ((buffer[12] == 0) and (buffer[0] == 0x88)):
+                        pass
+                      else:
                         i_Soll = int(buffer[buffer_index])
                         self.__gdata.update(nickname, "Tsoll", self.__Check4MaxValue(nickname, "Tsoll", i_Soll))
                     if raw_index == 5 and msg_bytecount >= 2:
-                        f_Ist = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                        self.__gdata.update(nickname, "Tist", self.__Check4MaxValue(nickname, "Tist", f_Ist))
+                        MsgID_52_1_0 = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1])
+                        if MsgID_52_1_0 < 0x7000:
+                          f_Ist = float(MsgID_52_1_0 / 10)
+                          self.__gdata.update(nickname, "Tist", self.__Check4MaxValue(nickname, "Tist", f_Ist))
                     if raw_index == 7 and msg_bytecount >= 2:
-                        f_Speicheroben = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                        self.__gdata.update(nickname, "Tspeicher", self.__Check4MaxValue(nickname, "Tspeicher", f_Speicheroben))
+                        MsgID_52_3_0 = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1])
+                        if MsgID_52_3_0 < 0x7000:
+                          f_Speicheroben = float(MsgID_52_3_0 / 10)
+                          self.__gdata.update(nickname, "Tspeicher", self.__Check4MaxValue(nickname, "Tspeicher", f_Speicheroben))
                     if raw_index == 9 and msg_bytecount >= 1:
                         # Bitfeld Byte9
                         i_WW_einmallad = 1 if(buffer[buffer_index] & 0x02) else 0
@@ -3183,7 +3235,7 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
     #  1.modification reagarding:
     #   https://www.mikrocontroller.net/topic/324673#5169108
     deviceadr_2msgid_blacklist = {
-        0x10: [11, 12, 24, 46, 47, 64, 100, 106],
+        0x10: [11, 12, 24, 46, 47, 61, 64, 100, 106],
         0x1b: [17, 56, 74, 89],
         0x20: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
         0x21: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
