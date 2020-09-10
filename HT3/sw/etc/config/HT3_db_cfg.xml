@@ -50,6 +50,7 @@
  #                               SO:'V_ertrag_tag_calc' used now for SO:'Ertrag Tag'.
  #                               'UNKNOWN' deleted on <maxvalue>.
  #                               accessnames now: 'dhw_runtime_ch' and 'dhw_starts_ch'.
+ # Ver:0.3.2  / Datum 08.09.2020 DHW 'T-Soll max' added using 'V_spare_1'.
   #################################################################
  #
  #  Configuration-file for 'heater' data- decoding and logging to databases and
@@ -944,9 +945,9 @@
             <datause>GAUGE</datause>
             <maxvalue>100</maxvalue>
             <default>0</default>
-            <unit></unit>
-            <displayname></displayname>
-            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
+            <unit>Grad</unit>
+            <displayname>T-Soll max</displayname>
+            <accessname>dhw_Tsetpoint_max</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_spare_2">
             <datatype>INT</datatype>
