@@ -71,6 +71,12 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 ## Changelog
 
+## 0.3.3
+`10.09.2020`
+- `modul `: `gui_worker.py` with scrollbars and WW:'T-Soll max' added.  
+- `modul `: `ht_discode.py` decoding of MsgId's 51 & 52 improved, msglength check added.  
+- `config`: `etc/config/HT3_db_cfg.xml` and `etc/config/HT3_db_off_cfg.xml` WW:'V_spare_1' used as WW:'T-Soll max'.
+
 ## 0.3.2
 `03.12.2019`
 - `moduls`: Issue: Deprecated property InterCharTimeout #7; port.setInterCharTimeout() removed.
