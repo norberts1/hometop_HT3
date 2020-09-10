@@ -62,6 +62,9 @@
 #                               Unit 'Stunden' - String entfernt -> jetzt aus Cfg-file.
 # Ver:0.3.2  / Datum 03.12.2019 Issue:'Deprecated property InterCharTimeout #7'
 #                                port.setInterCharTimeout() removed
+# Ver:0.3.3  / Datum 08.09.2020 Modified 'geometry' for the display
+#                               Scrollbars added.
+#                               DHW display 'T-Soll max' added.
 #################################################################
 #
 
@@ -77,8 +80,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.3.2"
-__date__ = "03.12.2019"
+__version__ = "0.3.3"
+__date__ = "08.09.2020"
 
 
 class gui_cworker(ht_utils.clog):
@@ -121,17 +124,18 @@ class gui_cworker(ht_utils.clog):
             self.__fr1.pack(side="top")
             if self.__hexdump_window:
                 self.__main.title('Heatronic Analyser Rev:{0} (Input:{1})'.format(__version__, self.__gui_titel_input))
-                self.__main.geometry("1200x800+330+230")
+                self.__main.geometry("1570x800+5+0")
                 self.__fr2 = tkinter.Frame(self.__fr1, relief="sunken", bd=2)
                 self.__fr2.pack(side="left")
             else:
                 self.__main.title('Heatronic Systemstatus Rev:{0} (Input:{1})'.format(__version__, self.__gui_titel_input))
-                self.__main.geometry("600x750+330+230")
+                self.__main.geometry("650x800+5+0")
                 self.__fr2 = None
 
             self.__fr3 = tkinter.Frame(self.__fr1, relief="sunken", bd=3)
             self.__fr3.pack(side="right")
 
+            # setup Buttons for controlling the frame-context
             if self.__hexdump_window:
                 self.__bhexdclear = tkinter.Button(self.__fr2, text="Hexdump clear",
                                                 highlightbackground="red",
@@ -175,19 +179,33 @@ class gui_cworker(ht_utils.clog):
 
             self.__g_i_hexheader_counter = 0
             if self.__hexdump_window:
-                #frame for hexdump
+                #frame for hexdump with scrollbar on the left side
                 self.__hexdumpfr = tkinter.Frame(self.__main, width=1000, relief="sunken", bd=1)
                 self.__hexdumpfr.pack(side="left", expand=1, fill="both")
-                self.__hextext = tkinter.Text(self.__hexdumpfr)
+
+                scrollbar_hexdump = tkinter.Scrollbar(self.__hexdumpfr, orient=tkinter.VERTICAL ,bg="lightgray")
+                scrollbar_hexdump.pack(side="left", fill = tkinter.Y)
+
+                self.__hextext = tkinter.Text(self.__hexdumpfr, yscrollcommand = scrollbar_hexdump.set)
                 self.__hextext.pack(side="left", expand=1, fill="both")
+
+                scrollbar_hexdump.config(command = self.__hextext.yview)
+
                 self.__colourconfig(self.__hextext)
                 self.__Hextext_bytecomment()
 
             #frame for data
             self.__datafr = tkinter.Frame(self.__main, width=1, relief="sunken", bd=4)
             self.__datafr.pack(side="left", fill="both")
-            self.__text = tkinter.Text(self.__datafr)
+
+            scrollbar_data = tkinter.Scrollbar(self.__datafr, orient=tkinter.VERTICAL ,bg="lightgray")
+            scrollbar_data.pack(side="right", fill = tkinter.Y)
+
+            self.__text = tkinter.Text(self.__datafr, yscrollcommand = scrollbar_data.set)
             self.__text.pack(side="left", expand=1, fill="both")
+
+            scrollbar_data.config(command = self.__text.yview)
+
             self.__colourconfig(self.__text)
 
             #browser-details
@@ -482,7 +500,16 @@ class gui_cworker(ht_utils.clog):
 
         # 9. line
         tempvalue = format(int(self.__gdata.values(nickname_HG, "Vleistung")), "d")
-        temptext = self.__DisplayColumn(nickname_HG, "Vleistung", tempvalue)
+
+        #modified 08.09.2020 WW:'T-Soll max' added on GUI
+        tempvalue_int = int(self.__gdata.values(nickname_WW, "V_spare_1"))
+        if (tempvalue_int > 0):
+          temptext = self.__DisplayColumn(nickname_HG, "Vleistung", tempvalue, endofline=False)
+          tempvalue = format(tempvalue_int, "2d")
+          temptext += self.__DisplayColumn(nickname_WW, "V_spare_1", tempvalue, right=True)
+        else:
+          temptext = self.__DisplayColumn(nickname_HG, "Vleistung", tempvalue)
+
         if len(temptext) > 0: self.__text.insert("end", temptext)
 
         # 10. line
@@ -860,6 +887,13 @@ class gui_cworker(ht_utils.clog):
             tempvalue = self.__GetStrOnOff(self.__gdata.values(nickname, "VWW_nachladung"))
             temptext = self.__DisplayColumn(nickname, "VWW_nachladung", tempvalue)
             if len(temptext) > 0: self.__text.insert("end", temptext)
+
+            #modified 08.09.2020 'T-Soll max' added on GUI
+            tempvalue_int = int(self.__gdata.values(nickname, "V_spare_1"))
+            tempvalue = format(tempvalue_int, "2d")
+            temptext = self.__DisplayColumn(nickname, "V_spare_1", tempvalue)
+            if ((len(temptext) > 0) and tempvalue_int > 0): self.__text.insert("end", temptext)
+
             ####
             # temptext=" Einmalladung         : "+self.__GetStrOnOff(self.__gdata.values(nickname,"VWW_einmalladung"))+'\n'
             # self.__text.insert("end",temptext)
