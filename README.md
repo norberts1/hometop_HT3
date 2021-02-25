@@ -71,6 +71,13 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 ## Changelog
 
+## 0.4
+`2021-02-25` 
+- `reason`: Issue: #13.  
+- `modul `: `gui_worker.py` set to rev.:0.4.  
+- `modul `: `lib/ht_proxy_if.py` port# set to 48088.  
+- `config`: `etc/config/ht_proxy_cfg.xml` port# to:48088, `etc/html/httpd.py` port# to:48086.
+
 ## 0.3.3
 `10.09.2020`
 - `modul `: `gui_worker.py` with scrollbars and WW:'T-Soll max' added.  
