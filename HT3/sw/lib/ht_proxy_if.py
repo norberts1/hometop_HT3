@@ -24,6 +24,7 @@
 #              for handling clients which not sending the devicetype
 # Ver:0.1.7.3/ Datum 03.12.2019 Issue:'Deprecated property InterCharTimeout #7'
 #                                port.setInterCharTimeout() removed
+# Ver:0.1.8    2021-02-19 Portnumber changed to 48088
 #################################################################
 
 import socketserver, socket, serial
@@ -34,8 +35,8 @@ import time, os
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.1.7.3"
-__date__    = "03.12.2019"
+__version__ = "0.1.8"
+__date__    = "2021-02-19"
 
 #---------------------------------------------------------------------------
 #   targettype related stuff
@@ -699,7 +700,7 @@ class cht_proxy_daemon(threading.Thread, cproxyconfig):
         self._configfile =configfile
         self._logfile    ="default_proxy.log"
         self._ip_address="localhost"
-        self._port_number=8088
+        self._port_number=48088
         self._server=None
         self._ht_transceiver_if=[]
 
@@ -808,7 +809,7 @@ class cht_socket_client(cproxyconfig, ht_utils.clog):
         cproxyconfig.__init__(self, tcp_ip_type, self._devicetype)
         self._configfile =configfile
         self._ip_address ="192.168.2.1"
-        self._port_number=8088
+        self._port_number=48088
         self._logfile    ="./ht_client_default.log"
         self._loglevel   = loglevel
         self._loggertag  = tcp_ip_type

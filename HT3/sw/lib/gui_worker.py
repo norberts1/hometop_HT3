@@ -65,6 +65,10 @@
 # Ver:0.3.3  / Datum 08.09.2020 Modified 'geometry' for the display
 #                               Scrollbars added.
 #                               DHW display 'T-Soll max' added.
+# Ver:0.4    / 2021-02-25  Portnumbers changed in project-config:
+#                           from 8086 to 48086
+#                           from 8088 to 48088
+#                           see Issue: #13
 #################################################################
 #
 
@@ -80,8 +84,8 @@ import ht_const
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.3.3"
-__date__ = "08.09.2020"
+__version__ = "0.4"
+__date__ = "2021-02-25"
 
 
 class gui_cworker(ht_utils.clog):

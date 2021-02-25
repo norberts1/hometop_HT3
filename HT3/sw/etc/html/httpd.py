@@ -18,16 +18,16 @@
 #
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
+# Ver:0.2    / 2021-02-17  port-number changed to 48086
 #################################################################
 #
 #----------------------------------------------------
-# Dateiname:  httpd.py 
-# Kleiner HTTP-Server, der auf den Port: 8086 verbindet.
+# Dateiname:  httpd.py
+# Kleiner HTTP-Server, der auf den Port: 48086 verbindet.
 # Die Daten muessen in dem Verzeichnis des Servers sein.
 #----------------------------------------------------
 #
 from http.server import HTTPServer, CGIHTTPRequestHandler
-serveradresse =("", 8086)                            
+serveradresse =("", 48086)
 server=HTTPServer(serveradresse, CGIHTTPRequestHandler)
 server.serve_forever()
-              
