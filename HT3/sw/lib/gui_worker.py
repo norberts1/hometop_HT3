@@ -69,6 +69,7 @@
 #                           from 8086 to 48086
 #                           from 8088 to 48088
 #                           see Issue: #13
+# Ver:0.4.1  / 2021-03-12  Release-File imported
 #################################################################
 #
 
@@ -81,11 +82,12 @@ import data
 import ht_utils
 import logging
 import ht_const
+import ht_release
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.4"
-__date__ = "2021-02-25"
+__version__ = "0.4.1"
+__date__ = "2021-03-12"
 
 
 class gui_cworker(ht_utils.clog):
@@ -127,12 +129,12 @@ class gui_cworker(ht_utils.clog):
             self.__fr1 = tkinter.Frame(self.__main, relief="sunken", bd=5)
             self.__fr1.pack(side="top")
             if self.__hexdump_window:
-                self.__main.title('Heatronic Analyser Rev:{0} (Input:{1})'.format(__version__, self.__gui_titel_input))
+                self.__main.title('Heatronic Analyser Rev:{0} (Input:{1})'.format(ht_release.VERSION, self.__gui_titel_input))
                 self.__main.geometry("1570x800+5+0")
                 self.__fr2 = tkinter.Frame(self.__fr1, relief="sunken", bd=2)
                 self.__fr2.pack(side="left")
             else:
-                self.__main.title('Heatronic Systemstatus Rev:{0} (Input:{1})'.format(__version__, self.__gui_titel_input))
+                self.__main.title('Heatronic Systemstatus Rev:{0} (Input:{1})'.format(ht_release.VERSION, self.__gui_titel_input))
                 self.__main.geometry("650x800+5+0")
                 self.__fr2 = None
 

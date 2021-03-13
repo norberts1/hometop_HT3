@@ -70,6 +70,11 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 
 ## Changelog
+## 0.4.1
+`2021-03-12` 
+- `reason`: Issue: #14. HomeAssistant IF added.  
+- `modul `: `ht_2hassio.py`, `ht_2hass` and `lib/ht_release.py` added.  
+- `docu  `: `HT3_Adaption.pdf` modified for HA.  
 
 ## 0.4
 `2021-02-25` 

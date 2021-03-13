@@ -19,6 +19,9 @@
 #################################################################
 # Ver:0.1    / Datum 15.06.2017 first release
 # Ver:0.2    / Datum 20.08.2017 waiting max 120 seconds in broker_available()
+# Ver:0.3    / 2021-02-28 creating logfile after loglevel-reading.
+#                         cfg_client_ID() modified to return/set values.
+#                         mqtt_init() now with client_id parameter.
 #################################################################
 
 import xml.etree.ElementTree as ET
@@ -33,8 +36,8 @@ import paho.mqtt.client as paho
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.2"
-__date__    = "20.08.2017"
+__version__ = "0.3"
+__date__    = "2021-02-28"
 
 """
 #################################################################
@@ -115,7 +118,7 @@ class cmqtt_cfg(ht_utils.clog):
                 filename = 'mqtt_client.log'
             logfilepathname = ht_utils.cht_utils.MakeAbsPath2FileName(self, (path, filename))
             self.cfg_logfilepathname(logfilepathname)
-            rtnvalue = ht_utils.clog.create_logfile(self, logfilepath=logfilepathname, loggertag=tag)
+            rtnvalue = ht_utils.clog.create_logfile(self, logfilepath=logfilepathname, loglevel=self.cfg_loglevel() ,loggertag=tag)
         except:
             errorstr = "cmqtt_cfg.create_logger();could not create logger-file:{0}; logger-tag:{1}".format(filepath, tag)
             raise EnvironmentError(errorstr)
@@ -183,8 +186,10 @@ class cmqtt_cfg(ht_utils.clog):
         """returns the current OnlyNewValue cfg-flag."""
         return self.__Publish_OnlyNewValues
 
-    def cfg_client_ID(self):
-        """returns the client-ID configured in cfg-file."""
+    def cfg_client_ID(self, client_id=None):
+        """returns/sets the client-ID read from cfg-file."""
+        if client_id != None:
+            self.__client_id=client_id
         return self.__client_id
 
     def cfg_read(self):
@@ -213,14 +218,14 @@ class cmqtt_cfg(ht_utils.clog):
                     #  join both 'path' and 'filename' and save it
                     logfilepathname = os.path.normcase(os.path.join(path, default_filename))
                     self.cfg_logfilepathname(logfilepathname)
+                    #  get and save loglevel
+                    self.cfg_loglevel( logging_param.find('loglevel').text.upper() )
                     if self.cfg_logging() == None:
                         # check if called from itself or used from outside
                         if __name__ == "__main__":
                             self.cfg_logging(self._create_logger())
                         else:
                             self.cfg_logging(self._create_logger(logfilepathname))
-                    #  get and save loglevel
-                    self.cfg_loglevel( logging_param.find('loglevel').text.upper() )
             except:
                 # if not already done create logger with default values
                 errorstr = "cmqtt_cfg.read_db_config();Error on logging parameter"
@@ -389,8 +394,10 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
         my_socket.close()
         return rtnvalue
 
-    def mqtt_init(self):
-        """initialisation of mqtt-client with values from cfg-file."""
+    def mqtt_init(self, my_client_id=None):
+        """initialisation of mqtt-client with values from cfg-file.
+            The used mqtt client-id is override able.
+        """
         rtnvalue = False
         #check broker availability at first
         self.cfg_logging().info("-----------------------------")
@@ -402,6 +409,10 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
             rtnvalue = False
             self.stop()
         else:
+            # if 'my_client_id' is available, then set it as new value
+            if my_client_id != None:
+                self.cfg_client_ID(my_client_id)
+
             #broker is available, so connect using paho
             self.__client = paho.Client(client_id=self.cfg_client_ID(),
                                     clean_session=self.cfg_CleanSession(),
