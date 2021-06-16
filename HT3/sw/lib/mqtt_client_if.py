@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 #
 #################################################################
-## Copyright (c) 2017 Norbert S. <junky-zs@gmx.de>
+## Copyright (c) 2017 Norbert S. <junky-zs at gmx dot de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@
 # Ver:0.3    / 2021-02-28 creating logfile after loglevel-reading.
 #                         cfg_client_ID() modified to return/set values.
 #                         mqtt_init() now with client_id parameter.
+# Ver:0.4    / 2021-06-14 LWT handling corrected (see issue: #16).
+#                         device_id added for topic-names.
 #################################################################
 
 import xml.etree.ElementTree as ET
@@ -31,13 +33,14 @@ import threading
 import queue
 import ht_utils
 import logging
+import socket
 
 import paho.mqtt.client as paho
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.3"
-__date__    = "2021-02-28"
+__version__ = "0.4"
+__date__    = "2021-06-14"
 
 """
 #################################################################
@@ -105,6 +108,10 @@ class cmqtt_cfg(ht_utils.clog):
         self.__LastWillRetain = True
         self.__Publish_OnlyNewValues = False
         self.__client_id = "myID"
+        self.__device_id = ""
+        self.__LWT_topic_name = self.__topic_root_name + "/status"
+        # read the configuration from config xml-file
+        self.cfg_read()
 
     def __del__(self):
         """class destructor."""
@@ -192,6 +199,16 @@ class cmqtt_cfg(ht_utils.clog):
             self.__client_id=client_id
         return self.__client_id
 
+    def cfg_device_ID(self, device_id=None):
+        """returns/sets the device-ID read from cfg-file."""
+        if device_id != None:
+            self.__device_id=device_id
+        return self.__device_id
+
+    def LWT_topic_name(self):
+        """returns the LWT topic-name."""
+        return self.__LWT_topic_name
+
     def cfg_read(self):
         """read the configuration-file and sets the private parameter."""
         try:
@@ -273,6 +290,25 @@ class cmqtt_cfg(ht_utils.clog):
                     self.__Publish_OnlyNewValues = bool(True if self.__Publish_OnlyNewValues == 'TRUE' else False)
                     search_tag='client_id'
                     self.__client_id = client_param.find(search_tag).text
+                    try:
+                        device_id = client_param.find('device_id').text
+                        if device_id != None:
+                            # search for optional values and use them
+                            #  if not defined, use that contend as string for the root_topic-name
+                            if str(device_id).lower() in ['[hostname]', '[localhost]']:
+                                self.__device_id = socket.gethostname()
+                            else:
+                                self.__device_id = device_id
+                        else:
+                            self.__device_id = ""
+                    except:
+                        self.__device_id = ""
+
+                    if len(self.__device_id) > 0:
+                        # set root topic-name using defined device_id [hostname | any string]
+                        self.__topic_root_name = self.__device_id + '/' + self.__topic_root_name
+
+                    self.__LWT_topic_name = self.__topic_root_name + "/status"
             except:
                 errorstr = "cmqtt_cfg.read_db_config();Error reading parameter:{0}".format(search_tag)
                 self.cfg_logging().critical(errorstr)
@@ -354,6 +390,7 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
         print(infostr)
         if rc == 0:
             self._wait4connection = False
+            self.__client.publish(self.LWT_topic_name(), 'Online', qos=self.cfg_QoS(), retain=self.cfg_LastWillRetain())
 
     def processing_payload(self, userdata, topic, payload):
         """overwrite this methode for your own message-handling."""
@@ -365,7 +402,6 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
             mainly used once at startup of the mqtt-client.
         """
         rtnvalue = False
-        import socket
         my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         my_socket.setblocking(False)
         address = (self.cfg_brokeraddress(), self.cfg_portnumber())
@@ -429,6 +465,8 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
                 #setup user and password if available
                 if len(self.cfg_username()) > 0 and len(self.cfg_password()) > 0:
                     self.__client.username_pw_set(self.cfg_username(), self.cfg_password())
+                #set LWT informations
+                self.__client.will_set(self.LWT_topic_name(), 'Offline', qos=self.cfg_QoS(), retain=self.cfg_LastWillRetain())
                 #connect to broker
                 infostr = "MQTT Pub-Client try to connected to MQTT-broker at address:{0}; port:{1}".format(self.cfg_brokeraddress(),
                                                                                         self.cfg_portnumber())
@@ -471,7 +509,7 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
                                                                                            self.cfg_LastWillRetain(),
                                                                                            self.cfg_OnlyNewValues())
                 self.cfg_logging().info(infostr)
-                infostr = """  Client_ID:{0}""".format(self.cfg_client_ID())
+                infostr = """  Client_ID:{0}; Device_ID:{1}""".format(self.cfg_client_ID(), self.cfg_device_ID())
                 self.cfg_logging().info(infostr)
                 rtnvalue = True
         return rtnvalue
@@ -580,7 +618,6 @@ class cmqtt_client(cmqtt_baseclass):
             if rc != 0:
                 errorstr = "cmqtt_client.publish_data() error occured; topic:{0}; mid:{1}".format(topic, mid)
                 self.cfg_logging().warning(errorstr)
-            self._client_handle().will_set(topic, payload=value, qos=self.cfg_QoS(), retain=self.cfg_LastWillRetain())
         except:
             errorstr = "cmqtt_client.publish_data() error occured on topic:{0}".format(topic)
             self.cfg_logging().critical(errorstr)
@@ -628,6 +665,7 @@ class cmqtt_client(cmqtt_baseclass):
         if rc == 0:
             self._wait4connection = False
             self._client_handle(client)
+            self._client_handle().publish(self.LWT_topic_name(), 'Online', qos=self.cfg_QoS(), retain=self.cfg_LastWillRetain())
             self.subscribe_settopics()
 
     def run(self):
@@ -726,6 +764,8 @@ if __name__ == "__main__":
     print("MQTT Client: LastWill Retain  : {0}".format(mqtt_client.cfg_LastWillRetain()))
     print("MQTT Client: Only New Values  : {0}".format(mqtt_client.cfg_OnlyNewValues()))
     print("MQTT Client: Client ID        : {0}".format(mqtt_client.cfg_client_ID()))
+    print("MQTT Client: Device ID        : {0}".format(mqtt_client.cfg_device_ID()))
+    print("MQTT Client: LWT topic-name   : {0}".format(mqtt_client.LWT_topic_name()))
 
     print("-----------------------------------------")
 

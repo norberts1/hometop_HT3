@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 #
 #################################################################
-## Copyright (c) 2021 Norbert S. <junky-zs@gmx.de>
+## Copyright (c) 2021 Norbert S. <junky-zs at gmx dot de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 #
 #################################################################
 # Ver:0.1    / 2021-02-28 first release
+# Ver:0.2    / 2021-06-14 using subscribe_settopics() with topicname
+#                          from config-file.
 #################################################################
 
 import sys
@@ -32,8 +34,8 @@ import json
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.1"
-__date__    = "2021-02-28"
+__version__ = "0.2"
+__date__    = "2021-02-14"
 
 #global used values
 HA_base_topic = 'homeassistant'
@@ -93,7 +95,8 @@ class c_hometop2HA_if(mqtt_client):
         init_OK = False
         try:
             # mqtt client initialisation
-            init_OK = self.mqtt_init(my_client_id='hometop2HA_if')
+            new_client_id = self.cfg_device_ID() + '_hometop2HA_if'
+            init_OK = self.mqtt_init(my_client_id = new_client_id)
         except Exception as e:
             errorstr = "c_hometop2HA_if.mqtt_init();error:{}".format(e)
             self.critical(errorstr)
@@ -114,7 +117,7 @@ class c_hometop2HA_if(mqtt_client):
         if rc == 0:
             self._wait4connection = False
             self._client_handle(client)
-            self.subscribe_settopics('hometop/ht/#')
+            self.subscribe_settopics(subscribe_topic=self.cfg_topic_root_name()+'/#')
 
     def processing_payload(self, userdata, topic, payload):
         """ handler for processing that received topic and payload.

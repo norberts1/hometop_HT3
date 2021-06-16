@@ -17,10 +17,15 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
+# Ver:0.4.2  / 2021-06-16
+#               LWT correted in lib/mqtt_client_if.py
+#               [hostname][localhost] added in mqtt-config.
+#               ht_2hassio.py modified for new mqtt-config.
+#               Issue: #16
 # Ver:0.4.1  / 2021-03-12
 #               HomeAssistant interface-daemon added.
 #               Issue: #14
 # Ver:0.4    / 2021-02-25
 #################################################################
 
-VERSION = "0.4.1"
+VERSION = "0.4.2"

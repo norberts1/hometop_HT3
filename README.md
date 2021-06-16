@@ -70,6 +70,11 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 
 ## Changelog
+## 0.4.2
+`2021-06-16` 
+- `reason`: Issue: #16. mqtt - LWT handling corrected.  
+- `modul `: `ht_2hassio.py`, `lib/mqtt_client_if.py` and `config/mqtt_client_cfg.xml` modified.  
+
 ## 0.4.1
 `2021-03-12` 
 - `reason`: Issue: #14. HomeAssistant IF added.  
