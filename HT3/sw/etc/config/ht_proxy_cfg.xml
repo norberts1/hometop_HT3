@@ -21,7 +21,8 @@
  #################################################################
  # Ver:0.1.7  / Datum 25.02.2015 first release
  # Ver:0.1.8    2021-02-19 Portnumber changed to 48088
-#################################################################
+ # Ver:0.2      2022-01-19  /dev/ttyAMA0 replaced with /dev/serial0
+ ################################################################
  #
  #  Configuration-file for 'ht_proxy'-daemon and attached clients.
  #
@@ -47,12 +48,12 @@
  #   1. If you use a 'ht_transceiver'-board (ht_piduino or ht_pitiny)
  #      you have to configure: 
  #        <baudrate>19200</baudrate>
- #        <serialdevice>/dev/ttyAMA0</serialdevice>   (for RaspberryPi UART)
+ #        <serialdevice>/dev/serial0</serialdevice>   (for RaspberryPi UART)
  #
  #   2. If you use a 'HT3_miniAdapter'-board
  #      you have to configure: 
  #        <baudrate>9600</baudrate>
- #        <serialdevice>/dev/ttyAMA0</serialdevice>   (for RaspberryPi UART)
+ #        <serialdevice>/dev/serial0</serialdevice>   (for RaspberryPi UART)
  #
  #   3. If you use a 'HT3_microAdapter'-board with USB<->UART interface
  #      you have to configure: 
@@ -76,7 +77,7 @@
     <logfilepath>./var/log/ht_proxy.log</logfilepath>
     <ht_transceiver_if devicename="RX">
       <parameter>
-        <serialdevice>/dev/ttyAMA0</serialdevice>
+        <serialdevice>/dev/serial0</serialdevice>
         <baudrate>19200</baudrate>
         <config>"8N1"</config>  <!-- only 8N1 available -->
       </parameter>
@@ -84,7 +85,7 @@
     </ht_transceiver_if>
     <ht_transceiver_if devicename="MODEM">
       <parameter>
-        <serialdevice>/dev/ttyAMA0</serialdevice>
+        <serialdevice>/dev/serial0</serialdevice>
         <baudrate>19200</baudrate>
         <config>"8N1"</config>  <!-- only 8N1 available -->
       </parameter>

@@ -70,6 +70,11 @@ Gewährleistung, Haftung und Ansprüche durch Fehlfunktionen an Heizung oder Ada
 
 
 ## Changelog
+## 0.4.3
+`2022-01-19` 
+- `reason`: Issue: #17. new serial portnaming (changed from ttyAMA0 to serial0).  
+- `modul `: all configuration-files (*.xml) modified.  
+
 ## 0.4.2
 `2021-06-16` 
 - `reason`: Issue: #16. mqtt - LWT handling corrected.  

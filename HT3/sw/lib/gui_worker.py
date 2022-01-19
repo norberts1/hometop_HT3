@@ -70,6 +70,8 @@
 #                           from 8088 to 48088
 #                           see Issue: #13
 # Ver:0.4.1  / 2021-03-12  Release-File imported
+# Ver:0.4.2  / 2021-06-16  Issue #16 LWL handling corrected.
+# Ver:0.4.3  / 2022-01-19  Issue #17 New serial port naming corrected.
 #################################################################
 #
 
@@ -86,8 +88,6 @@ import ht_release
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.4.1"
-__date__ = "2021-03-12"
 
 
 class gui_cworker(ht_utils.clog):

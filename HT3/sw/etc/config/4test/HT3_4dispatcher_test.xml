@@ -48,6 +48,7 @@
  #                               'sol_Tcollector_2' and 'sol_pump_2' added.
  #                               SO:'V_ertrag_sum_calc' used now for SO:'Ertrag Summe'.
  #                               SO:'V_ertrag_tag_calc' used now for SO:'Ertrag Tag'.
+ # Ver:0.4    / Datum 19.01.2022 /dev/ttyAMA0 replaced with /dev/serial0
   #################################################################
  #
  #  Configuration-file for 'heater' data- decoding and logging to databases and
@@ -167,7 +168,7 @@
       <proto_type>RAW</proto_type>  <!-- protocoll-types     are:
                                             RAW:=transparent  ; TRX   :=TBD (transceiver-messages with header) -->
       <parameter name="ASYNC">
-        <serialdevice>/dev/ttyAMA0</serialdevice>
+        <serialdevice>/dev/serial0</serialdevice>
         <inputtestfilepath></inputtestfilepath>
         <baudrate>9600</baudrate>
         <config>"8N1"</config>  <!-- only 8N1 available -->

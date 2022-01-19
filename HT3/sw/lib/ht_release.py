@@ -17,6 +17,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
+# Ver:0.4.3  / 2022-01-19  Issue #17 New serial port naming corrected.
 # Ver:0.4.2  / 2021-06-16
 #               LWT correted in lib/mqtt_client_if.py
 #               [hostname][localhost] added in mqtt-config.
@@ -28,4 +29,4 @@
 # Ver:0.4    / 2021-02-25
 #################################################################
 
-VERSION = "0.4.2"
+VERSION = "0.4.3"
