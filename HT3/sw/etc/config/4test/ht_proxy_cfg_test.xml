@@ -23,6 +23,7 @@
  # Ver:0.2    / Datum 20.01.2019 log-path modified.
  #                               <serveraddress> set to 'localhost'.
  # Ver:0.3    / Datum 19.01.2022 /dev/ttyAMA0 replaced with /dev/serial0
+ # Ver:0.3.1    2022-01-21 Portnumber changed to 48088
  #################################################################
  #
  #  Configuration-file for 'ht_proxy'-daemon and attached clients.
@@ -74,7 +75,7 @@
   <proxy_server>
     <serveraddress></serveraddress>
     <servername></servername>
-    <portnumber>8088</portnumber>
+    <portnumber>48088</portnumber>
     <logfilepath>./../var/log/ht_proxy.log</logfilepath>
     <ht_transceiver_if devicename="RX">
       <parameter>
@@ -107,7 +108,7 @@
   <proxy_client devicename="RX">
     <serveraddress>localhost</serveraddress>
     <servername></servername>
-    <portnumber>8088</portnumber>
+    <portnumber>48088</portnumber>
     <logfilepath>./var/log/ht_client_rx.log</logfilepath>
     <devicetype>RX</devicetype>
   </proxy_client>
@@ -115,7 +116,7 @@
   <proxy_client devicename="MODEM">
     <serveraddress>localhost</serveraddress>
     <servername></servername>
-    <portnumber>8088</portnumber>
+    <portnumber>48088</portnumber>
     <logfilepath>./var/log/ht_client_modem.log</logfilepath>
     <devicetype>MODEM</devicetype>
   </proxy_client>
