@@ -85,6 +85,12 @@
 # Ver:0.3.2  / Datum 08.09.2020 modified 'msgID_51_DomesticHotWater' for storing 'T-Soll max'
 #                               no decoding if length is <= 8 for EMS2 heating-circuit messages.
 #                               'msgID_52_DomesticHotWater()' modified handling for not available sensor-values.
+# Ver:0.3.3  / 2022-01-23       added devices 0x40 and 0x41 to 'deviceaddress_white_list[]'
+#                               activated '_remove_black_sequences()' handling.
+#                                see URL: https://www.mikrocontroller.net/topic/324673?page=single#6579738.
+#                               In msgID_26_HeatingCircuit() 'i_tvorlauf_soll' now independant from 'IPM_MM_Modul_Flag'.
+#                               In msgID_367_370_HeatingCircuit() 'i_TsolarSupport' not saved to database anymore.
+#                               'msgID_191_194_ErrorCodeDetails()' added for msgID's:191 to 194.
 #################################################################
 
 import serial
@@ -96,8 +102,8 @@ import ht_proxy_if
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.3.2"
-__date__ = "08.09.2020"
+__version__ = "0.3.3"
+__date__ = "2022-01-23"
 
 
 class cht_decode(ht_utils.cht_utils):
@@ -1053,6 +1059,21 @@ class cht_decode(ht_utils.cht_utils):
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
+    def msgID_191_194_ErrorCodeDetails(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:191 -> Error-/Code-/Class- message.
+        """
+        nickname = "DT"     # displayed (coloured) as system-info
+        (msgid, offset) = msgtuple
+        systempart_tag = "sys"
+        temptext = "{0:4}_{1:<2}:{2:<3}:".format(msgid, offset, systempart_tag)
+
+        for x in range(0, length):
+            temptext += format(buffer[x], "02x") + " "
+        self.__gdata.update(nickname, "hexdump", temptext)
+        values = self.__gdata.values(nickname)
+        return (nickname, values)
+
     def msgID_296_ErrorMsg(self, msgtuple, buffer, length):
         """
             decoding of msgID:296 -> Error message.
@@ -1088,7 +1109,7 @@ class cht_decode(ht_utils.cht_utils):
             nickname = "HK1"
         self.__currentHK_nickname = nickname
 
-        # If PowerModul in system, then the values are NOT written to database
+        # If PowerModul is in system, then no pump-running-flag is used
         IPM_MM_Modul_Flag = False
         if buffer[0] == 0xa0 or buffer[0] == 0xa1 or buffer[0] == 0xa2 or buffer[0] == 0xa3:
             IPM_MM_Modul_Flag = True
@@ -1109,8 +1130,8 @@ class cht_decode(ht_utils.cht_utils):
                 temptext += format(buffer[buffer_index], "02x") + " "
                 if raw_index == 4 and msg_bytecount >= 1:
                     i_tvorlauf_soll = int(buffer[buffer_index])
-                    if (IPM_MM_Modul_Flag == False):
-                        self.__gdata.update(nickname, "V_spare1", self.__Check4MaxValue(nickname, "V_spare1", i_tvorlauf_soll))
+                    # V-Spare-1 benutzt fuer 'T-Soll (Vorlauf)'
+                    self.__gdata.update(nickname, "V_spare1", self.__Check4MaxValue(nickname, "V_spare1", i_tvorlauf_soll))
                 # if msg-bytes [5] or [6] are > 0 then hc_pump is running
                 if raw_index == 5 and msg_bytecount >= 1:
                     if int(buffer[buffer_index]) > 0:
@@ -1331,8 +1352,8 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";T???_HK:{0}".format(f_Taussen_HK)
 
                 if raw_index == 14 and msg_bytecount >= 1:
+                    #2021-02-19 not saved anymore to database
                     i_TsolarSupport = int(buffer[buffer_index])
-                    self.__gdata.update(nickname, "V_spare1", i_TsolarSupport)
                     debugstr += ";TSolarSupport:{0}".format(i_TsolarSupport)
 
                 raw_index += 1
@@ -2964,21 +2985,19 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
 
     def _remove_black_sequences(self):
         """
-            removing bytes from buffer using predefined unusable sequences.
+            removing unwanted bytes-sequences from raw-buffer using predefined black-sequences.
         """
         for value in self.black_sequence.values():
-            if value[0] in self._rawdata:
-                found_index = self._rawdata.index(value[0])
-                if len(self._rawdata) > found_index + len(value):
-                    search_index = 1
-                    compare_counter = 1
-                    while search_index < len(value):
-                        if value[search_index] == self._rawdata[found_index + search_index]:
-                            compare_counter += 1
-                        search_index += 1
-
-                    if compare_counter == len(value):
-                        del self._rawdata[0:(found_index + compare_counter)]
+            while bytearray(value) in bytearray(self._rawdata):
+                try:
+                    found_index = bytearray(self._rawdata).find(bytearray(value))
+#zs$ only 4 test #                    print("-----------------\nFOUND:{0};index:{1};\nraw_data:{2}".format(value, found_index, self._rawdata))
+                except:
+                    found_index = -1
+                if (found_index >= 0) and (len(self._rawdata) > found_index + len(value)):
+                    del self._rawdata[found_index:(found_index + len(value))]
+                else:
+                    break
 
     def _IsValidMessageID(self, deviceaddress, msgid):
         """
@@ -3118,7 +3137,10 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
         176: cht_decode.msgID_xzy_suppress_it,
         188: cht_decode.msgID_188_Hybrid,
         190: cht_decode.msgID_190_DisplayAndCauseCode,
-        191: cht_decode.msgID_AnyMessage,
+        191: cht_decode.msgID_191_194_ErrorCodeDetails,
+        192: cht_decode.msgID_191_194_ErrorCodeDetails,
+        193: cht_decode.msgID_191_194_ErrorCodeDetails,
+        194: cht_decode.msgID_191_194_ErrorCodeDetails,
         239: cht_decode.msgID_239_datahandling,
         259: cht_decode.msgID_259_Solar,
         260: cht_decode.msgID_260_Solar,
@@ -3226,9 +3248,11 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
     #      max 4 heatercircuits,
     #          2 solar-circuits
     #          2 domestic hotwater-circuits
+    # 2022-01-21: 0x40 and 0x41 added in deviceaddress_white_list[]
+    #  see URL: https://www.mikrocontroller.net/topic/324673?page=single#6579738
     deviceaddress_white_list = [0x08, 0x0a, 0x0b, 0x0c, 0x0d, 0x10, 0x18, 0x19, 0x1a,
                                 0x20, 0x21, 0x22, 0x23, 0x28, 0x29,
-                                0x30, 0x31, 0x48]
+                                0x30, 0x31, 0x40, 0x41, 0x48]
 
     ####################################
     # device-adr mapped with not valid message-IDs for detailed message - searching.
@@ -3246,10 +3270,9 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
     ####################################
     # polling sequences with no datacontent to be removed from RAW-string (to
     #  support the searching)
-    #  currently unused
     black_sequence = {
-        0: [9, 0, 0x89, 0],
-        1: [9, 0, 0x89, 0, 0x30, 0, 0xb0, 0, 9, 0, 0x89, 0],
+        0: [9, 0, 0x89, 0, 0x30, 0, 0xb0, 0, 9, 0, 0x89, 0],
+        1: [9, 0, 0x89, 0],
     }
     ####################################
     # device-adr mapped with attached message-IDs for detailed message - searching
@@ -3385,6 +3408,8 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
                         self._read_rawdata()
 
                 if self._ValidSourceTargetBytes(self._rawdata[0], self._rawdata[1]):
+                    # remove invalid byte-sequences (from bus-polling with break-signals)
+                    self._remove_black_sequences()
                     # search for a valid CRC
                     crc_ok = False
                     message_size = 0

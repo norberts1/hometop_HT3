@@ -1,4 +1,9 @@
 ## Changelog
+## 0.5
+`2022-01-26` 
+- `reason`: Issue: #15. new DeviceID's with IPM-Modules.  
+- `modul `: `ht_discode.py` modified.  
+
 ## 0.4.3
 `2022-01-19` 
 - `reason`: Issue: #17. new serial portnaming (changed from ttyAMA0 to serial0).  
