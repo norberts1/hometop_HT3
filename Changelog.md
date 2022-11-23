@@ -1,4 +1,10 @@
 ## Changelog
+## 0.6
+`2022-11-22` 
+- `reason`: Issue: #23. recovering from USB disconnection.  
+- `modul `: `lib/ht_proxy_if.py` modified.  
+- `modul `: `lib/ht_release.py` updated.  
+
 ## 0.5
 `2022-01-26` 
 - `reason`: Issue: #15. new DeviceID's with IPM-Modules.  

@@ -17,6 +17,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
+# Ver:0.6    / 2022-11-22  Issue #23 lib/ht_proxy_if.py redesigned
 # Ver:0.5    / 2022-01-26  Issue #15 New deviceID-handling with IPM-moduls.
 # Ver:0.4.3  / 2022-01-19  Issue #17 New serial port naming corrected.
 # Ver:0.4.2  / 2021-06-16
@@ -30,4 +31,4 @@
 # Ver:0.4    / 2021-02-25
 #################################################################
 
-VERSION = "0.5"
+VERSION = "0.6"
