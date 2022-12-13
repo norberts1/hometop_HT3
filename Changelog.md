@@ -1,4 +1,9 @@
 ## Changelog
+## 0.6.1
+`2022-12-12` 
+- `reason`: socketerror cause early start of ht_collgate.py  
+- `modul `: `ht_collgate.py` modified.  
+
 ## 0.6
 `2022-11-22` 
 - `reason`: Issue: #23. recovering from USB disconnection.  

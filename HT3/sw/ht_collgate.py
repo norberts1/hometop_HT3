@@ -18,19 +18,24 @@
 #
 #################################################################
 # Ver:0.1    / Datum 11.06.2017 first release
+# Ver:0.2    / Datum 12.12.2022 update with wait-time before start.
 #################################################################
 
 import sys
 sys.path.append('lib')
 import Ccollgate
+import time
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.1"
-__date__    = "11.06.2017"
+__version__ = "0.2"
+__date__    = "12.12.2022"
 
 
 cfg_pathfilename = './etc/config/collgate_cfg.xml'
-
 collgate = Ccollgate.ccollgate(cfg_pathfilename)
+
+# wait-time to be sure server (ht_proxy.py) is running
+time.sleep(2.0)
+
 collgate.start()
