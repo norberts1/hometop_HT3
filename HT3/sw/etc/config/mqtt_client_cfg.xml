@@ -21,6 +21,7 @@
  #################################################################
  # Ver:0.1    / Datum 01.06.2017 first release
  # Ver:0.2    / Datum 2021.06.14 device_id added
+ # Ver:0.3    / Datum 2023.01.02 device_id default empty. issue:#24
  #################################################################
  #
  #  Configuration-file for 'mqtt_client'- class.
@@ -58,10 +59,10 @@
         <LastWillRetain>True</LastWillRetain>   <!-- True / False -->
         <Publish_OnlyNewValues>True</Publish_OnlyNewValues>  <!-- True / False -->
         <client_id>myHeater_MQTT_Client_test</client_id> <!-- unique ID for your purposes -->
-        <device_id>[localhost]</device_id> 
+        <device_id></device_id> 
           <!-- optional device_id used for unique topic_name(s)
                 - leave it empty if not required
-                - '[hostname | localhost]' is replaced with real hostname
+                - [hostname] or [localhost] are replaced with real hostname
                 example with [localhost] := 'mypi':
                  -> topic-name: mypi/hometop/ht/....
            -->
