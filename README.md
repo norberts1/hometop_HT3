@@ -9,6 +9,7 @@ Most everything needed for your heater-system to be shown at your 'hometop' ->
 - [Introduction](#intro)
 - [Used Hardware](#hardware)
 - [Software](#software)
+- [Software Installation](#softwareinstallation)
 - [Changelog](./Changelog.md)
 - [Documentation](#docu)
 - [Importent notes](#notes)
@@ -17,7 +18,7 @@ Most everything needed for your heater-system to be shown at your 'hometop' ->
 ## Introduction<a name="intro"></a>
 
 This project is limited to recording/controlling and presentation of heating and solar informations.
-Currently only heater-systems from german manufacturer: **`Junkers`** and system-bus: **`Heatronic/EMS2 (c)`** are supported. 
+Currently only heater-systems from german manufacturer: **`Junkers/Bosch`** and system-bus: **`Heatronic/EMS2 (c)`** are supported. 
 
 This repo can not fulfill all wishes you could have to your 'hometop'.
 Each has his ideas such as the 'home' can be 'Top'. 
@@ -160,6 +161,39 @@ Also your support with binary - logfiles is good to have for further development
 
 Thank's to all supporting me, in the past and future.  
 We all want to have the right thing in the right time.
+
+## Software Installation<a name="softwareinstallation"></a>
+
+The SW-installation is designed for user: `pi`.  
+For any other user the startup-scripts have to be modified.  
+During the installation all required software-parts are installed or updated including the OS-update and -upgrade.  
+Currently created databases are NOT overwritten.  
+The previous project-software is saved in folder: `~/.hometop` (excluding databases).  
+It's possible to install this project to any platform with a linux-distribution.  
+
+### Preconditions:
+- login as user: (all startup-scripts are written for user:pi)  
+ `pi`
+
+- get the project with:  
+ `git clone https://github.com/norberts1/hometop_HT3.git`  
+
+- 'sudo' has to be accessible for user 'pi'.  
+
+
+### Installation / Update
+
+- Step into cloned folder:  
+ `cd hometop_HT3/HT3`  
+
+- Call the installaton-script:  
+ `ht_project_setup.sh`  
+
+### Postconditions:
+
+- Check the output on the installation-terminal for any errors.  
+- reboot the system with:  
+ `sudo reboot`  
 
 ## Documentation<a name="docu"></a>
 
