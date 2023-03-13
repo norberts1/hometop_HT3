@@ -28,7 +28,9 @@
 #                               'Absfilepathname()' added
 # Ver:0.3    / Datum 11.06.2017 'MakeAbsPath2FileName()' added.
 # Ver:0.3.1  / Datum 29.11.2018 'Extract_HT3_path_from_AbsPath()' added.
-#
+# Ver:0.4    / Datum 24.10.2022 log-format now with ';'.
+#                                IsSensorAvailable(), IsTemperaturValid(),
+#                                IsTemperaturInValidRange() and IsValueNotZero() added.
 #################################################################
 
 import os
@@ -116,6 +118,43 @@ class cht_utils(object):
         returns True/False if tempvalue is in range or not.
         """
         return True if (float(tempvalue) < maxvalue and float(tempvalue) > minvalue) else False
+
+    def IsTemperaturValid(self, tempvalue):
+        """
+            Returns True if temperaturvalues is less then 300 degrees, else False.
+        """
+        return True if float(tempvalue) < 300.0 else False
+
+    def IsTemperaturInValidRange(self, tempvalue):
+        """
+            Returns True if temperaturvalues is less then 300 degrees and not 0, else False.
+        """
+        return True if (float(tempvalue) < 300.0 and float(tempvalue) != 0.0) else False
+
+    def IsValueNotZero(self, tempvalue):
+        """
+            Returns True if temperaturvalue is not 0, else False.
+        """
+        return True if (int(tempvalue) != 0 and float(tempvalue) != 0.0) else False
+
+    def IsSensorAvailable(self, value):
+        """
+            returns True if 'value' is not 0xFF, 0xFFFF or 0X8000 or 32000, else False.
+        """
+        rtnvalue = True
+        ivalue = 0xFF
+        if isinstance(value, float):
+            ivalue = int(value)
+        if isinstance(value, str):
+            if '.' in value:
+                ivalue = int(value[0:value.find('.')])
+            else:
+                ivalue = int(value)
+        if isinstance(value, int):
+            ivalue = value
+        if (ivalue == 0xFF) or (ivalue == 0xFFFF) or (ivalue == 0x8000) or (ivalue == 32000):
+            rtnvalue = False
+        return rtnvalue
 
     ## is ht_transceiver header ?
     def Is_TransceiverHeader(self, msgbuffer):
@@ -228,7 +267,7 @@ class clog(object):
 
         try:
             self._handler = logging.handlers.RotatingFileHandler(self._logfilepath, maxBytes=1000000)
-            _frm = logging.Formatter("%(asctime)s %(levelname)s: %(message)s", "%d.%m.%Y %H:%M:%S")
+            _frm = logging.Formatter("%(asctime)s;%(levelname)s;%(message)s", "%d.%m.%Y;%H:%M:%S")
             self._handler.setFormatter(_frm)
             self._logger = logging.getLogger(self._loggertag)
             self._logger.addHandler(self._handler)

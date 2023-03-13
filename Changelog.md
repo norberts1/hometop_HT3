@@ -1,4 +1,10 @@
 ## Changelog
+## 0.6.2
+`2023-03-12` 
+- `reason`: Issues: #18 and #20. GUI-display modified.  
+- `modul `: `ht_discode.py`, `gui_worker.py`, `data.py` modified.  
+- `modul `: `lib/ht_release.py` updated.  
+
 ## 0.6.1
 `2022-12-12` 
 - `reason`: socketerror cause early start of ht_collgate.py  

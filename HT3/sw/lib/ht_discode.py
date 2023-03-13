@@ -91,8 +91,13 @@
 #                               In msgID_26_HeatingCircuit() 'i_tvorlauf_soll' now independant from 'IPM_MM_Modul_Flag'.
 #                               In msgID_367_370_HeatingCircuit() 'i_TsolarSupport' not saved to database anymore.
 #                               'msgID_191_194_ErrorCodeDetails()' added for msgID's:191 to 194.
-#################################################################
-
+# Ver:0.4    / 2023-03-12       BusmodulAdr - handling added, msgID_190_DisplayAndCauseCode() modified for remote controller.
+#                               0x1b added to deviceaddress_white_list[]
+#                               msgID_2 new busmember-numbers added.
+#                               msgID_870_Solar() added.
+#                               in 'black_sequence'- and 'deviceadr_2msgid_blacklist'-list values added.
+#                                issues #18 and #20
+#
 import serial
 import data
 import db_sqlite
@@ -102,8 +107,6 @@ import ht_proxy_if
 
 __author__ = "junky-zs"
 __status__ = "draft"
-__version__ = "0.3.3"
-__date__ = "2022-01-23"
 
 
 class cht_decode(ht_utils.cht_utils):
@@ -151,6 +154,10 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.update("HG", "Vzirkula_pumpe", 0)
         self.__gdata.update("HG", "V_spare1", 0)
         self.__gdata.update("HG", "V_spare2", 0)
+        self.__gdata.update("HG", "V_pressure", 0xFF)
+        self.__gdata.update("HG", "V_spare3", 0)
+        self.__gdata.update("HG", "V_spare4", 0)
+
         self.__gdata.update("HK1", "V_spare1", 0)
         self.__gdata.update("HK1", "V_spare2", 0)
         self.__gdata.update("HK2", "V_spare1", 0)
@@ -178,16 +185,22 @@ class cht_decode(ht_utils.cht_utils):
 
         self.__currentHK_nickname = "HK1"
 
-    def __IsTempInRange(self, tempvalue, maxvalue=300.0, minvalue=-50.0):
+    def __IsInRange(self, nickname, item, value):
         """
-            returns True if 'temperaturvalue' is in physical range, else False.
+            returns True if 'value' is in valid range, defined in config else False.
         """
-        return True if (float(tempvalue) < maxvalue and float(tempvalue) > minvalue) else False
+        maxvalue = 0.0
+        defaultvalue = 0.0
+        if self.__gdata.maxvalue(nickname, item) != None:
+            maxvalue = float(self.__gdata.maxvalue(nickname, item))
+        if self.__gdata.defaultvalue(nickname, item) != None:
+            defaultvalue = float(self.__gdata.defaultvalue(nickname, item))
+        return self.IsTempInRange(value, maxvalue, defaultvalue)
 
     def __Check4MaxValue(self, nickname, item, value):
         """
             returns the 'value' itself, if it is less then maxvalue defined in configuration,
-             else the maxvalue from configuration.
+             else the default value from configuration.
         """
         if self.__gdata.maxvalue(nickname, item) != None:
             if value > self.__gdata.maxvalue(nickname, item):
@@ -206,6 +219,38 @@ class cht_decode(ht_utils.cht_utils):
             rtnvalue = True
         return rtnvalue
 
+    def __CreateHexdump(self, msgtuple, nickname, message, length):
+        """
+            returns formated hex-string from message-input.
+        """
+        (msgid, offset) = msgtuple
+        rtnvalue = ""
+        if isinstance(message, list) and len(message) >= length:
+            hexstr = ""
+            for x in range(0, length):
+                hexstr += format(message[x], "02x") + " "
+            rtnvalue = "{0:4}_{1:<2};{2:3}:{3}".format(msgid, offset, nickname, hexstr)
+        return rtnvalue
+
+    def __Debuglog(self, msgtuple, nickname, debugstring, message=None):
+        """
+            writes the debugstring to the logger.
+        """
+        (msgid, offset) = msgtuple
+        if len(debugstring) > 0:
+            tempstring = ""
+            # search for ';' in debugstring on first position, if not add one
+            if debugstring.find(';') != 0:
+                debugstring = ';' + debugstring
+            if message != None and isinstance(message, list):
+                source = (message[0] & 0x7F)
+                target = (message[1] & 0x7F)
+                tempstring = "{0:4}_{1:<2};{2};S{3:02x};T{4:02x}{5}".format(msgid, offset, nickname, source, target, debugstring)
+            else:
+                tempstring = "{0:4}_{1:<2};{2};S{3:02x};T{4:02x}{5}".format(msgid, offset, nickname, 0, 0, debugstring)
+            # write to logger in debug-mode
+            self._logging.debug(tempstring)
+            
     def GetMessageID(self, payloadheader):
         """
             returns the messageID for the payload
@@ -256,12 +301,10 @@ class cht_decode(ht_utils.cht_utils):
         """
             hexdump is created and returns (nickname,values) -tuple
         """
-        (msgid, offset) = msgtuple
         nickname = "DT"
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, "req")
-        for buffer_index in range(0, length):
-            temptext += format(buffer[buffer_index], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        (msgid, offset) = msgtuple
+        hexstr = self.__CreateHexdump(msgtuple, "req", buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -271,87 +314,192 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "DT"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:bus:".format(msgid, offset)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        if self._IsRequestCall(buffer):
+            return self._RequestCall(msgtuple, buffer, length)
+
+        debugstr = ""
         first_payload_index = 4
-        request = True if (buffer[1] & 0x80) else False
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
-            sourcedevicehex = format((buffer[0] & 0x7f), "02x")
-            targetdevicehex = format((buffer[1] & 0x7f), "02x")
-
-            if request == True:
-                debugstr += ";Bus-Request  Source:{0}(h) to Target:{1}(h)".format(sourcedevicehex, targetdevicehex)
+            sourcedevice = buffer[0] & 0x7f
+            targetdevice = buffer[1] & 0x7f
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
-                if request == False:
-                    # read values from buffer and assign them
-                    if raw_index == 4 and msg_bytecount >= 1:
-                        i_busteilnehmer = buffer[buffer_index]
-                        if i_busteilnehmer == 78:
-                            str_busteilnehmer = "M400"
-                        elif i_busteilnehmer == 79:
-                            str_busteilnehmer = "M100"
-                        elif i_busteilnehmer == 80:
-                            str_busteilnehmer = "M200"
-                        elif i_busteilnehmer == 95:
-                            str_busteilnehmer = "Heatronic3"
-                        elif i_busteilnehmer == 100:
-                            str_busteilnehmer = "IPM1"
-                        elif i_busteilnehmer == 101:
-                            str_busteilnehmer = "ISM1"
-                        elif i_busteilnehmer == 102:
-                            str_busteilnehmer = "IPM2"
-                        elif i_busteilnehmer == 103:
-                            str_busteilnehmer = "ISM2"
-                        elif i_busteilnehmer == 104:
-                            str_busteilnehmer = "IUM1"
-                        elif i_busteilnehmer == 105:
-                            str_busteilnehmer = "FW100"
-                        elif i_busteilnehmer == 106:
-                            str_busteilnehmer = "FW200"
-                        elif i_busteilnehmer == 107:
-                            str_busteilnehmer = "FR100"
-                        elif i_busteilnehmer == 108:
-                            str_busteilnehmer = "FR110"
-                        elif i_busteilnehmer == 109:
-                            str_busteilnehmer = "FB10"
-                        elif i_busteilnehmer == 110:
-                            str_busteilnehmer = "FB100"
-                        elif i_busteilnehmer == 111:
-                            str_busteilnehmer = "FR10"
-                        elif i_busteilnehmer == 116:
-                            str_busteilnehmer = "FW500"
-                        elif i_busteilnehmer == 147:
-                            str_busteilnehmer = "FR50"
-                        elif i_busteilnehmer == 157:
-                            str_busteilnehmer = "CW100"
-                        elif i_busteilnehmer == 189:
-                            str_busteilnehmer = "Modem(MBLAN/NetCom)"
-                        elif i_busteilnehmer == 191:
-                            str_busteilnehmer = "FR120"
-                        elif i_busteilnehmer == 192:
-                            str_busteilnehmer = "FW120"
-                        else:
-                            str_busteilnehmer = ""
+                # read values from buffer and assign them
+                if raw_index == 4 and msg_bytecount >= 1:
+                    i_busteilnehmer = buffer[buffer_index]
+                    if i_busteilnehmer == 1:
+                        str_busteilnehmer = "RC20"
+                    elif i_busteilnehmer == 2:
+                        str_busteilnehmer = "RC35"
+                    elif i_busteilnehmer == 64:
+                        str_busteilnehmer = "UBA3"
+                    elif i_busteilnehmer == 65:
+                        str_busteilnehmer = "RC10"
+                    elif i_busteilnehmer == 66:
+                        str_busteilnehmer = "RC20"
+                    elif i_busteilnehmer == 67:
+                        str_busteilnehmer = "RC30"
+                    elif i_busteilnehmer == 68:
+                        str_busteilnehmer = "BC10"
+                    elif i_busteilnehmer == 69:
+                        str_busteilnehmer = "MM10"
+                    elif i_busteilnehmer == 70:
+                        str_busteilnehmer = "Gaswaermepumpe"
+                    elif i_busteilnehmer == 71:
+                        str_busteilnehmer = "WM10"
+                    elif i_busteilnehmer == 72:
+                        str_busteilnehmer = "MC10"
+                    elif i_busteilnehmer == 73:
+                        str_busteilnehmer = "SM10"
+                    elif i_busteilnehmer == 74:
+                        str_busteilnehmer = "EM10"
+                    elif i_busteilnehmer == 75:
+                        str_busteilnehmer = "Brennerautomat"
+                    elif i_busteilnehmer == 76:
+                        str_busteilnehmer = "Regler ES73"
+                    elif i_busteilnehmer == 77:
+                        str_busteilnehmer = "Schaltmodul M300"
+                    elif i_busteilnehmer == 78:
+                        str_busteilnehmer = "M400"
+                    elif i_busteilnehmer == 79:
+                        str_busteilnehmer = "M100"
+                    elif i_busteilnehmer == 80:
+                        str_busteilnehmer = "M200"
+                    elif i_busteilnehmer == 81:
+                        str_busteilnehmer = "Kaskadenmodul CM10"
+                    elif i_busteilnehmer == 82:
+                        str_busteilnehmer = "Schaltmodul VM10"
+                    elif i_busteilnehmer == 83:
+                        str_busteilnehmer = "ServiceKey"
+                    elif i_busteilnehmer == 84:
+                        str_busteilnehmer = "Controller DBA"
+                    elif i_busteilnehmer == 85:
+                        str_busteilnehmer = "Easycom"
+                    elif i_busteilnehmer == 86:
+                        str_busteilnehmer = "Regler RC34"
+                    elif i_busteilnehmer == 87:
+                        str_busteilnehmer = "Easycom Pro"
+                    elif i_busteilnehmer == 88:
+                        str_busteilnehmer = "Gateway"
+                    elif i_busteilnehmer == 89:
+                        str_busteilnehmer = "BC10USA"
+                    elif i_busteilnehmer == 90:
+                        str_busteilnehmer = "RC10USA"
+                    elif i_busteilnehmer == 91:
+                        str_busteilnehmer = "RC10USA"
+                    elif i_busteilnehmer == 92:
+                        str_busteilnehmer = "UM10"
+                    elif i_busteilnehmer == 93:
+                        str_busteilnehmer = "Funkregler RC20F"
+                    elif i_busteilnehmer == 94:
+                        str_busteilnehmer = "Funkregler RFM20"
+                    elif i_busteilnehmer == 95:
+                        str_busteilnehmer = "Heatronic3"
+                    elif i_busteilnehmer == 96:
+                        str_busteilnehmer = "Funkregler RT10"
+                    elif i_busteilnehmer == 97:
+                        str_busteilnehmer = "TD200"
+                    elif i_busteilnehmer == 98:
+                        str_busteilnehmer = "AM10"
+                    elif i_busteilnehmer == 99:
+                        str_busteilnehmer = "ZR01"
+                    elif i_busteilnehmer == 100:
+                        str_busteilnehmer = "IPM1"
+                    elif i_busteilnehmer == 101:
+                        str_busteilnehmer = "ISM1"
+                    elif i_busteilnehmer == 102:
+                        str_busteilnehmer = "IPM2"
+                    elif i_busteilnehmer == 103:
+                        str_busteilnehmer = "ISM2"
+                    elif i_busteilnehmer == 104:
+                        str_busteilnehmer = "IUM1"
+                    elif i_busteilnehmer == 105:
+                        str_busteilnehmer = "FW100"
+                    elif i_busteilnehmer == 106:
+                        str_busteilnehmer = "FW200"
+                    elif i_busteilnehmer == 107:
+                        str_busteilnehmer = "FR100"
+                    elif i_busteilnehmer == 108:
+                        str_busteilnehmer = "FR110"
+                    elif i_busteilnehmer == 109:
+                        str_busteilnehmer = "FB10"
+                    elif i_busteilnehmer == 110:
+                        str_busteilnehmer = "FB100"
+                    elif i_busteilnehmer == 111:
+                        str_busteilnehmer = "FR10"
+                    elif i_busteilnehmer == 112:
+                        str_busteilnehmer = "RC10V2"
+                    elif i_busteilnehmer == 113:
+                        str_busteilnehmer = "RC20V2"
+                    elif i_busteilnehmer == 114:
+                        str_busteilnehmer = "BC15"
+                    elif i_busteilnehmer == 115:
+                        str_busteilnehmer = "UBA3_50"
+                    elif i_busteilnehmer == 116:
+                        str_busteilnehmer = "FW500"
+                    elif i_busteilnehmer == 117:
+                        str_busteilnehmer = "ModulinkReceiver"
+                    elif i_busteilnehmer == 118:
+                        str_busteilnehmer = "BRM10"
+                    elif i_busteilnehmer == 119:
+                        str_busteilnehmer = "FR110FRM"
+                    elif i_busteilnehmer == 120:
+                        str_busteilnehmer = "FR110FEM"
+                    elif i_busteilnehmer == 121:
+                        str_busteilnehmer = "MCC"
+                    elif i_busteilnehmer == 122:
+                        str_busteilnehmer = "Cux-Steuergerät CBN"
+                    elif i_busteilnehmer == 123:
+                        str_busteilnehmer = "Cux-Steuergerät CBS"
+                    elif i_busteilnehmer == 124:
+                        str_busteilnehmer = "Bedieneiheit im CUX-Steuergerät HIN"
+                    elif i_busteilnehmer == 125:
+                        str_busteilnehmer = "Cux-Steuergerät mit Trim Design HIS"
+                    elif i_busteilnehmer == 126:
+                        str_busteilnehmer = "Heatronic III für Buderusprodukte"
+                    elif i_busteilnehmer == 127:
+                        str_busteilnehmer = "IGM1"
+                    elif i_busteilnehmer == 128:
+                        str_busteilnehmer = "UBA H3"
+                    elif i_busteilnehmer == 129:
+                        str_busteilnehmer = "IEM"
+                    elif i_busteilnehmer == 130:
+                        str_busteilnehmer = "Wärmerückgewinnungseinheit HRU"
+                    elif i_busteilnehmer == 147:
+                        str_busteilnehmer = "FR50"
+                    elif i_busteilnehmer == 157:
+                        str_busteilnehmer = "CW100"
+                    elif i_busteilnehmer == 158:
+                        str_busteilnehmer = "CW400"
+                    elif i_busteilnehmer == 163:
+                        str_busteilnehmer = "MS100"
+                    elif i_busteilnehmer == 164:
+                        str_busteilnehmer = "MS200"
+                    elif i_busteilnehmer == 189:
+                        str_busteilnehmer = "Modem(MBLAN/NetCom)"
+                    elif i_busteilnehmer == 191:
+                        str_busteilnehmer = "FR120"
+                    elif i_busteilnehmer == 192:
+                        str_busteilnehmer = "FW120"
+                    else:
+                        str_busteilnehmer = ""
 
-                        if len(str_busteilnehmer) == 0:
-                            str_busteilnehmer = str(i_busteilnehmer)
-                        # setup found controller if response is from controller (source: 90h)
-                        if (buffer[0] & 0x7f) == 0x10 or (buffer[0] & 0x7f) == 0x18:
-                            self.__gdata.controller_type(str_busteilnehmer)
+                    if len(str_busteilnehmer) == 0:
+                        str_busteilnehmer = str(i_busteilnehmer)
+                    # setup controller-type if response is from controller (source: 90h of 18h)
+                    if sourcedevice == 0x10 or sourcedevice == 0x18:
+                        self.__gdata.controller_type_nr(i_busteilnehmer)
+                        self.__gdata.controller_type(str_busteilnehmer)
 
-                        if (buffer[0] & 0x7f) == 0x08:
-                            self.__gdata.bus_type(str_busteilnehmer)
+                    if (sourcedevice == 0x08 or sourcedevice == 0x09) and i_busteilnehmer == 95:
+                        self.__gdata.bus_type(str_busteilnehmer)
 
-                        debugstr += ";Bus-Response Source:{0}(h) to Target:{1}(h)\n".format(sourcedevicehex, targetdevicehex)
-                        debugstr += " ;1.Busteilnehmer:{0};Typ:{1}".format(i_busteilnehmer, str_busteilnehmer)
+                    debugstr += ";Bus-Response Source:{0:02x}(h) to Target:{1:02x}(h)".format(sourcedevice, targetdevice)
+                    debugstr += " ;1.Busteilnehmer:{0};Typ:{1}".format(i_busteilnehmer, str_busteilnehmer)
 
                     if raw_index == 5 and msg_bytecount >= 1:
                         i_softwarefamilie = buffer[buffer_index]
@@ -389,6 +537,8 @@ class cht_decode(ht_utils.cht_utils):
                         i_marke = buffer[buffer_index]
                         if i_marke == 0:
                             strmarke = "None"
+                        elif i_marke == 1:
+                            strmarke = "Bosch"
                         elif i_marke == 2:
                             strmarke = "Junkers"
                         elif i_marke == 3:
@@ -398,10 +548,10 @@ class cht_decode(ht_utils.cht_utils):
                         debugstr += " ;Markenzeichen:{0}".format(strmarke)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, "bus", buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, "bus", debugstr, buffer)
+            self.__Debuglog(msgtuple, "bus", hexstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -414,10 +564,8 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "DT"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:sys:".format(msgid, offset)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        hexstr = self.__CreateHexdump(msgtuple, "sys", buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -428,10 +576,8 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "DT"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -439,7 +585,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 4 and msg_bytecount >= 7:
                     iyear = int(buffer[buffer_index] + 2000)
@@ -461,9 +606,8 @@ class cht_decode(ht_utils.cht_utils):
                     self.__gdata.update(nickname, "Time", self.__info_zeit)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             return (nickname, self.__gdata.values(nickname))
         else:
@@ -478,17 +622,28 @@ class cht_decode(ht_utils.cht_utils):
         if self._IsRequestCall(buffer):
             return self._RequestCall(msgtuple, buffer, length)
 
-        temptext = "{0:4}_{1:<2}:".format(msgid, offset)
+        first_payload_index = 4
         # check if source-device-adr | 0x80 := buffer[0]
         if (buffer[0] == 0x88):
             nickname = "HG"
-            temptext += nickname + " :"
+            hexdump_nickname = nickname
         else:
             nickname = "DT"
-            temptext += "sys:"
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+            hexdump_nickname = "sys"
+
+        # create busmodul-ID string from byte-infos
+        deviceID_str=""
+        for x in range(first_payload_index, length-2):
+            bit = 0x01
+            for y in range(0, 8):
+                if((buffer[x] & bit) == bit):
+                    deviceID = y + 8*(x - 3)
+                    deviceID_str += format(deviceID, "02x") + " "
+                bit <<= 1
+        self.__gdata.busmodulAdr(deviceID_str)
+
+        hexstr = self.__CreateHexdump(msgtuple, hexdump_nickname, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -510,18 +665,15 @@ class cht_decode(ht_utils.cht_utils):
         nickname = "HG"
         self.__currentHK_nickname = nickname
 
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
+        debugstr = ""
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 4 and msg_bytecount >= 1:
                     heater_enable = buffer[buffer_index]
@@ -571,11 +723,9 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";pumpminpow:{0}".format(i_heater_minpumppower)
 
                 raw_index += 1
-
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -587,11 +737,9 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        debugstr = ""
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -605,8 +753,6 @@ class cht_decode(ht_utils.cht_utils):
             f_tverbrennungsluft = 0
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
-                # read values from buffer and assign them
                 if raw_index == 4 and msg_bytecount >= 1:
                     i_tvorlauf_soll = int(buffer[buffer_index])
                     self.__gdata.update(nickname, "Tvorlauf_soll", self.__Check4MaxValue(nickname, "Tvorlauf_soll", i_tvorlauf_soll))
@@ -684,26 +830,39 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";T2-buffer:{0}".format(f_t2_storagecell)
 
                 if raw_index == 17 and msg_bytecount >= 2:
-                    f_truecklauf = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                    self.__gdata.update(nickname, "Truecklauf", self.__Check4MaxValue(nickname, "Truecklauf", f_truecklauf))
+                    i_truecklauf = buffer[buffer_index] * 256 + buffer[buffer_index + 1]
+                    if self.IsSensorAvailable(i_truecklauf):
+                        f_truecklauf = float(i_truecklauf) / 10
+                        self.__gdata.update(nickname, "Truecklauf", self.__Check4MaxValue(nickname, "Truecklauf", f_truecklauf))
 
                 if raw_index == 19 and msg_bytecount >= 2:
                     f_ionisationstrom = float(buffer[19] * 256 + buffer[20]) / 10
                     debugstr += ";I-current:{0}".format(f_ionisationstrom)
-
                 if raw_index == 21 and msg_bytecount >= 1:
-                    i_systempressure = int(buffer[buffer_index])
-                    debugstr += ";pressure:{0}".format(i_systempressure)
+                    i_systempressure = buffer[buffer_index]
+                    f_systempressure = float(i_systempressure) / 10
+
+                    # V_pressure added but not yet activated
+                    i_systempressure = 0x8000
+                    if self.IsSensorAvailable(i_systempressure):
+                        self.__gdata.update(nickname, "V_pressure", f_systempressure)
+                        debugstr += ";pressure:{0} bar".format(f_systempressure)
+                        if not self.__IsInRange(nickname, "V_pressure", f_systempressure):
+                            debugstr += " !out of range!"
+                    else:
+                        debugstr += ";No pressure"
 
                 if raw_index == 22 and msg_bytecount >= 2:
                     displaycode = buffer[buffer_index]*65536 + buffer[buffer_index+1]*256
                     if displaycode > 0:
                         self.__gdata.update(nickname, "V_displaycode", displaycode)
+                    debugstr += ";displaycode:{}".format(displaycode)
 
                 if raw_index == 24 and msg_bytecount >= 2:
                     causecode = int((buffer[buffer_index] * 256) + buffer[buffer_index + 1])
                     if causecode > 0:
                         self.__gdata.update(nickname, "V_causecode", causecode)
+                    debugstr += ";causecode:{}".format(causecode)
 
                 if raw_index == 26 and msg_bytecount >= 1:
                     i_WWflow = int(buffer[buffer_index])
@@ -744,11 +903,11 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";TAbgass:{0}".format(f_tverbrennungsluft)
 
                 raw_index += 1
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
+            self.__Debuglog(msgtuple, nickname, hexstr, buffer)
 
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -758,12 +917,12 @@ class cht_decode(ht_utils.cht_utils):
         """
             decoding of msgID:25 -> Heaterdevice message.
         """
+
         nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        debugstr = ""
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -775,7 +934,6 @@ class cht_decode(ht_utils.cht_utils):
             i_brenner_heizung_ein = 0
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 4 and msg_bytecount >= 2:
                     if buffer[buffer_index] != 255:
@@ -801,8 +959,7 @@ class cht_decode(ht_utils.cht_utils):
                 if raw_index == 20 and msg_bytecount >= 3:
                     i_betriebszeit_2stufe = int(buffer[buffer_index] * 65536 + buffer[buffer_index + 1] * 256 + buffer[buffer_index + 2])
                     # not yet written to database, only for debug-purposes
-                    debugstr = "{0:4}_{1:<2};betriebszeit_2.Stufe:{2}".format(msgid, offset, i_betriebszeit_2stufe)
-                    self._logging.debug(debugstr)
+                    debugstr += ";betriebszeit_2.Stufe:{}".format(i_betriebszeit_2stufe)
 
                 if raw_index == 23 and msg_bytecount >= 3:
                     i_betriebheizung_minuten = int(buffer[buffer_index] * 65536 + buffer[buffer_index + 1] * 256 + buffer[buffer_index + 2])
@@ -815,16 +972,21 @@ class cht_decode(ht_utils.cht_utils):
 
                 if raw_index == 29 and msg_bytecount >= 2:
                     # TIst an der hydraulischen Weiche
-                    f_THydrWeiche = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                    if self.__IsTempInRange(f_THydrWeiche):
+                    i_THydrWeiche = buffer[buffer_index] * 256 + buffer[buffer_index + 1]
+                    f_THydrWeiche = float(i_THydrWeiche) / 10
+                    debugstr += ";T-Hydr.Weiche:{}".format(f_THydrWeiche)
+                    if self.IsSensorAvailable(i_THydrWeiche):
                         self.__gdata.update(nickname, "V_spare2", self.__Check4MaxValue(nickname, "V_spare2", f_THydrWeiche))
                         # setup flag for Hydraulic Switch available, used in GUI
                         self.__gdata.IsTempSensor_Hydrlic_Switch(True)
-
+                    else:
+                        # Hydr.Weiche not available
+                        self.__gdata.IsTempSensor_Hydrlic_Switch(False)
+                
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -837,10 +999,8 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "DT"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:sys:".format(msgid, offset)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        hexstr = self.__CreateHexdump(msgtuple, "sys", buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -854,39 +1014,33 @@ class cht_decode(ht_utils.cht_utils):
         (msgid, offset) = msgtuple
         self.__currentHK_nickname = nickname
 
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
+        debugstr = ""
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 4 and msg_bytecount >= 2:
                     # TIst an der hydraulischen Weiche
                     f_THydrWeiche = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                    if self.__IsTempInRange(f_THydrWeiche):
+                    if self.IsTempInRange(f_THydrWeiche):
                         self.__gdata.update(nickname, "V_spare2", self.__Check4MaxValue(nickname, "V_spare2", f_THydrWeiche))
                         # setup flag for Hydraulic Switch available, used in GUI
                         self.__gdata.IsTempSensor_Hydrlic_Switch(True)
                     debugstr += ";T_HydraulicDevice:{0}".format(f_THydrWeiche)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            # not yet written to database, only for debug-purposes
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
             return ("", None)
-
 
     def msgID_35_HydraulischeWeiche(self, msgtuple, buffer, length):
         """
@@ -894,11 +1048,22 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+
+        if(buffer[0] == 0x90):
+            if(buffer[1] == 0x08):
+                nickname = "HG"
+            if(buffer[1] == 0x20):
+                nickname = "HK1"
+            if(buffer[1] == 0x21):
+                nickname = "HK2"
+            if(buffer[1] == 0x22):
+                nickname = "HK3"
+            if(buffer[1] == 0x23):
+                nickname = "HK4"
+
+        debugstr = ""
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -907,28 +1072,27 @@ class cht_decode(ht_utils.cht_utils):
 
             pump_running_flag = 0
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 4 and msg_bytecount >= 1:
                     # TSoll hinter der hydraulischen Weiche
                     i_tsoll = buffer[buffer_index]
-                    debugstr += ";TSoll:{0}".format(i_tsoll)
+                    debugstr += ";TSoll hinter Hydr.Weiche:{0}".format(i_tsoll)
                 # if msg-bytes [5] or [6] are > 0 then hc_pump is running
                 if raw_index == 5 and msg_bytecount >= 1:
-                    i_leistung_soll = buffer[buffer_index]
+                    i_leistung_soll = int(buffer[buffer_index])
                     if i_leistung_soll > 0:
                         pump_running_flag += 1
                     debugstr += ";Leistung:{0}".format(i_leistung_soll)
                 if raw_index == 6 and msg_bytecount >= 1:
-                    i_drehzahl_pumpe_soll = buffer[buffer_index]
+                    i_drehzahl_pumpe_soll = int(buffer[buffer_index])
                     if i_drehzahl_pumpe_soll > 0:
                         pump_running_flag += 1
                     debugstr += ";Drehzahl:{0}".format(i_drehzahl_pumpe_soll)
                 if raw_index == 8 and msg_bytecount >= 1:
-                    i_betriebsart_heizung = buffer[buffer_index]
+                    i_betriebsart_heizung = int(buffer[buffer_index])
                     debugstr += ";Betriebsart:{0}".format(i_betriebsart_heizung)
                 if raw_index == 9 and msg_bytecount >= 2:
-                    i_erweiterter_tsoll = buffer[buffer_index] + buffer[buffer_index + 1]
+                    i_erweiterter_tsoll = int(buffer[buffer_index] + buffer[buffer_index + 1])
                     debugstr += ";TSoll_erweitert:{0}".format(i_erweiterter_tsoll)
 
                 raw_index += 1
@@ -938,11 +1102,10 @@ class cht_decode(ht_utils.cht_utils):
             else:
                 self.__gdata.update(nickname, "V_spare2", 0)
 
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            # not yet written to database, only for debug-purposes
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
+            self.__Debuglog(msgtuple, nickname, hexstr, buffer)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -954,10 +1117,8 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -967,10 +1128,8 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -980,10 +1139,9 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        for x in range(0, length):
-            temptext = temptext + format(buffer[x], "02x") + " "
+        debugstr = ""
         first_payload_index = 4
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -993,7 +1151,6 @@ class cht_decode(ht_utils.cht_utils):
             causecode = 0
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[x], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 4 and msg_bytecount >= 3:
                     # Auswertung display-code
@@ -1003,13 +1160,14 @@ class cht_decode(ht_utils.cht_utils):
                     causecode = buffer[buffer_index] * 256 + buffer[buffer_index + 1]
                     self.__gdata.update(nickname, "V_causecode", causecode)
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             values = self.__gdata.values(nickname)
-            debugstr = "{0:4}_{1:<2};display:{2};cause:{3}".format(msgid, offset, displaycode, causecode)
-            self._logging.debug(debugstr)
+            debugstr += ";displaycode:{};causecode:{}".format(displaycode, causecode)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
+            self.__Debuglog(msgtuple, nickname, hexstr, buffer)
+            
             return (nickname, values)
         else:
             return ("", None)
@@ -1020,42 +1178,44 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:".format(msgid, offset)
-
+        b_nicknameKnown = True
         if(buffer[4] == 0x18 or buffer[4] == 0x20):
             # remote controller FBxy/RC | IPM1/2
             nickname = "HK1"
-            temptext += nickname + ":"
-        elif(buffer[4] == 0x21):
-            # IPM1/2
+        elif(buffer[4] == 0x19 or buffer[4] == 0x21):
+            # IPM1/2 or FBxyz remote controller on HC2
             nickname = "HK2"
-            temptext += nickname + ":"
             self.__gdata.heatercircuits_amount(2)
-        elif(buffer[4] == 0x22):
-            # IPM1/2
+        elif(buffer[4] == 0x1a or buffer[4] == 0x22):
+            # IPM1/2 or FBxyz remote controller on HC3
             nickname = "HK3"
-            temptext += nickname + ":"
             self.__gdata.heatercircuits_amount(3)
-        elif(buffer[4] == 0x23):
-            # IPM1/2
+        elif(buffer[4] == 0x1b or buffer[4] == 0x23):
+            # IPM1/2 or FBxyz remote controller on HC4
             nickname = "HK4"
-            temptext += nickname + ":"
             self.__gdata.heatercircuits_amount(4)
         elif(buffer[4] == 0x10):
             # main controller Fxyz | Cxyz
             nickname = "HK1"
-            temptext += nickname + ":"
         elif(buffer[4] == 0x30):
             # solar controller ISM1/2 | MSxyz ...
             nickname = "SO"
-            temptext += nickname + " :"
+        elif(buffer[4] == 0x08):
+            # heizgeraet
+            nickname = "HG"
         else:
             nickname = "DT"
-            temptext += "???:"
+            b_nicknameKnown = False
+            unknown_nickname = format(buffer[4], "02x") + "h"
+            
+        if (b_nicknameKnown) :
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__Debuglog(msgtuple, nickname, hexstr, buffer)
+        else:
+            hexstr = self.__CreateHexdump(msgtuple, unknown_nickname, buffer, length)
+            self.__Debuglog(msgtuple, unknown_nickname, hexstr, buffer)
 
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -1066,11 +1226,9 @@ class cht_decode(ht_utils.cht_utils):
         nickname = "DT"     # displayed (coloured) as system-info
         (msgid, offset) = msgtuple
         systempart_tag = "sys"
-        temptext = "{0:4}_{1:<2}:{2:<3}:".format(msgid, offset, systempart_tag)
-
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        hexstr = self.__CreateHexdump(msgtuple, systempart_tag, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, systempart_tag, hexstr, buffer)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -1080,10 +1238,10 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:sys:".format(msgid, offset)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        systempart_tag = "sys"
+        hexstr = self.__CreateHexdump(msgtuple, systempart_tag, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, systempart_tag, hexstr, buffer)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -1114,10 +1272,7 @@ class cht_decode(ht_utils.cht_utils):
         if buffer[0] == 0xa0 or buffer[0] == 0xa1 or buffer[0] == 0xa2 or buffer[0] == 0xa3:
             IPM_MM_Modul_Flag = True
 
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1127,7 +1282,6 @@ class cht_decode(ht_utils.cht_utils):
             pump_running_flag = 0
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 if raw_index == 4 and msg_bytecount >= 1:
                     i_tvorlauf_soll = int(buffer[buffer_index])
                     # V-Spare-1 benutzt fuer 'T-Soll (Vorlauf)'
@@ -1148,9 +1302,8 @@ class cht_decode(ht_utils.cht_utils):
                 else:
                     self.__gdata.update(nickname, "V_spare2", 0)
 
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -1181,11 +1334,9 @@ class cht_decode(ht_utils.cht_utils):
         else:
             nickname = "HK1"
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1193,7 +1344,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 ### Handling for IPM-moduls following:
                 if buffer[0] >= 0xa0 and buffer[0] <= 0xa3:
                     if raw_index == 6 and msg_bytecount >= 1:
@@ -1217,18 +1367,17 @@ class cht_decode(ht_utils.cht_utils):
                         debugstr += ";mixerposition:{0}%".format(i_IPM_Mischerstellung)
                     if raw_index == 9 and msg_bytecount >= 2:
                         f_IPM_VorlaufTemp = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                        if self.__IsTempInRange(f_IPM_VorlaufTemp):
+                        if self.IsTempInRange(f_IPM_VorlaufTemp):
                             self.__gdata.update(nickname, "Tvorlaufmisch_HK", self.__Check4MaxValue(nickname, "Tvorlaufmisch_HK", f_IPM_VorlaufTemp))
-                            debugstr += ";IPM Vorlauf:{0}%".format(f_IPM_VorlaufTemp)
+                            debugstr += ";IPM T-Ist:{0}".format(f_IPM_VorlaufTemp)
                     if raw_index == 11 and msg_bytecount >= 1:
                         i_IPM_SollVorlaufTemp = int(buffer[buffer_index])
-                        debugstr += ";IPM Soll:{0}%".format(i_IPM_SollVorlaufTemp)
+                        debugstr += ";IPM T-Soll Vorlauf:{0}".format(i_IPM_SollVorlaufTemp)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -1257,10 +1406,8 @@ class cht_decode(ht_utils.cht_utils):
             nickname = "HK4"
             self.__gdata.heatercircuits_amount(4)
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1268,7 +1415,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 if raw_index == 20 and msg_bytecount >= 1:
                     i_tempniveau = int(buffer[buffer_index])
                     # values above 3 like 4:='Auto' will be suppressed cause:
@@ -1278,9 +1424,8 @@ class cht_decode(ht_utils.cht_utils):
                         self.__gdata.update(nickname, "Vtempera_niveau", i_tempniveau)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -1310,11 +1455,8 @@ class cht_decode(ht_utils.cht_utils):
             nickname = "HK4"
             self.__gdata.heatercircuits_amount(4)
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1322,8 +1464,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
-
                 if raw_index == 6 and msg_bytecount >= 1:
                     i_tempniveau = int(buffer[buffer_index])
                     self.__gdata.update(nickname, "Vtempera_niveau", i_tempniveau)
@@ -1336,13 +1476,13 @@ class cht_decode(ht_utils.cht_utils):
 
                 if raw_index == 8 and msg_bytecount >= 2:
                     f_Soll_HK = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                    if self.__IsTempInRange(f_Soll_HK):
+                    if self.IsTempInRange(f_Soll_HK):
                         self.__gdata.update(nickname, "Tsoll_HK", f_Soll_HK)
                     debugstr += ";TSoll_HK:{0}".format(f_Soll_HK)
 
                 if raw_index == 10 and msg_bytecount >= 2:
                     f_Ist_HK = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                    if self.__IsTempInRange(f_Ist_HK):
+                    if self.IsTempInRange(f_Ist_HK):
                         self.__gdata.update(nickname, "Tist_HK", self.__Check4MaxValue(nickname, "Tist_HK", f_Ist_HK))
                     debugstr += ";TIst_HK:{0}".format(f_Ist_HK)
 
@@ -1357,10 +1497,9 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";TSolarSupport:{0}".format(i_TsolarSupport)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -1373,10 +1512,9 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "DT"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, "???")
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        hexstr = self.__CreateHexdump(msgtuple, "???", buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, "???", hexstr, buffer)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -1387,12 +1525,8 @@ class cht_decode(ht_utils.cht_utils):
         nickname = "HK1"
         (msgid, offset) = msgtuple
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
-
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
 
         # length > first index + payload-bytes + crc-byte + break-byte
         #  at least there must be 5 payload-bytes for decoding
@@ -1402,7 +1536,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 #  596_0_0 Measured Temp (2 Bytes)
                 #  596_2_0 Measured Temp high resolution (2 Bytes)
                 #  596_4_0 Valid Flag for temp's
@@ -1416,18 +1549,16 @@ class cht_decode(ht_utils.cht_utils):
 
                         debugstr += ";Tist:{0}".format(f_Ist_HK)
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
             if bool(buffer[first_payload_index + 4]) == True:
-                self._logging.debug(debugstr)
+                self.__Debuglog(msgtuple, nickname, debugstr, buffer)
             else:
-                self._logging.debug(temptext)
+                self.__Debuglog(msgtuple, nickname, hexstr, buffer)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
             return ("", None)
-
 
     def msgID_597_HeatingCircuit(self, msgtuple, buffer, length):
         """
@@ -1445,12 +1576,8 @@ class cht_decode(ht_utils.cht_utils):
         if Sourcedevice == 0xa3:
             nickname = "HK4"
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
-
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
 
         # length > first index + crc-byte + break-byte and send to 'all' targetdevices
         if (length > first_payload_index + 2):
@@ -1459,17 +1586,14 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 1:
                     i_value = int(buffer[buffer_index])
                     debugstr += ";value:{0}".format(i_value)
                 raw_index += 1
-
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -1483,12 +1607,10 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         if not self.__DeviceIsModem(buffer[0]):
             self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -1518,11 +1640,8 @@ class cht_decode(ht_utils.cht_utils):
           self.__gdata.heatercircuits_amount(4)
 
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1530,7 +1649,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 2:
                     f_Ist_HK = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
@@ -1549,9 +1667,8 @@ class cht_decode(ht_utils.cht_utils):
                     self.__gdata.update(nickname, "Voperation_status", i_operationstatus)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -1584,11 +1701,7 @@ class cht_decode(ht_utils.cht_utils):
             nickname = "HK4"
             self.__gdata.heatercircuits_amount(4)
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
 
         # length > first index + crc-byte + break-byte and send to 'all' targetdevices
         if (length > first_payload_index + 2) and Targetdevice == 0:
@@ -1597,7 +1710,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 1 and offset in range(1,4):
                     # offset        Temperatur-type
@@ -1606,13 +1718,11 @@ class cht_decode(ht_utils.cht_utils):
                     #  3            comfort1
                     #  4            ECO
                     f_Soll = float(buffer[buffer_index]) / 2
-                    if self.__IsTempInRange(f_Soll):
+                    if self.IsTempInRange(f_Soll):
                         self.__gdata.update(nickname, "Tsoll_HK", f_Soll)
                 raw_index += 1
-
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -1644,10 +1754,8 @@ class cht_decode(ht_utils.cht_utils):
             nickname = "HK4"
             self.__gdata.heatercircuits_amount(4)
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1655,7 +1763,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 1:
                     i_HK_FlowPump = int(buffer[buffer_index])
@@ -1669,16 +1776,15 @@ class cht_decode(ht_utils.cht_utils):
                     self.__gdata.update(nickname, "VMischerstellung", i_IPM_Mischerstellung)
                 if raw_index == 9 and msg_bytecount >= 2:
                     f_IPM_VorlaufTemp = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                    if self.__IsTempInRange(f_IPM_VorlaufTemp):
+                    if self.IsTempInRange(f_IPM_VorlaufTemp):
                         self.__gdata.update(nickname, "Tvorlaufmisch_HK", self.__Check4MaxValue(nickname, "Tvorlaufmisch_HK", f_IPM_VorlaufTemp))
                 if raw_index == 11 and msg_bytecount >= 1:
                     # V-Spare-1 benutzt fuer 'T-Soll (Vorlauf)'
                     i_tvorlauf_soll = int(buffer[buffer_index])
                     self.__gdata.update(nickname, "V_spare1", self.__Check4MaxValue(nickname, "V_spare1", i_tvorlauf_soll))
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -1710,11 +1816,9 @@ class cht_decode(ht_utils.cht_utils):
             nickname = "HK4"
             self.__gdata.heatercircuits_amount(4)
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}:{2}".format(msgid, offset, nickname)
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1722,7 +1826,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 1:
                     i_req_season = int(buffer[buffer_index])
@@ -1740,10 +1843,9 @@ class cht_decode(ht_utils.cht_utils):
                     i_prio = int(buffer[buffer_index])
                     debugstr += ";Prio:{0}".format(i_prio)
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -1776,20 +1878,12 @@ class cht_decode(ht_utils.cht_utils):
             nickname = "HK4"
             self.__gdata.heatercircuits_amount(4)
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
-            # init values
-            raw_index = offset + first_payload_index
-            msg_bytecount = length - first_payload_index - 2
-
-            for buffer_index in range(first_payload_index, length):
-                temptext += format(buffer[buffer_index], "02x")+" "
-
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -1806,7 +1900,6 @@ class cht_decode(ht_utils.cht_utils):
         if length <= 8:
             return ("", None)
 
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         if buffer[0] == 0x98:
             nickname = "HK1"
         elif buffer[0] == 0x99:
@@ -1821,9 +1914,8 @@ class cht_decode(ht_utils.cht_utils):
         else:
             nickname = "HK1"
 
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -1852,10 +1944,8 @@ class cht_decode(ht_utils.cht_utils):
         else:
             nickname = "HK1"
         self.__currentHK_nickname = nickname
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1863,16 +1953,14 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 2:
                     f_Steuer_FB = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
                     self.__gdata.update(nickname, "Tsteuer_FB", self.__Check4MaxValue(nickname, "Tsteuer_FB", f_Steuer_FB))
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -1906,11 +1994,9 @@ class cht_decode(ht_utils.cht_utils):
         device_address = buffer[0] & 0x7f
         if self.__DeviceIsModem(device_address):
             systempart_tag = "mod"
-        temptext = "{0:4}_{1:<2}:{2:<3}:".format(msgid, offset, systempart_tag)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1918,7 +2004,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 1:
                     i_bauart_HK = buffer[buffer_index]
@@ -1949,10 +2034,9 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";Statusoptimier:{0}".format(i_status_optimierung)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, systempart_tag, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, systempart_tag, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -1965,15 +2049,12 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HK1"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:<3}:".format(msgid, offset, systempart_tag)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
-        self._logging.debug(temptext)
+        hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, nickname, hexstr, buffer)
 
         values = self.__gdata.values(nickname)
         return (nickname, values)
-
 
     def msgID_188_Hybrid(self, msgtuple, buffer, length):
         """
@@ -1981,11 +2062,9 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "HG"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        debugstr = ""
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -1993,8 +2072,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
-
                 if raw_index == 4 and msg_bytecount >= 2:
                     Toben_pufferspeicher = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
                     debugstr += ";Toben_puffer:{0}".format(Toben_pufferspeicher)
@@ -2020,10 +2097,9 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";Betriebsstatus Verdichter:{0}".format(i_betriebsstatus_verdichter)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2040,26 +2116,21 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "WW"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 4 and msg_bytecount >= 1:
                     i_Soll = int(buffer[buffer_index])
                     self.__gdata.update(nickname, "Tsoll", self.__Check4MaxValue(nickname, "Tsoll", i_Soll))
                 raw_index += 1
-
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2073,18 +2144,15 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "WW"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         Targetadress = buffer[1]
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 #saving data only if target-adresse is := 0, service-key or modem device-ID
                 if(Targetadress in [0, 0x0a, 0x0b, 0x0d, 0x48]):
                     # read values from buffer and assign them
@@ -2097,10 +2165,8 @@ class cht_decode(ht_utils.cht_utils):
                         #modified 08.09.2020: 'T-Soll max' used now for manual dhw-setup on the heater-device
                         self.__gdata.update(nickname, "V_spare_1", self.__Check4MaxValue(nickname, "V_spare_1", i_Soll))
                 raw_index += 1
-
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2113,10 +2179,8 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "WW"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2130,7 +2194,6 @@ class cht_decode(ht_utils.cht_utils):
 
             # at least decode the stuff
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 if b_decoding == True:
                     # read values from buffer and assign them
                     if raw_index == 4 and msg_bytecount >= 1:
@@ -2182,10 +2245,8 @@ class cht_decode(ht_utils.cht_utils):
                             i_brennerww_ein = int(buffer[buffer_index] * 65536 + buffer[buffer_index + 1] * 256 + buffer[buffer_index + 2])
                             self.__gdata.update(nickname, "Cbrenner_ww", i_brennerww_ein)
                     raw_index += 1
-
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             if b_decoding == True:
                 values = self.__gdata.values(nickname)
@@ -2201,17 +2262,14 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "WW"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
         first_payload_index = 4
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 7 and msg_bytecount >= 1:
                     ############################  this is disabled ######
@@ -2223,10 +2281,8 @@ class cht_decode(ht_utils.cht_utils):
                     ####################################################
                     pass
                 raw_index += 1
-
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2237,16 +2293,82 @@ class cht_decode(ht_utils.cht_utils):
         """
             decoding of msgID:269 -> Domestic Hot Water(DHW) message.
              Fkt returns hexdump for 'DHW' messages.
-             Messages is for: Status NTC and Thermostat in WW-storagecell.
+             Messages is for: Status NTC or Thermostat in WW-storagecell connected to IPM.
         """
         nickname = "WW"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        for x in range(0, length):
-            temptext = temptext + format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
-        values = self.__gdata.values(nickname)
-        return (nickname, values)
+        if buffer[0] == 0x88 or buffer[0] == 0x90 or buffer[0] == 0xa0:
+            nickname = "HK1"
+        elif buffer[0] == 0x89 or buffer[0] == 0x99 or buffer[0] == 0xa1:
+            nickname = "HK2"
+        elif buffer[0] == 0x9a or buffer[0] == 0xa2:
+            nickname = "HK3"
+        elif buffer[0] == 0x9b or buffer[0] == 0xa3:
+            nickname = "HK4"
+        else:
+            nickname = "WW"
+        first_payload_index = 6
+        b_data_available = False
+
+        # length >= first index + crc-byte + break-byte
+        if length > first_payload_index + 2:
+            # init values
+            raw_index = offset + first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+            for buffer_index in range(first_payload_index, length - 2):
+                # read values from buffer and assign them
+                if raw_index == 6 and msg_bytecount >= 1:
+                    #check WW flag for this message
+                    if int(buffer[raw_index]) > 0:
+                        nickname = "WW"
+                        b_data_available = True
+                        break
+                raw_index += 1
+        hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, nickname, hexstr, buffer)
+            
+        if b_data_available:
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
+
+    def msgID_457_458_DomesticHotWater_System1_2(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:457 until 458 -> Domestic Hot Water(DHW) system 1 and 2 message.
+        """
+        nickname = "WW"
+        (msgid, offset) = msgtuple
+        debugstr = ""
+        wwsystemnr = 1
+        if msgid == 458:
+            wwsystemnr = 2
+
+        debugstr = ""
+        first_payload_index = 6
+
+        # length > first index + crc-byte + break-byte
+        if length > first_payload_index + 2:
+            # init values
+            raw_index = offset + first_payload_index
+            msg_bytecount = length - first_payload_index - 2
+
+            for buffer_index in range(first_payload_index, length - 2):
+                # read values from buffer and assign them
+                if raw_index == 6 and msg_bytecount >= 1:
+                    WWart = buffer[buffer_index]
+                    debugstr += ";WW{};Art WW-Bereitung:{}".format(wwsystemnr, WWart)
+                    self.__Debuglog(msgtuple, nickname, debugstr, buffer)
+                raw_index += 1
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
+            self.__Debuglog(msgtuple, nickname, hexstr, buffer)
+            values = self.__gdata.values(nickname)
+            return (nickname, values)
+        else:
+            return ("", None)
 
     def msgID_467_468_DomesticHotWater_System1_2(self, msgtuple, buffer, length):
         """
@@ -2254,29 +2376,31 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "WW"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        debugstr = ""
+        wwsystemnr = 1
+        if msgid == 468:
+            wwsystemnr = 2
+            
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
             raw_index = offset + first_payload_index
             msg_bytecount = length - first_payload_index - 2
-            b_WWanfoderung = 0
+            betriebsart = 0
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 1:
-                    b_WWanfoderung = 1 if(buffer[buffer_index] & 0x08) else 0
-                    debugstr = "{0:4}_{1:<2};WW1-Sofort;Anforderung:{2}".format(msgid, offset, b_WWanfoderung)
-                    self._logging.debug(debugstr)
+                    betriebsart = buffer[buffer_index]
+                    debugstr += ";WW{};Betriebsart:{}".format(wwsystemnr, betriebsart)
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
+            self.__Debuglog(msgtuple, nickname, hexstr, buffer)
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
@@ -2288,10 +2412,8 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "WW"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
+        hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -2304,11 +2426,12 @@ class cht_decode(ht_utils.cht_utils):
         """
         nickname = "SO"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        if not self.__DeviceIsModem(buffer[0]):
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2318,7 +2441,6 @@ class cht_decode(ht_utils.cht_utils):
             f_speicherunten = 0.0
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 2:
                     if buffer[buffer_index] != 255:
@@ -2331,18 +2453,20 @@ class cht_decode(ht_utils.cht_utils):
                     f_speicherunten = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
                     self.__gdata.update(nickname, "Tspeicher_unten", self.__Check4MaxValue(nickname, "Tspeicher_unten", f_speicherunten))
 
-                # secondary collector-filed temperatur
+                # secondary collector-field temperatur
                 if raw_index == 12 and msg_bytecount >= 2:
-                    f_second_kollektor = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
+                    i_second_kollektor = int(buffer[buffer_index] * 256 + buffer[buffer_index + 1])
+                    f_second_kollektor = float(i_second_kollektor) / 10
                     debugstr += ";second Tcollector:{0}".format(f_second_kollektor)
-                    if not self.__IsTempInRange(f_second_kollektor):
+                    if not self.IsSensorAvailable(i_second_kollektor):
                         debugstr += " -> not available"
+                    # terminate loop, nothing to decode anymore
+                    break
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(temptext) if offset > 10 else self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, hexstr, buffer) if offset > 10 else self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2356,10 +2480,11 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.IsSolarAvailable(True)
         nickname = "SO"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        if not self.__DeviceIsModem(buffer[0]):
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+
         first_payload_index = 6
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2367,15 +2492,13 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                     ## cause: no values decoded yet this loop is disabled currently
                     #for buffer_index in range(first_payload_index, length - 2):
                     #    # read values from buffer and assign them
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, hexstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2389,11 +2512,12 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.IsSolarAvailable(True)
         nickname = "SO"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        if not self.__DeviceIsModem(buffer[0]):
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2401,7 +2525,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 9:
                     solar_status = buffer[buffer_index]
@@ -2409,29 +2532,55 @@ class cht_decode(ht_utils.cht_utils):
                     i_speicher_voll = (1 if (solar_status & 0x01) else 0)
                     self.__gdata.update(nickname, "Vkollektor_aus", i_kollektor_aus)
                     self.__gdata.update(nickname, "Vspeicher_voll", i_speicher_voll)
-                    debugstr += ";collector_deactive:{0}%;storage_full:{1}".format(i_kollektor_aus, i_speicher_voll)
+                    debugstr += ";collector_deactive:{0};storage_full:{1}".format(i_kollektor_aus, i_speicher_voll)
 
                 if raw_index == 15:
                     pump_power = buffer[buffer_index]
                     debugstr += ";solarpump power:{0}%".format(pump_power)
 
+                if raw_index == 16:
+                    # Solar influence on CH := 868_10_0
+                    self.__gdata.update(nickname,"V_ch_optimize", buffer[buffer_index])
+                    debugstr += ";Optimazation on CH:{}".format(buffer[buffer_index])
+
+                if raw_index == 17:
+                    # Optimazation DHW := 868_11_0
+                    self.__gdata.update(nickname,"V_dhw_optimize", buffer[buffer_index])
+                    debugstr += ";Optimazation DHW:{}".format(buffer[buffer_index])
+
+                if raw_index == 18:
+                    # Reduced DHW temperatur setup := 868_12_0
+                    debugstr += ";Reduced DHW temperatur:{}".format(buffer[buffer_index])
+
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, hexstr, buffer)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
         else:
             return ("", None)
 
+    def msgID_870_Solar(self, msgtuple, buffer, length):
+        """
+            decoding of msgID:870 -> solar message.
+        """
+        (msgid, offset) = msgtuple
+        self.__gdata.IsSolarAvailable(True)
+        if not self.__DeviceIsModem(buffer[0]):
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+        return self.msgID_Solarcommon(msgtuple, buffer, length)
+
     def msgID_872_Solar(self, msgtuple, buffer, length):
         """
             decoding of msgID:872 -> solar message.
         """
+        (msgid, offset) = msgtuple
         self.__gdata.IsSolarAvailable(True)
+        if not self.__DeviceIsModem(buffer[0]):
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
         return self.msgID_Solarcommon(msgtuple, buffer, length)
 
     def msgID_873_Solar(self, msgtuple, buffer, length):
@@ -2441,10 +2590,11 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.IsSolarAvailable(True)
         nickname = "SO"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
+        if not self.__DeviceIsModem(buffer[0]):
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2452,7 +2602,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 f_ertrag_letztestunde = 0.0
                 if raw_index == 6 and msg_bytecount >= 4:
@@ -2477,9 +2626,8 @@ class cht_decode(ht_utils.cht_utils):
                     self.__gdata.update(nickname, "V_ertrag_sum_calc", f_ertrag_gesamt)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2493,11 +2641,12 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.IsSolarAvailable(True)
         nickname = "SO"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        if not self.__DeviceIsModem(buffer[0]):
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2505,7 +2654,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 16:
                     statusbyte = buffer[buffer_index]
@@ -2516,10 +2664,9 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";solarpump status:{0}".format(b_pumpe)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2533,13 +2680,12 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.IsSolarAvailable(True)
         nickname = "SO"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
         if not self.__DeviceIsModem(buffer[0]):
-            self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2550,7 +2696,6 @@ class cht_decode(ht_utils.cht_utils):
             f_ertrag_total = 0.0
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 4:
                     # Auswertung der Solarertrag letzte Stunde Bytes: 8-9
@@ -2576,10 +2721,9 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";gesamt:{0}kWh".format(f_ertrag_total)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2593,11 +2737,12 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.IsSolarAvailable(True)
         nickname = "SO"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        if not self.__DeviceIsModem(buffer[0]):
+          self.__gdata.HeaterBusType(ht_const.BUS_TYPE_EMS)
+
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2607,7 +2752,6 @@ class cht_decode(ht_utils.cht_utils):
             i_laufzeit_stunden = 0
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 4:
                     # Auswertung der Solarlaufzeiten
@@ -2620,10 +2764,9 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";Laufzeit minuten:{0}".format(i_laufzeit_minuten)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2637,11 +2780,9 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.IsSolarAvailable(True)
         nickname = "SO"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2657,16 +2798,19 @@ class cht_decode(ht_utils.cht_utils):
             i_kollektor_aus = 0
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x")+" "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 1:
                     # Optimierungsfaktor f. WW und solarer Unterstuetzung  Byte: 6
                     i_ofaktorWW = int(buffer[buffer_index])
+                    # Optimazation DHW := 259_0_0
+                    self.__gdata.update(nickname,"V_dhw_optimize", i_ofaktorWW)
                     debugstr += ";Optim.Faktor_WW:{0}".format(i_ofaktorWW)
 
                 if raw_index == 7 and msg_bytecount >= 1:
                     # Optimierungsfaktor f. HG und solarer Unterstuetzung  Byte: 7
                     i_ofaktorHG = int(buffer[buffer_index])
+                    # Solar influence on CH := 259_1_0
+                    self.__gdata.update(nickname,"V_ch_optimize", i_ofaktorHG)
                     debugstr += ";Optim.Faktor_HG:{0}".format(i_ofaktorHG)
 
                 if raw_index == 8 and msg_bytecount >= 2:
@@ -2710,10 +2854,9 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += ";laufzeit Min.:{0}".format(i_laufzeit_minuten)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2725,13 +2868,13 @@ class cht_decode(ht_utils.cht_utils):
             decoding of msgID:2603 -> solar message.
         """
         self.__gdata.IsSolarAvailable(True)
-        nickname = "SO"
+        nickname    = "SO"
+        nickname_HG = "HG"
+        
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        debugstr = "{0:4}_{1:<2}".format(msgid, offset)
+        debugstr = ""
         first_payload_index = 6
-        for x in range(0, first_payload_index):
-            temptext += format(buffer[x], "02x") + " "
+
         # length > first index + crc-byte + break-byte
         if length > first_payload_index + 2:
             # init values
@@ -2739,7 +2882,6 @@ class cht_decode(ht_utils.cht_utils):
             msg_bytecount = length - first_payload_index - 2
 
             for buffer_index in range(first_payload_index, length - 2):
-                temptext += format(buffer[buffer_index], "02x") + " "
                 # read values from buffer and assign them
                 if raw_index == 6 and msg_bytecount >= 2:
                     f_t41 = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
@@ -2748,12 +2890,13 @@ class cht_decode(ht_utils.cht_utils):
 
                 if raw_index == 8 and msg_bytecount >= 2:
                     f_t42 = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                    self.__gdata.update(nickname, "Thybrid_sysinput", f_t42)
+                    # 25.10.2022 new assign to HG
+                    self.__gdata.update(nickname_HG, "T_ruecklauf", f_t42)
                     debugstr += ";T heizruecklauf:{0}".format(f_t42)
 
                 if raw_index == 14 and msg_bytecount >= 2:
                     f_t2collectorfeld = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                    if self.__IsTempInRange(f_t2collectorfeld):
+                    if self.IsTempInRange(f_t2collectorfeld):
                         self.__gdata.update(nickname, "V_spare_1", f_t2collectorfeld)
                         #setup flag for 2.collector-field values and GUI
                         self.__gdata.IsSecondCollectorValue_SO(True)
@@ -2769,10 +2912,9 @@ class cht_decode(ht_utils.cht_utils):
                     debugstr += "; 2.Coll_feld PumpStatus:{0}".format(so_pump_2collector)
 
                 raw_index += 1
-            for buffer_index in range(length - 2, length):
-                temptext += format(buffer[buffer_index], "02x") + " "
-            self.__gdata.update(nickname, "hexdump", temptext)
-            self._logging.debug(debugstr)
+            hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+            self.__gdata.update(nickname, "hexdump", hexstr)
+            self.__Debuglog(msgtuple, nickname, debugstr, buffer)
 
             values = self.__gdata.values(nickname)
             return (nickname, values)
@@ -2786,11 +2928,9 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.IsSolarAvailable(True)
         nickname = "SO"
         (msgid, offset) = msgtuple
-        temptext = "{0:4}_{1:<2}:{2:3}:".format(msgid, offset, nickname)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
-        self._logging.debug(temptext)
+        hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, nickname, hexstr, buffer)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -2807,11 +2947,9 @@ class cht_decode(ht_utils.cht_utils):
         else:
             systempart_tag = "???"
 
-        temptext = "{0:4}_{1:<2}:{2:<3}:".format(msgid, offset, systempart_tag)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
-        self._logging.debug(temptext)
+        hexstr = self.__CreateHexdump(msgtuple, systempart_tag, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, systempart_tag, hexstr, buffer)
 
         values = self.__gdata.values(nickname)
         return (nickname, values)
@@ -2831,11 +2969,9 @@ class cht_decode(ht_utils.cht_utils):
         device_address = buffer[0] & 0x7f
         if self.__DeviceIsModem(device_address):
             systempart_tag = "mod"
-        temptext = "{0:4}_{1:<2}:{2:<3}:".format(msgid, offset, systempart_tag)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
-        self._logging.debug(temptext)
+        hexstr = self.__CreateHexdump(msgtuple, systempart_tag, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, systempart_tag, hexstr, buffer)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -2850,11 +2986,9 @@ class cht_decode(ht_utils.cht_utils):
         device_address = buffer[0] & 0x7f
         if self.__DeviceIsModem(device_address):
             systempart_tag = "mod"
-        temptext = "{0:4}_{1:<2}:{2:<3}:".format(msgid, offset, systempart_tag)
-        for x in range(0, length):
-            temptext += format(buffer[x], "02x") + " "
-        self.__gdata.update(nickname, "hexdump", temptext)
-        self._logging.debug(temptext)
+        hexstr = self.__CreateHexdump(msgtuple, systempart_tag, buffer, length)
+        self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, systempart_tag, hexstr, buffer)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -2862,6 +2996,7 @@ class cht_decode(ht_utils.cht_utils):
         """
             used to suppress the message, no display and no decoding.
         """
+        (msgid, offset) = msgtuple
         return ("", None)
 
 #--- class cht_decode end ---#
@@ -2991,7 +3126,7 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
             while bytearray(value) in bytearray(self._rawdata):
                 try:
                     found_index = bytearray(self._rawdata).find(bytearray(value))
-#zs$ only 4 test #                    print("-----------------\nFOUND:{0};index:{1};\nraw_data:{2}".format(value, found_index, self._rawdata))
+#zs$ only 4 test #                   print("-----------------\nFOUND:{0};index:{1};\nraw_data:{2}".format(value, found_index, self._rawdata))
                 except:
                     found_index = -1
                 if (found_index >= 0) and (len(self._rawdata) > found_index + len(value)):
@@ -3161,6 +3296,8 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
         378: cht_decode.msgID_377_380_HeatingCircuit,
         379: cht_decode.msgID_377_380_HeatingCircuit,
         380: cht_decode.msgID_377_380_HeatingCircuit,
+        457: cht_decode.msgID_457_458_DomesticHotWater_System1_2,
+        458: cht_decode.msgID_457_458_DomesticHotWater_System1_2,
         467: cht_decode.msgID_467_468_DomesticHotWater_System1_2,
         468: cht_decode.msgID_467_468_DomesticHotWater_System1_2,
         569: cht_decode.msgID_569_HeatingCircuit,
@@ -3203,7 +3340,7 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
         866: cht_decode.msgID_866_Solar,
         867: cht_decode.msgID_867_Solar,
         868: cht_decode.msgID_868_Solar,
-        870: cht_decode.msgID_Solarcommon,
+        870: cht_decode.msgID_870_Solar,
         872: cht_decode.msgID_872_Solar,
         873: cht_decode.msgID_873_Solar,
         874: cht_decode.msgID_874_Solar,
@@ -3250,7 +3387,8 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
     #          2 domestic hotwater-circuits
     # 2022-01-21: 0x40 and 0x41 added in deviceaddress_white_list[]
     #  see URL: https://www.mikrocontroller.net/topic/324673?page=single#6579738
-    deviceaddress_white_list = [0x08, 0x0a, 0x0b, 0x0c, 0x0d, 0x10, 0x18, 0x19, 0x1a,
+    # 2022-01-31: 0x1b added to deviceaddress_white_list[]
+    deviceaddress_white_list = [0x08, 0x0a, 0x0b, 0x0c, 0x0d, 0x10, 0x18, 0x19, 0x1a, 0x1b,
                                 0x20, 0x21, 0x22, 0x23, 0x28, 0x29,
                                 0x30, 0x31, 0x40, 0x41, 0x48]
 
@@ -3258,13 +3396,14 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
     # device-adr mapped with not valid message-IDs for detailed message - searching.
     #  1.modification reagarding:
     #   https://www.mikrocontroller.net/topic/324673#5169108
+    #  25.10.2022 modification. MsgIds:10 and 24 invalid for deviceadrs
     deviceadr_2msgid_blacklist = {
-        0x10: [11, 12, 24, 46, 47, 61, 64, 100, 106],
-        0x1b: [17, 56, 74, 89],
-        0x20: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
-        0x21: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
-        0x22: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
-        0x23: [13, 14, 15, 21, 23, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
+        0x10: [10, 11, 12, 24, 46, 47, 61, 64, 100, 106],
+        0x1b: [10, 17, 35, 56, 74, 89],
+        0x20: [10, 13, 14, 15, 21, 23, 24, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
+        0x21: [10, 13, 14, 15, 21, 23, 24, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
+        0x22: [10, 13, 14, 15, 21, 23, 24, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
+        0x23: [10, 13, 14, 15, 21, 23, 24, 25, 29, 45, 49, 51, 61, 81, 88, 92, 95, 97, 101, 104, 107],
     }
 
     ####################################
@@ -3273,6 +3412,34 @@ class cht_discode(cht_decode, ht_utils.cht_utils, ht_utils.clog):
     black_sequence = {
         0: [9, 0, 0x89, 0, 0x30, 0, 0xb0, 0, 9, 0, 0x89, 0],
         1: [9, 0, 0x89, 0],
+        2: [0x20, 0, 0xa0, 0, 0x21, 0, 0xa1, 0, 0x22, 0, 0xa2, 0],
+        3: [0x20, 0, 0xa0, 0, 0x21, 0, 0xa1, 0],
+        #4: https://github.com/norberts1/hometop_HT3/issues/20
+        4: [0x90, 0, 0x1b, 0, 0x30, 0],
+        #5: https://github.com/norberts1/hometop_HT3/issues/18
+        5: [0x90, 0, 0x19, 0, 0x30, 0],
+        #6: 162_0 :HG :a1 00 a2 00
+        6: [0xa1, 0, 0xa2, 0, 0x0d, 0],
+        #7-10:  24_0 :HG :9x 00 18 00
+        7: [0x18, 0, 0x98, 0, 0x18, 0],
+        8: [0x19, 0, 0x99, 0, 0x18, 0],
+        9: [0x1a, 0, 0x9a, 0, 0x18, 0],
+        10:[0x1b, 0, 0x9b, 0, 0x18, 0],
+        #11-14:  24_0 :HG :9x 00 0d 00
+        11:[0x18, 0, 0x98, 0, 0x0d, 0],
+        12:[0x19, 0, 0x99, 0, 0x0d, 0],
+        13:[0x1a, 0, 0x9a, 0, 0x0d, 0],
+        14:[0x1b, 0, 0x9b, 0, 0x0d, 0],
+        #15-18:  32_0 :???:2x 00 ax 00 20 00
+        15:[0x20, 0, 0xa0, 0, 0x20, 0],
+        16:[0x21, 0, 0xa1, 0, 0x20, 0],
+        17:[0x22, 0, 0xa2, 0, 0x20, 0],
+        18:[0x23, 0, 0xa3, 0, 0x20, 0],
+        #19-22:  17_0 :???:2x 00 ax 00 11 00
+        19:[0x20, 0, 0xa0, 0, 0x11, 0],
+        20:[0x21, 0, 0xa1, 0, 0x11, 0],
+        21:[0x22, 0, 0xa2, 0, 0x11, 0],
+        22:[0x23, 0, 0xa3, 0, 0x11, 0],
     }
     ####################################
     # device-adr mapped with attached message-IDs for detailed message - searching

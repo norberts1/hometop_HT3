@@ -17,6 +17,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
+# Ver:0.6.2  / 2023-03-12  Issues #18, #20 and GUI-display modified.
 # Ver:0.6.1  / 2022-12-12  wait-starttime added in ht_collgate.py
 # Ver:0.6    / 2022-11-22  Issue #23 lib/ht_proxy_if.py redesigned
 # Ver:0.5    / 2022-01-26  Issue #15 New deviceID-handling with IPM-moduls.
@@ -32,4 +33,4 @@
 # Ver:0.4    / 2021-02-25
 #################################################################
 
-VERSION = "0.6.1"
+VERSION = "0.6.2"

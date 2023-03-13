@@ -40,6 +40,9 @@
 #                               'GetAllMixedFlags()' added
 #                               'IsTempSensor_Hydrlic_Switch()' added.
 #                               'IsSecondCollectorValue_SO()' added.
+# Ver:0.3.2  / 2023-03-12       __busmodulAdr string added.
+#                               HeaterBusType() and controller_type() handling
+#                                modified.
 #################################################################
 
 import xml.etree.ElementTree as ET
@@ -192,6 +195,7 @@ class cdata(ht_utils.clog):
         self.__controller_type = ht_const.CONTROLLER_TYPE_STR_Fxyz
         self.__controller_type_nr = ht_const.CONTROLLER_TYPE_NR_Fxyz
         self.__bus_type = "---"
+        self.__busmodulAdr = ""
 
 
     def setlogger(self, logger):
@@ -1088,9 +1092,6 @@ class cdata(ht_utils.clog):
         """returns/sets the found controller-type as string.
             if heaterbus-type EMS was detected then Cxyz-controller is default set.
         """
-        if self.HeaterBusType() == ht_const.BUS_TYPE_EMS:
-            self.__controller_type = ht_const.CONTROLLER_TYPE_STR_Cxyz
-            self.controller_type_nr(ht_const.CONTROLLER_TYPE_NR_Cxyz)
         if len(c_type) > 0:
             self.__controller_type = c_type
         return self.__controller_type
@@ -1108,6 +1109,12 @@ class cdata(ht_utils.clog):
         if len(b_type) > 0:
             self.__bus_type = b_type
         return self.__bus_type
+
+    def busmodulAdr(self, b_modulAdr=""):
+        """returns/sets the found busmodul Adresses as string."""
+        if len(b_modulAdr) > 0:
+            self.__busmodulAdr = b_modulAdr
+        return self.__busmodulAdr
 
     def get_access_context(self, accessname):
         """
@@ -1349,9 +1356,16 @@ class cdata(ht_utils.clog):
         if not bustype == None:
             self._heater_bustype = bustype
 
+        # change controller-type only, if default value is set
         if self._heater_bustype == ht_const.BUS_TYPE_EMS:
-            self.__controller_type    = ht_const.CONTROLLER_TYPE_STR_Cxyz
-            self.__controller_type_nr = ht_const.CONTROLLER_TYPE_NR_Cxyz
+            if self.__controller_type_nr == ht_const.CONTROLLER_TYPE_NR_Fxyz:
+                self.__controller_type_nr = ht_const.CONTROLLER_TYPE_NR_Cxyz
+                self.__controller_type    = ht_const.CONTROLLER_TYPE_STR_Cxyz
+        else:
+            if self.__controller_type_nr == ht_const.CONTROLLER_TYPE_NR_Cxyz:
+                self.__controller_type_nr = ht_const.CONTROLLER_TYPE_NR_Fxyz
+                self.__controller_type    = ht_const.CONTROLLER_TYPE_STR_Fxyz
+            
         return self._heater_bustype
 
     def IsSolarAvailable(self, available=None):

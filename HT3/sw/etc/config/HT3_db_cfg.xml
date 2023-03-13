@@ -350,7 +350,7 @@
             <datause>GAUGE</datause>
             <maxvalue></maxvalue>
             <default>0</default>
-            <unit>(Errorcode)</unit>
+            <unit>(Error)</unit>
             <displayname>Displaycode</displayname>
             <accessname>ch_errorcode</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
@@ -359,7 +359,7 @@
             <datause>GAUGE</datause>
             <maxvalue></maxvalue>
             <default>0</default>
-            <unit> (Detail)</unit>
+            <unit>(Detail)</unit>
             <displayname>Causecode</displayname>
             <accessname>ch_causecode</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
@@ -1053,7 +1053,7 @@
             <maxvalue></maxvalue>
             <default>0.0</default>
             <unit>Grad</unit>
-            <displayname>T-Zusatzspeicher</displayname>
+            <displayname>T-Zusatzspeicher T3</displayname>
             <accessname>sol_Thybrid_buffer</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="T_hybrid_sysinput">
