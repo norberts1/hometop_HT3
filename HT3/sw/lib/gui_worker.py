@@ -710,9 +710,8 @@ class gui_cworker(ht_utils.cht_utils, ht_utils.clog):
         # values: V_pressure, V_ch_optimize, V_dhw_optimize currently not activated.
         #           cause database has to be modified an new created
         # tempvalue = format(float(self.__gdata.values(nickname_HG, "V_pressure")), ".1f")
-        tempvalue = 0x8000
-        if self.IsSensorAvailable(tempvalue):
-            leftparameter_t = (nickname_HG, "V_pressure", tempvalue)
+        # if self.IsSensorAvailable(tempvalue):
+        #    leftparameter_t = (nickname_HG, "V_pressure", tempvalue)
 
         if self.__gdata.IsSolarAvailable():
             # tempvalue = format(int(self.__gdata.values(nickname_SO, "V_ch_optimize")), "d")
@@ -845,10 +844,11 @@ class gui_cworker(ht_utils.cht_utils, ht_utils.clog):
 
 
         # 20. line
-        systempressure = format(float(self.__gdata.values(nickname, "V_pressure")), ".1f")
-        if self.IsSensorAvailable(systempressure):
-            temptext = self.__DisplayColumn(nickname, "V_pressure", systempressure)
-            if len(temptext) > 0: self.__text.insert("end", temptext)
+        # not yet activated
+        # systempressure = format(float(self.__gdata.values(nickname, "V_pressure")), ".1f")
+        #if self.IsSensorAvailable(systempressure):
+        #    temptext = self.__DisplayColumn(nickname, "V_pressure", systempressure)
+        #    if len(temptext) > 0: self.__text.insert("end", temptext)
 
         if (self.__gdata.IsSyspartUpdate(nickname) and self.__hexdump_window):
             temptext = self.__gdata.values(nickname, "hexdump")
@@ -1155,13 +1155,15 @@ class gui_cworker(ht_utils.cht_utils, ht_utils.clog):
                 temptext = self.__DisplayColumn(nickname, "V_ertrag_sum_calc", tempvalue)
                 if len(temptext) > 0: self.__text.insert("end", temptext)
 
-            tempvalue = format(int(self.__gdata.values(nickname, "V_ch_optimize")), "d")
-            temptext = self.__DisplayColumn(nickname, "V_ch_optimize", tempvalue)
-            if len(temptext) > 0: self.__text.insert("end", temptext)
+            # not yet activated
+            # tempvalue = format(int(self.__gdata.values(nickname, "V_ch_optimize")), "d")
+            # temptext = self.__DisplayColumn(nickname, "V_ch_optimize", tempvalue)
+            # if len(temptext) > 0: self.__text.insert("end", temptext)
 
-            tempvalue = format(int(self.__gdata.values(nickname, "V_dhw_optimize")), "d")
-            temptext = self.__DisplayColumn(nickname, "V_dhw_optimize", tempvalue)
-            if len(temptext) > 0: self.__text.insert("end", temptext)
+            # not yet activated
+            # tempvalue = format(int(self.__gdata.values(nickname, "V_dhw_optimize")), "d")
+            # temptext = self.__DisplayColumn(nickname, "V_dhw_optimize", tempvalue)
+            # if len(temptext) > 0: self.__text.insert("end", temptext)
 
             if self.__gdata.IsSecondCollectorValue_SO():
                 tempvalue = format(float(self.__gdata.values(nickname, "V_spare_1")), ".1f")

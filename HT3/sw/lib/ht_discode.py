@@ -154,9 +154,9 @@ class cht_decode(ht_utils.cht_utils):
         self.__gdata.update("HG", "Vzirkula_pumpe", 0)
         self.__gdata.update("HG", "V_spare1", 0)
         self.__gdata.update("HG", "V_spare2", 0)
-        self.__gdata.update("HG", "V_pressure", 0xFF)
-        self.__gdata.update("HG", "V_spare3", 0)
-        self.__gdata.update("HG", "V_spare4", 0)
+#        self.__gdata.update("HG", "V_pressure", 0xFF)
+#        self.__gdata.update("HG", "V_spare3", 0)
+#        self.__gdata.update("HG", "V_spare4", 0)
 
         self.__gdata.update("HK1", "V_spare1", 0)
         self.__gdata.update("HK1", "V_spare2", 0)
@@ -843,12 +843,11 @@ class cht_decode(ht_utils.cht_utils):
                     f_systempressure = float(i_systempressure) / 10
 
                     # V_pressure added but not yet activated
-                    i_systempressure = 0x8000
                     if self.IsSensorAvailable(i_systempressure):
-                        self.__gdata.update(nickname, "V_pressure", f_systempressure)
+                    #    self.__gdata.update(nickname, "V_pressure", f_systempressure)
                         debugstr += ";pressure:{0} bar".format(f_systempressure)
-                        if not self.__IsInRange(nickname, "V_pressure", f_systempressure):
-                            debugstr += " !out of range!"
+                    #    if not self.__IsInRange(nickname, "V_pressure", f_systempressure):
+                    #        debugstr += " !out of range!"
                     else:
                         debugstr += ";No pressure"
 
@@ -2540,12 +2539,14 @@ class cht_decode(ht_utils.cht_utils):
 
                 if raw_index == 16:
                     # Solar influence on CH := 868_10_0
-                    self.__gdata.update(nickname,"V_ch_optimize", buffer[buffer_index])
+                    # not yet activated
+                    # self.__gdata.update(nickname,"V_ch_optimize", buffer[buffer_index])
                     debugstr += ";Optimazation on CH:{}".format(buffer[buffer_index])
 
                 if raw_index == 17:
                     # Optimazation DHW := 868_11_0
-                    self.__gdata.update(nickname,"V_dhw_optimize", buffer[buffer_index])
+                    # not yet activated
+                    # self.__gdata.update(nickname,"V_dhw_optimize", buffer[buffer_index])
                     debugstr += ";Optimazation DHW:{}".format(buffer[buffer_index])
 
                 if raw_index == 18:
@@ -2803,14 +2804,16 @@ class cht_decode(ht_utils.cht_utils):
                     # Optimierungsfaktor f. WW und solarer Unterstuetzung  Byte: 6
                     i_ofaktorWW = int(buffer[buffer_index])
                     # Optimazation DHW := 259_0_0
-                    self.__gdata.update(nickname,"V_dhw_optimize", i_ofaktorWW)
+                    # not yet activated
+                    #self.__gdata.update(nickname,"V_dhw_optimize", i_ofaktorWW)
                     debugstr += ";Optim.Faktor_WW:{0}".format(i_ofaktorWW)
 
                 if raw_index == 7 and msg_bytecount >= 1:
                     # Optimierungsfaktor f. HG und solarer Unterstuetzung  Byte: 7
                     i_ofaktorHG = int(buffer[buffer_index])
                     # Solar influence on CH := 259_1_0
-                    self.__gdata.update(nickname,"V_ch_optimize", i_ofaktorHG)
+                    # not yet activated
+                    #self.__gdata.update(nickname,"V_ch_optimize", i_ofaktorHG)
                     debugstr += ";Optim.Faktor_HG:{0}".format(i_ofaktorHG)
 
                 if raw_index == 8 and msg_bytecount >= 2:
