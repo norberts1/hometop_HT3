@@ -18,8 +18,8 @@
  # along with this program. If not, see <http://www.gnu.org/licenses/>.
  #
  #################################################################
- # date: 2023-03-11
- # rev.: 0.1
+ # date: 2023-03-17
+ # rev.: 0.2
  #################################################################
  #                                                               #
  # prepare os-parts and configuration for ht-project             #
@@ -88,7 +88,7 @@ echo "----------------------------------"
 echo "  >------- RPI.GPIO -----------<  "
 sudo apt-get -y install RPI.GPIO;
 echo "----------------------------------"
-currentuser=$(users)
+currentuser=$(whoami)
 echo "  >------- set user:${currentuser} dialout <  "
 sudo adduser ${currentuser} dialout
 echo "  >------- git ----------------<  "

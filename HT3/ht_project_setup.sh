@@ -18,8 +18,8 @@
  # along with this program. If not, see <http://www.gnu.org/licenses/>.
  #
  #################################################################
- # date: 2023-03-11
- # rev.: 0.1
+ # date: 2023-03-17
+ # rev.: 0.2
  #################################################################
  #                                                               #
  # setup for ht-project                                          #
@@ -28,7 +28,7 @@
 
 echo "=================================="
 echo "+==== Checking for user:pi   ====+"
-currentuser=$(users)
+currentuser=$(whoami)
 if expr "${currentuser}" : '^\(pi\)' >/dev/null
   then
     echo " >--- installation as default user:pi  <---"
@@ -99,7 +99,7 @@ if [ "$mqtt_required" = "y" ]; then
  ./__mqtt_setup.sh
 fi
 
-currentuser=$(users)
+currentuser=$(whoami)
 if expr "${currentuser}" : '^\(pi\)' >/dev/null
   then
     ./__post_setup.sh
