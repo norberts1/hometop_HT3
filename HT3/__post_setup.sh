@@ -18,8 +18,10 @@
  # along with this program. If not, see <http://www.gnu.org/licenses/>.
  #
  #################################################################
- # date: 2023-03-11
- # rev.: 0.1
+ # rev.: 0.1 date: 2023-03-11
+ # rev.: 0.2 date: 2023-03-20 database creation only on request.
+ #                             issue: #25
+ # 
  #################################################################
  #                                                               #
  # post-setup for ht-project                                     #
@@ -76,9 +78,29 @@ install_service httpd.service ~/HT3/sw/etc/sysconfig/httpd httpd
 install_service ht_2hass.service ~/HT3/sw/etc/sysconfig/ht_2hass ht_2hass
 
 echo
-echo "  >-- create databases --------<  "
-cd ~/HT3/sw
-./create_databases.py
+echo "----------------------------------"
+read -p '  Databases required (y/n) ?' creation_required
+echo
+if [ "$creation_required" = "y" ]; then
+  read -p '   1. Sql-Database wanted (y/n) ?' sql_db_required
+  if [ "$sql_db_required" = "y" ]; then
+    sed --in-place -zE 's/(<sql-db>\s*<enable>)off(<\/enable>)/\1on\2/gm' ~/HT3/sw/etc/config/HT3_db_cfg.xml
+  else
+    sed --in-place -zE 's/(<sql-db>\s*<enable>)on(<\/enable>)/\1off\2/gm' ~/HT3/sw/etc/config/HT3_db_cfg.xml
+  fi
+  read -p '   2. rrdtool-db   wanted (y/n) ?' rrdtool_db_required
+  if [ "$rrdtool_db_required" = "y" ]; then
+    sed --in-place -zE 's/(<rrdtool-db>\s*<enable>)off(<\/enable>)/\1on\2/gm' ~/HT3/sw/etc/config/HT3_db_cfg.xml
+  else
+    sed --in-place -zE 's/(<rrdtool-db>\s*<enable>)on(<\/enable>)/\1off\2/gm' ~/HT3/sw/etc/config/HT3_db_cfg.xml
+  fi
+
+  echo "  >-- create databases --------<  "
+  cd ~/HT3/sw
+  ./create_databases.py
+else
+  echo " No database-creation required"
+fi
 
 echo "----- post_setup done ------------"
 

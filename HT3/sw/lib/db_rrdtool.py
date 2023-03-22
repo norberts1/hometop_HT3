@@ -23,6 +23,7 @@
 # Ver:0.1.10 / Datum 28.08.2016 code-adjustment after pylint
 # Ver:0.2    / Datum 29.08.2016 added info-text
 # Ver:0.3    / Datum 18.01.2019 create_draw() added
+# Ver:0.4    / Datum 25.10.2022 create_draw() debug-output modified.
 #################################################################
 #
 
@@ -367,15 +368,9 @@ class cdb_rrdtool(ht_utils.clog):
                     ):
         """calling the rrdtool-draw script to create rrdtool-drawings"""
         [hc1_mixer, hc2_mixer, hc3_mixer, hc4_mixer] = mixer_flags
-        debugstr = """cdb_rrdtool.create_draw();\n
-                    path2db  :{0};\n
-                    path2draw:{1};\n
-                    hc_count:{2};\n
-                    Contr.type:{3};\n
-                    mixer_flags:{4};\n
-                    hydrlic_sw:{5};\n
-                    solar_flag:{6};\n
-                    second_source:{7}\n""".format(path_2_db, path_2_draw, hc_count, controller_type_nr, mixer_flags, hydsw, solar_flag, second_source_flag)
+        debugstr = "cdb_rrdtool.create_draw();path2db:{0};path2draw:{1};hc_count:{2};Contr.type:{3};mixer_flags:{4};hydrlic_sw:{5};solar_flag:{6};second_source:{7}".format(path_2_db, 
+                            path_2_draw, hc_count, controller_type_nr, 
+                            mixer_flags, hydsw, solar_flag, second_source_flag)
         self._logging.debug(debugstr)
         AbsPathandFilename = os.path.abspath(os.path.normcase('./etc/rrdtool_draw.pl'))
         Abspath2_db = ht_utils.cht_utils.Extract_HT3_path_from_AbsPath(self, path_2_db)
@@ -385,7 +380,8 @@ class cdb_rrdtool(ht_utils.clog):
         strsystemcmd1 = AbsPathandFilename+' '+Abspath2_db+' '+Abspath_2_draw+' '+str(hc_count)+' '
         strsystemcmd2 = str(controller_type_nr)+' '+str(hc1_mixer)+' '+str(hc2_mixer)+' '+str(hc3_mixer)+' '+str(hc4_mixer)
         strsystemcmd = strsystemcmd1 + strsystemcmd2 +' '+str(hydsw) +' '+str(solar_flag)+' '+str(second_source_flag)
-        self._logging.debug(strsystemcmd)
+        # enable only for test-purposes
+        ## self._logging.debug(strsystemcmd)
         try:
             #execute perl-script for drawing 'rrdtool' dbinfos
             error = os.system(strsystemcmd)

@@ -18,8 +18,9 @@
  # along with this program. If not, see <http://www.gnu.org/licenses/>.
  #
  #################################################################
- # date: 2023-03-17
- # rev.: 0.2
+ # rev.: 0.2 date: 2023-03-17
+ # rev.: 0.3 date: 2023-03-22 export 'LANGUGAGE' added for perl-install.
+ # 
  #################################################################
  #                                                               #
  # setup for ht-project                                          #
@@ -35,6 +36,19 @@ if expr "${currentuser}" : '^\(pi\)' >/dev/null
   else
     echo " >--- installation as user:${currentuser}  <---"
     echo " >---  Manually modification of service-scripts required for user: ${currentuser} <---"
+fi
+
+# export language environment if not set
+if [ ! ${LC_ALL} ]; then
+  if [ ${LANG} ]; then
+    LC_ALL=$LANG
+    LANGUAGE=$LANG
+  else
+    LC_ALL=en_GB.UTF-8
+    LANGUAGE=en_GB.UTF-8
+  fi
+  export LC_ALL
+  export LANGUAGE
 fi
 
 echo "+==== Setup OS               ====+"

@@ -19,6 +19,7 @@
 #################################################################
 # Ver:0.1.5  / Datum 25.05.2014
 # Ver:0.1.7.1/ Datum 04.03.2015 logging from ht_utils added
+# Ver:0.2    / Date: 2023.03.20 log -infos/-handling modified.
 #################################################################
 #
 """ Module 'create_databases.py' creats databases 'sqlite' and 'rrdtool'
@@ -70,49 +71,52 @@ except:
     raise
 
 ####################################
-## set configuration-filename and create sqlite-db
+## set configuration-filename
 configurationfilename='./etc/config/HT3_db_cfg.xml'
+
+infostr="------------------------------------------------"
+logging.info(infostr)
+print(infostr)
+
 sqlitedb=db_sqlite.cdb_sqlite(configurationfilename, logger=logging)
-sqlitedb.connect()
-infostr="------------------------------------------------"
-logging.info(infostr)
-print(infostr)
-infostr="Create: sqlite -database"
-logging.info(infostr)
-print(infostr)
-sqlitedb.createdb_sqlite()
-#check created sqlite-database for read/write access
 databasename=sqlitedb.db_sqlite_filename()
-if os.access(databasename,os.W_OK and os.R_OK):
-    infostr="sqlite-database:'{0}' created and access possible".format(databasename)
-else:
-    infostr="sqlite-database:'{0}' not available".format(databasename)
-print(infostr)
-logging.info(infostr)
+if sqlitedb.is_sql_db_enabled():
+    ## create sqlite-db
+    sqlitedb.connect()
+    infostr="Create: sqlite -database"
+    logging.info(infostr)
+    print(infostr)
+    sqlitedb.createdb_sqlite()
+    #check created sqlite-database for read/write access
+    if os.access(databasename,os.W_OK and os.R_OK):
+        infostr="sqlite-database :'{0}' created and access possible".format(databasename)
+    else:
+        infostr="sqlite-database :'{0}' not available".format(databasename)
+    print(infostr)
+    logging.info(infostr)
 
-sqlitedb.close()
+    sqlitedb.close()
+else:
+    infostr="sqlite-database :'{0}' disabled".format(databasename)
+    print(infostr)
+    logging.info(infostr)
+
 
 infostr="------------------------------------------------"
-logging.info(infostr)
-print(infostr)
-infostr="Create: rrdtool-database (if request is enabled)"
 logging.info(infostr)
 print(infostr)
 rrdtool=db_rrdtool.cdb_rrdtool(configurationfilename, logger=logging)
-if not rrdtool.is_rrdtool_db_enabled():
-    infostr="rrdtool-database will not be created"
+if rrdtool.is_rrdtool_db_enabled():
+    infostr="Create: rrdtool-database"
     logging.info(infostr)
     print(infostr)
-    infostr="  enable-flag is set to 'False' in configuration"
-    logging.info(infostr)
-    print(infostr)
-else:    
     rrdtool.createdb_rrdtool()
     if rrdtool.is_rrdtool_db_available():
         infostr="rrdtool-databases:'{0}' created and access possible".format(rrdtool.db_rrdtool_filename())
     else:
         infostr="rrdtool-databases:'{0}' not available".format(rrdtool.db_rrdtool_filename())
-
-logging.info(infostr)
-print(infostr)
+else:    
+    infostr="rrdtool-database:'{0}' disabled".format(rrdtool.db_rrdtool_filename())
+    logging.info(infostr)
+    print(infostr)
 

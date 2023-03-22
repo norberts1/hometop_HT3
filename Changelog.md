@@ -1,4 +1,11 @@
 ## Changelog
+## 0.6.3
+`2023-03-22` 
+- `reason`: Issue: #25 installation-scripts and displays.  
+- `modul `: `create_databases.py`, `ht_project_setup.sh`, `__post_setup.sh` modified.  
+- `modul `: `db_rrdtool.py` debug-output modified.  
+- `modul `: `lib/ht_release.py` updated.  
+
 ## 0.6.2
 `2023-03-12` 
 - `reason`: Issues: #18 and #20. GUI-display modified.  
