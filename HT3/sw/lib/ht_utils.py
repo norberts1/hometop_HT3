@@ -31,9 +31,14 @@
 # Ver:0.4    / Datum 24.10.2022 log-format now with ';'.
 #                                IsSensorAvailable(), IsTemperaturValid(),
 #                                IsTemperaturInValidRange() and IsValueNotZero() added.
+# Ver:0.4.1  / 2023-08-30       tempfile handling added in create_logfile()
+#                               IntegerToString() added.
+#                               Bitstatus() added.
+#                               Temperature-Limits set to 200.0.
 #################################################################
 
 import os
+import tempfile
 import logging
 import logging.handlers
 
@@ -113,7 +118,7 @@ class cht_utils(object):
             print("HT3_decode.__crc_testen();Error;{0}", e.args[0])
             return False
 
-    def IsTempInRange(self, tempvalue, maxvalue=300.0, minvalue=-50.0):
+    def IsTempInRange(self, tempvalue, maxvalue=200.0, minvalue=-50.0):
         """
         returns True/False if tempvalue is in range or not.
         """
@@ -121,15 +126,15 @@ class cht_utils(object):
 
     def IsTemperaturValid(self, tempvalue):
         """
-            Returns True if temperaturvalues is less then 300 degrees, else False.
+            Returns True if temperaturvalues is less then 200 degrees, else False.
         """
-        return True if float(tempvalue) < 300.0 else False
+        return True if float(tempvalue) < 200.0 else False
 
     def IsTemperaturInValidRange(self, tempvalue):
         """
-            Returns True if temperaturvalues is less then 300 degrees and not 0, else False.
+            Returns True if temperaturvalues is less then 200 degrees and not 0, else False.
         """
-        return True if (float(tempvalue) < 300.0 and float(tempvalue) != 0.0) else False
+        return True if (float(tempvalue) < 200.0 and float(tempvalue) != 0.0) else False
 
     def IsValueNotZero(self, tempvalue):
         """
@@ -233,8 +238,30 @@ class cht_utils(object):
             rtnpath = rtnpath[: rtnpath.rfind(searchpath)]
         return os.path.abspath(rtnpath)
 
-#--- class cht_utils end ---#
+    def IntegerToString(self, value):
+        """ returns positiv integer-value as string """
+        rtnstr = ""
+        if not isinstance(value, int):
+            return value
+        if value > 0:
+            byte_conversion = value.to_bytes((value.bit_length()//8)+1, byteorder='big')
+            for byte in byte_conversion:
+                rtnstr += "{:c}".format(byte)
+        else:
+            rtnstr = "0"
+            
+        return rtnstr
 
+    def Bitstatus(self, byte, bitnr):
+        """ returns 1 if bit is set, else 0
+             bitnr must be in range 0...7
+        """
+        bitmask = pow(2, bitnr) if (bitnr in range(0,7)) else 0
+        rtnvalue = 1 if (byte & bitmask) else 0
+        return rtnvalue
+
+        
+#--- class cht_utils end ---#
 
 class clog(object):
     """
@@ -250,10 +277,13 @@ class clog(object):
         self._fileonly = ""
         self._pathonly = ""
 
-    def create_logfile(self, logfilepath="./default_logfile.log", loglevel=logging.INFO, loggertag="default"):
+    def create_logfile(self, logfilepath="", loglevel=logging.INFO, loggertag="default"):
         """
         Create logfile with default-values (overwrite-able).
         """
+        if len(logfilepath) == 0:
+            logfilepath = os.path.join(tempfile.gettempdir(),"default_logfile.log")
+
         self._logfilepath = logfilepath
         self._loglevel = loglevel
         self._loggertag = loggertag
@@ -473,3 +503,18 @@ if __name__ == "__main__":
     print("Please check the content of:")
     print(" default-file:{0}".format(log.logfilepathname()))
     print(" debug  -file:{0}".format(logdebug.logfilepathname()))
+
+    print("-------------------- do some conversion checks ---------------------")
+    value = 0        # -->> '0'
+    print("value (int):{}, value (str):{}".format(value, utils.IntegerToString(value)))
+    value = 0x32     # -->> '2'
+    print("value (int):{}, value (str):{}".format(value, utils.IntegerToString(value)))
+    value = 12594    # -->> '12'
+    print("value (int):{}, value (str):{}".format(value, utils.IntegerToString(value)))
+    value = 4273457  # -->> 'A51'
+    print("value (int):{}, value (str):{}".format(value, utils.IntegerToString(value)))
+    value = 0x423233 # -->> 'B23'
+    print("value (int):{}, value (str):{}".format(value, utils.IntegerToString(value)))
+    value = 0x43353637 # -->> 'C567'
+    print("value (int):{}, value (str):{}".format(value, utils.IntegerToString(value)))
+   

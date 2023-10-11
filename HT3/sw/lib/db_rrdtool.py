@@ -24,6 +24,8 @@
 # Ver:0.2    / Datum 29.08.2016 added info-text
 # Ver:0.3    / Datum 18.01.2019 create_draw() added
 # Ver:0.4    / Datum 25.10.2022 create_draw() debug-output modified.
+# Ver:0.4.1  / 2023-06-07 tempfile handling added in __init__()
+# Ver:0.5    / 2023-07-26 db-size smaler: LAST kept now for 2years back.
 #################################################################
 #
 
@@ -52,7 +54,8 @@ class cdb_rrdtool(ht_utils.clog):
         # init/setup logging-file
         if logger == None:
             ht_utils.clog.__init__(self)
-            self._logging = ht_utils.clog.create_logfile(self, logfilepath="./cdb_rrdtool.log", loggertag="cdb_rrdtool")
+            logfilenamepath = os.path.join(tempfile.gettempdir(),"cdb_rrdtool.log")
+            self._logging = ht_utils.clog.create_logfile(self, logfilepath=logfilenamepath, loggertag="cdb_rrdtool")
         else:
             self._logging = logger
 
@@ -439,8 +442,8 @@ class cdb_rrdtool(ht_utils.clog):
             self.__rrdtoolh.write("#   'DEVSEASONAL', 'DEVPREDICT', 'FAILURES']\n")
             self.__rrdtoolh.write('# \n')
             self.__rrdtoolh.write("# Define the archiv\n")
-            self.__rrdtoolh.write("# 'LAST    saved every 5 min, kept for 10years back\n")
-            self.__rrdtoolh.write("# 'AVERAGE saved every 1 min, kept for  1year  back\n")
+            self.__rrdtoolh.write("# 'LAST    saved every 5 min, kept for 2years back\n")
+            self.__rrdtoolh.write("# 'AVERAGE saved every 1 min, kept for 1year  back\n")
             self.__rrdtoolh.write("# 'MAX  saved every 5 min, kept for 1year back\n")
             self.__rrdtoolh.write("# 'MIN  saved every 5 min, kept for 1year back\n")
             self.__rrdtoolh.write('# \n')
@@ -462,7 +465,7 @@ class cdb_rrdtool(ht_utils.clog):
                 self.__rrdtoolh.write('    step        => $step,\n')
             elif tail:
                 self.__rrdtoolh.write('        archive     => { \n')
-                self.__rrdtoolh.write('            rows     => 1051200,\n')
+                self.__rrdtoolh.write('            rows     => 210240,\n')
                 self.__rrdtoolh.write('            cpoints  => 5,\n')
                 self.__rrdtoolh.write("            cfunc    => 'LAST',\n")
                 self.__rrdtoolh.write('        },\n')

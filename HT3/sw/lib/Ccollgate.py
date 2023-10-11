@@ -22,6 +22,7 @@
 #                               __Autocreate_draw() removed, db_rrdtool.create_draw() replacement
 # Ver:0.3    / Datum 03.12.2019 Issue:'Deprecated property InterCharTimeout #7'
 #                                port.setInterCharTimeout() removed
+# Ver:0.4    / 2023-10-06  logitems matching with the values now exported.
 #################################################################
 
 import sys
@@ -541,6 +542,11 @@ class cht_if_worker(threading.Thread):
             self._logging.info("cht_if_worker();   Baudrate     :{0}".format(self.__baudrate))
             self._logging.info("cht_if_worker();   Configuration:{0}".format(self._data.AsyncConfig()))
 
+        # prepare sorted logitem name-dir
+        sorted_logitem_names = {}
+        for short_nickname in self._data.getall_nicknames().keys():
+            sorted_logitem_names.update({short_nickname : self._data.getall_sorted_logitem_names(short_nickname)})
+
         try:
             # create object of tx_data class with known values
             #   tx_queue, port, logging, loglevel and access-/set_parameter- names
@@ -573,19 +579,24 @@ class cht_if_worker(threading.Thread):
         try:
             while self.__thread_run:
                 # blocking call to discoder() returns nickname/value-tuple
-                (nickname, value) = decoded_data.discoder()
-                if (nickname, value) == (None, None):
+                (nickname, values) = decoded_data.discoder()
+                if (nickname, values) == (None, None):
                     self.stop()
                     errorstr="cht_if_worker();Error;nickname:=None and value:=None got from discoder()"
                     self._logging.critical(errorstr)
                     break
+                if len(nickname) > 0:
+                    logitems = sorted_logitem_names.get(nickname)
+                else:
+                    logitems = []
                 #send data only if waittime is elapsed (valid data) and value is not 'None'
-                if self.WaitTimeElapsed() and value != None:
+                if self.WaitTimeElapsed() and values != None:
+
                     # put data to message-queue for Database-saving
-                    self.decoded_data_4_DBs().put((nickname, value))
+                    self.decoded_data_4_DBs().put((nickname, (logitems, values)))
                     # put data to message-queue for further processing in other threads
                     if self.__putdata_flag:
-                        self.decoded_data_queue().put((nickname, value))
+                        self.decoded_data_queue().put((nickname, (logitems, values)))
 
         except:
             errorstr="cht_if_worker();Error; 'discoder()' thread terminated"
@@ -800,14 +811,14 @@ class cstore2db(threading.Thread):
         while self.__thread_run:
             try:
                 # read values from queue, wait if empty or stop if (None, None)
-                (nickname, value) = self._ht_if.decoded_data_4_DBs().get()
+                (nickname, (logitems, values)) = self._ht_if.decoded_data_4_DBs().get()
                 # terminate thread if both values are None, else process them
-                if (nickname, value) == (None, None):
+                if (nickname, (logitems, values)) == (None, (None, None)):
                     self.stop()
                     break
 
                 if database.is_sql_db_enabled():
-                    database.insert(str(self._ht_if.ht_if_data().getlongname(nickname)), value)
+                    database.insert(str(self._ht_if.ht_if_data().getlongname(nickname)), values)
                     database.commit()
 
                 if self._ht_if.ht_if_data().is_db_rrdtool_enabled() and rrdtooldb != None:
@@ -820,7 +831,7 @@ class cstore2db(threading.Thread):
                             if syspartshortname.upper() == 'DT':
                                 continue
                             syspartname = rrdtooldb.syspartnames()[syspartshortname]
-                            itemvalue_array = self._ht_if.ht_if_data().getall_sorted_items_with_values(syspartshortname)
+                            itemvalue_array = self._ht_if.ht_if_data().getfiltered_sorted_items_with_values(syspartshortname)
                             error = rrdtooldb.update(syspartname, itemvalue_array, time.time())
                             if error:
                                 self._logging.critical("rrdtooldb.update();Error;syspartname:{0}".format(syspartname))
@@ -832,10 +843,22 @@ class cstore2db(threading.Thread):
                         # create draw calling script
                         (db_path, dbfilename) = self._ht_if.ht_if_data().db_rrdtool_filepathname()
                         (html_path, filename) = self._ht_if.ht_if_data().db_rrdtool_filepathname('.')
-                        rrdtooldb.create_draw(db_path, html_path,
-                                              self._ht_if.ht_if_data().heatercircuits_amount(),
-                                              self._ht_if.ht_if_data().controller_type_nr(),
-                                              self._ht_if.ht_if_data().GetAllMixerFlags())
+                        
+                        second_solar_drawflag = int (self._ht_if.ht_if_data().IsSecondCollectorValue_SO() | \
+                                                 self._ht_if.ht_if_data().IsSecondBuffer_SO()
+                                                )
+                        try:
+                            rrdtooldb.create_draw(db_path, html_path,
+                                              int(self._ht_if.ht_if_data().heatercircuits_amount()),
+                                              int(self._ht_if.ht_if_data().controller_type_nr()),
+                                              self._ht_if.ht_if_data().GetAllMixerFlags(),
+                                              int(self._ht_if.ht_if_data().IsTempSensor_Hydrlic_Switch()),
+                                              int(self._ht_if.ht_if_data().IsSolarAvailable()),
+                                              int(second_solar_drawflag)
+                                            )
+                        except Exception as e:
+                            errorstr = "cstore2db.run(); Error:{}".format(e)
+                            self._logging.critical(errorstr)
 
                 if sqlite_autoerase:
                     self.__Autoerasing_sqlitedb(database)
@@ -855,7 +878,7 @@ class cstore2db(threading.Thread):
     def stop(self):
         """ """
         self.__thread_run = False
-        self._ht_if.decoded_data_4_DBs().put(None, None)
+        self._ht_if.decoded_data_4_DBs().put(None, (None, None))
 #--- class cstore2db end ---#
 ################################################
 

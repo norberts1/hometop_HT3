@@ -1,4 +1,11 @@
 ## Changelog
+## 0.7
+`2023-10-06` 
+- `reason`: Issues: #21, #24 and #28.  
+- `moduls`: all are modified.  
+- `config`: all are modified and have new content.  
+- `importend notes`: it's required to recreate the databases. The old once's aren't compatible anymore.  
+
 ## 0.6.3
 `2023-03-22` 
 - `reason`: Issue: #25 installation-scripts and displays.  

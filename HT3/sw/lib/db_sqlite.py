@@ -22,12 +22,14 @@
 # Ver:0.1.8  / Datum 21.09.2015 is_sql_db_enabled() now with flag-input
 # Ver:0.1.10 / Datum 25.08.2016 minor formatting changes
 # Ver:0.2    / Datum 29.08.2016 Fkt.doc added.
+# Ver:0.3    / 2023-06-07       tempfile handling added in __init__()
 #################################################################
 #
 
 import sqlite3
 import time
 import os
+import tempfile
 import xml.etree.ElementTree as ET
 import ht_utils
 import logging
@@ -49,7 +51,8 @@ class cdb_sqlite(ht_utils.clog):
             # init/setup logging-file
             if logger == None:
                 ht_utils.clog.__init__(self)
-                self._logging = ht_utils.clog.create_logfile(self, "./cdb_sqlite.log", loggertag="cdb_sqlite")
+                logfilenamepath = os.path.join(tempfile.gettempdir(),"cdb_sqlite.log")
+                self._logging = ht_utils.clog.create_logfile(self, logfilenamepath, loggertag="cdb_sqlite")
             else:
                 self._logging = logger
 

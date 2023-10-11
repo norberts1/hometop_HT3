@@ -17,6 +17,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
+# Ver:0.7    / 2023-10-06  Issues #28,#21 and solar-details.
 # Ver:0.6.3  / 2023-03-32  Issues #25 installation-scripts modified.
 # Ver:0.6.2  / 2023-03-12  Issues #18, #20 and GUI-display modified.
 # Ver:0.6.1  / 2022-12-12  wait-starttime added in ht_collgate.py
@@ -34,4 +35,4 @@
 # Ver:0.4    / 2021-02-25
 #################################################################
 
-VERSION = "0.6.3"
+VERSION = "0.7"

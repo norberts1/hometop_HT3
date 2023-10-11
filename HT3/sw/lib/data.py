@@ -43,11 +43,18 @@
 # Ver:0.3.2  / 2023-03-12       __busmodulAdr string added.
 #                               HeaterBusType() and controller_type() handling
 #                                modified.
+# Ver:0.4    / 2023-09-29       tempfile handling added in create_mylogger()
+#                               IsSecondBuffer_SO() modified.
+#                               IsReloadbuffer_Option_IJ_SO() added.
+#                               setall_values2default() and showall_values() added.
+#                               defaultvalue() updated.
+#                               getall_nicknames(), getfiltered_sorted_items_with_values() added.
 #################################################################
 
 import xml.etree.ElementTree as ET
 import sys
 import os
+import tempfile
 import _thread
 import ht_utils
 import logging
@@ -161,14 +168,24 @@ class cdata(ht_utils.clog):
         self.__accessnameSO = {}
         self.__accessnameDT = {}
         self.__accessnameNN = {}
+        # dir's for Logitem: 'minvalue'
+        self.__minvalueHG = {}
+        self.__minvalueHK1 = {}
+        self.__minvalueHK2 = {}
+        self.__minvalueHK3 = {}
+        self.__minvalueHK4 = {}
+        self.__minvalueWW = {}
+        self.__minvalueSO = {}
+        self.__minvalueDT = {}
+        self.__minvalueNN = {}
         # other required values
         self.__accesscontext = {}
         self.__syspartnames = []
         self.__unmixedHK1_HK4 = {}
         self.__LoadpumpWW = False
-        self.__SecondHeaterSO = False
         self.__SecondBufferSO = False
         self.__SecondCollect_ValueSO = False
+        self.__ReloadBuffer_OptionIJ_SO = False
         self.__TempSensor_HydraulicSwitch = 0
         self.__data = {}
         self.__thread_lock = _thread.allocate_lock()
@@ -204,13 +221,15 @@ class cdata(ht_utils.clog):
         """
         self._logging = logger
 
-    def create_mylogger(self, filepath="./cdata.log", tag="cdata"):
+    def create_mylogger(self, filepath="", tag="cdata"):
         """
         creating logger with default values (overwrite-able).
         """
         rtnvalue = None
         try:
             ht_utils.clog.__init__(self)
+            if len(filepath) == 0:
+                filepath = os.path.join(tempfile.gettempdir(),"cdata.log")
             rtnvalue = ht_utils.clog.create_logfile(self, logfilepath=filepath, loggertag=tag)
         except:
             errorstr = "data.create_mylogger();could not create logger-file"
@@ -228,6 +247,7 @@ class cdata(ht_utils.clog):
                                                                 {itemname:unit},
                                                                 {itemname:maxvalue},
                                                                 {itemname:defaultvalue},
+                                                                {itemname:minvalue},
                                                                 hardwaretype]}
         """
         # init/setup logging-file if not already forced from external call
@@ -403,9 +423,6 @@ class cdata(ht_utils.clog):
                             if shortname in ("WW"):
                                 self.__LoadpumpWW = True if syspart.find('load_pump').text.upper() == "TRUE" else False
 
-                            if shortname in ("SO"):
-                                self.__SecondHeaterSO = True if syspart.find('second_heater').text.upper() == "TRUE" else False
-                                self.__SecondBufferSO = True if syspart.find('second_buffer').text.upper() == "TRUE" else False
                         except (KeyError, IndexError, AttributeError) as e:
                             errorstr = "data.read_db_config();Error on xml-tag:{0}".format(e.args[0])
                             self._logging.critical(errorstr)
@@ -438,9 +455,15 @@ class cdata(ht_utils.clog):
                             except:
                                 set_parameter = ""
 
+                            try:
+                                minvalue = logitem.find('minvalue').text
+                            except:
+                                minvalue = None
+
                             # add itemname and values to table
-                            self.update(shortname, name, default, displayname, unit, hardwaretype,
-                                        maxvalue, default, accessname, set_parameter)
+                            self.update(shortname, logitem=name, value=default, displayname=displayname, unit=unit, 
+                                        hwtype=hardwaretype, maxvalue=maxvalue, default=default, 
+                                        accessname=accessname, set_parameter=set_parameter, minvalue=minvalue )
                         else:
                             if not len(logitem):
                                 errorstr = "data.read_db_config();Error;AttributeError(logitem)"
@@ -571,6 +594,7 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueHG,
                                           self.__defaultvalueHG,
                                           self.__accessnameHG,
+                                          self.__minvalueHG,
                                           self.__hwtypeHG]})
             elif "HK1" in shortname:
                 self.__data.update({"HK1": [self.__logitemHK1,
@@ -582,6 +606,7 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueHK1,
                                           self.__defaultvalueHK1,
                                           self.__accessnameHK1,
+                                          self.__minvalueHK1,
                                           self.__hwtypeHK1]})
             elif "HK2" in shortname:
                 self.__data.update({"HK2": [self.__logitemHK2,
@@ -593,6 +618,7 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueHK2,
                                           self.__defaultvalueHK2,
                                           self.__accessnameHK2,
+                                          self.__minvalueHK2,
                                           self.__hwtypeHK2]})
 
             elif "HK3" in shortname:
@@ -605,6 +631,7 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueHK3,
                                           self.__defaultvalueHK3,
                                           self.__accessnameHK3,
+                                          self.__minvalueHK3,
                                           self.__hwtypeHK3]})
 
             elif "HK4" in shortname:
@@ -617,6 +644,7 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueHK4,
                                           self.__defaultvalueHK4,
                                           self.__accessnameHK4,
+                                          self.__minvalueHK4,
                                           self.__hwtypeHK4]})
 
             elif "WW" in shortname:
@@ -629,6 +657,7 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueWW,
                                           self.__defaultvalueWW,
                                           self.__accessnameWW,
+                                          self.__minvalueWW,
                                           self.__hwtypeWW]})
 
             elif "SO" in shortname:
@@ -641,6 +670,7 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueSO,
                                           self.__defaultvalueSO,
                                           self.__accessnameSO,
+                                          self.__minvalueSO,
                                           self.__hwtypeSO]})
 
             elif "DT" in shortname:
@@ -653,6 +683,7 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueDT,
                                           self.__defaultvalueDT,
                                           self.__accessnameDT,
+                                          self.__minvalueDT,
                                           self.__hwtypeDT]})
 
             else:
@@ -665,6 +696,7 @@ class cdata(ht_utils.clog):
                                           self.__maxvalueNN,
                                           self.__defaultvalueNN,
                                           self.__accessnameNN,
+                                          self.__minvalueNN,
                                           self.__hwtypeNN]})
 
         except (NameError, AttributeError) as e:
@@ -711,6 +743,24 @@ class cdata(ht_utils.clog):
             self._logging.critical(errorstr)
             return None
 
+    def getfiltered_sorted_items_with_values(self, nickname):
+        """
+        This function returns the sorted tuple-array of items and attached values
+         except undefined (out of range) temperaturvalues.
+        """
+        nickname = nickname.upper()[0:3]
+        all_logitem_names = self.getall_sorted_logitem_names(nickname)
+        rtntuple_array = []
+        defined = True
+        for itemname in all_logitem_names:
+            if not itemname == "hexdump":
+                internal_itemname = itemname.replace("_", "").lower()
+                index = int(self.__data[nickname][0][internal_itemname])
+                value = self.__data[nickname][1][index]
+                if self.Is_Value_defined((itemname, value)):
+                    rtntuple_array.append((itemname, value))
+        return rtntuple_array
+
     def getall_sorted_items_with_values(self, nickname):
         """
         This function returns the sorted tuple-array of items and attached values.
@@ -749,16 +799,36 @@ class cdata(ht_utils.clog):
             return None
 
     def getall_accessnames(self):
-        """
-        returns sorted list of access-names for all available nicknames.
-        """
+        """ returns sorted list of access-names for all available nicknames. """
         all_access_names = {}
         for nickname in self.__nickname:
             all_access_names.update({nickname:self.getall_sorted_accessnames(nickname)})
         return all_access_names
 
+    def getall_nicknames(self):
+        """ returns all nicknames """
+        return self.__nickname
+
+    def setall_values2default(self):
+        """ set all default-values for nicknames (without 'DT'). """
+        for nickname in self.__nickname:
+            if nickname.upper() in "DT":
+                pass
+            else:
+                for (item, value) in self.__data[nickname][0].items():
+                    defaultvalue = self.defaultvalue(nickname, item)
+                    self.update(nickname, logitem=item, value=defaultvalue, default=defaultvalue)
+
+    def showall_values(self):
+        """ printout all values for all nicknames """
+        for nickname in self.__nickname:
+            for (item, value) in self.__data[nickname][0].items():
+                defaultvalue = self.defaultvalue(nickname, item)
+                savedvalue=self.values(nickname, item)
+                print("showall_values(); nickname:{};item:{};value:{};default:{}".format(nickname, item, savedvalue, defaultvalue))
+
     def update(self, nickname, logitem, value=0.0, displayname="", unit="", hwtype="",
-               maxvalue=100.0, default=0.0, accessname="", set_parameter=""):
+               maxvalue=100.0, default=0.0, accessname="", set_parameter="", minvalue=None):
         """
         updates an already created data.member (logitem) with the new value or
          will create it, if not yet available.
@@ -770,6 +840,7 @@ class cdata(ht_utils.clog):
                                                                         {itemname:maxvalue},
                                                                         {itemname:defaultvalue},
                                                                         {itemname:accessname},
+                                                                        {itemname:minvalue},
                                                                         hardwaretype]}
         """
 
@@ -801,6 +872,9 @@ class cdata(ht_utils.clog):
                         self.__data[nickname][7][itemname] = default
                     if len(accessname) > 0:
                         self.__data[nickname][8][itemname] = accessname
+                    if minvalue != -1000.0:
+                        self.__data[nickname][9][itemname] = minvalue
+                        
                 else:
                     # add new item and value, index is the current array-length
                     # and is set to dir{itemname:index}
@@ -839,9 +913,11 @@ class cdata(ht_utils.clog):
 
                     self.__data[nickname][8].update({itemname: accessname})
 
+                    self.__data[nickname][9].update({itemname: minvalue})
+                       
 
                 if not hwtype == None and len(hwtype) > 0:
-                    self.__data[nickname][9] = hwtype
+                    self.__data[nickname][10] = hwtype
             else:
                 errorstr = "data.update();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
@@ -960,6 +1036,43 @@ class cdata(ht_utils.clog):
             print(errorstr)
             self._logging.critical(errorstr)
 
+    def minvalue(self, nickname, logitem):
+        """
+        returns the 'minvalue' for the logitem.
+         Value is set in configuration-file.
+         parameters 'nickname' and 'logitem' are required.
+        """
+        nickname = nickname.upper()[0:3]
+        itemname = logitem.replace("_", "").lower()
+        try:
+            if not len(nickname):
+                errorstr = "data.minvalue();Error;nickname: '{0}' undefined".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if not len(logitem):
+                errorstr = "data.minvalue();Error;logitem: '{0}' undefined".format(logitem)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+            if nickname in self.__nickname:
+                if itemname in self.__data[nickname][0]:
+                    #check for float- or int-value and return the correct type
+                    if "." in (str(self.__data[nickname][9][itemname])):
+                        return float(self.__data[nickname][9][itemname])
+                    else:
+                        return int(self.__data[nickname][9][itemname])
+                else:
+                    errorstr = "data.minvalue();Error;itemname:'{0}' not found".format(logitem)
+                    self._logging.critical(errorstr)
+                    raise NameError(errorstr)
+            else:
+                errorstr = "data.minvalue();Error;nickname:'{0}' not found".format(nickname)
+                self._logging.critical(errorstr)
+                raise NameError(errorstr)
+        except(KeyError, NameError, AttributeError) as e:
+            errorstr = "data.minvalue();Error;{0}".format(e.args[0])
+            print(errorstr)
+            self._logging.critical(errorstr)
+
     def maxvalue(self, nickname, logitem):
         """
         returns the 'maxvalue' for the logitem.
@@ -1016,11 +1129,15 @@ class cdata(ht_utils.clog):
                 raise NameError(errorstr)
             if nickname in self.__nickname:
                 if itemname in self.__data[nickname][0]:
-                    #check for float- or int-value and return the correct type
-                    if "." in (str(self.__data[nickname][7][itemname])):
-                        return float(self.__data[nickname][7][itemname])
+                    default = self.__data[nickname][7][itemname]
+                    if not default in ['"','""']:
+                        #check for float- or int-value and return the correct type
+                        if "." in str(default):
+                            return float(default)
+                        else:
+                            return int(default)
                     else:
-                        return int(self.__data[nickname][7][itemname])
+                        return default
                 else:
                     errorstr = "data.defaultvalue();Error;itemname:'{0}' not found".format(logitem)
                     self._logging.critical(errorstr)
@@ -1078,7 +1195,7 @@ class cdata(ht_utils.clog):
                 self._logging.critical(errorstr)
                 raise NameError(errorstr)
             if nickname in self.__nickname:
-                return str(self.__data[nickname][9])
+                return str(self.__data[nickname][10])
             else:
                 errorstr = "data.hardwaretype();Error;nickname:'{0}' not found".format(nickname)
                 self._logging.critical(errorstr)
@@ -1315,19 +1432,15 @@ class cdata(ht_utils.clog):
         """
         return self.__LoadpumpWW
 
-    def IsSecondHeater_SO(self):
-        """
-        returns True, if second heater in system is available else False.
-         Value is set in configuration-file.
-        """
-        return self.__SecondHeaterSO
 
-    def IsSecondBuffer_SO(self):
+    def IsSecondBuffer_SO(self, Secondbuffer=None):
         """
-        returns True, if extra water-buffer for second heater is available else False.
-         Value is set in configuration-file.
+        returns True, if second solar-buffer is available else False.
+         Value is set automatic on temperature sensor-detection.
         """
-        return self.__SecondBufferSO
+        if Secondbuffer != None:
+            self.__SecondBufferSO = bool(Secondbuffer)
+        return bool(self.__SecondBufferSO)
 
     def IsSecondCollectorValue_SO(self, SecondValue=None):
         """
@@ -1338,6 +1451,15 @@ class cdata(ht_utils.clog):
             self.__SecondCollect_ValueSO = bool(SecondValue)
         return bool(self.__SecondCollect_ValueSO)
 
+    def IsReloadbuffer_Option_IJ_SO(self, ReloadBuffer=None):
+        """
+        returns True, if ReloadBuffer is used else False.
+         Value is set if TS10 solarsensor is available.
+        """
+        if ReloadBuffer != None:
+            self.__ReloadBuffer_OptionIJ_SO = bool(ReloadBuffer)
+        return bool(self.__ReloadBuffer_OptionIJ_SO)
+
     def IsTempSensor_Hydrlic_Switch(self, SensorAvailable=None):
         """
         returns 1, if the Temperatursensor at Hydraulic Switch is available else 0.
@@ -1346,6 +1468,19 @@ class cdata(ht_utils.clog):
         if SensorAvailable != None:
             self.__TempSensor_HydraulicSwitch = int(SensorAvailable)
         return int(self.__TempSensor_HydraulicSwitch)
+
+    def Is_Value_defined(self, logitem_value_tuple):
+        """ returns True, if value is available and in valid range """
+        rtnvalue = True
+        (logitem, value) = logitem_value_tuple
+        if value == None or len(logitem) == 0:
+            rtnvalue = False
+        else:
+            # check for Temperatur-logitemname and test the range
+            if ('T' in logitem) and logitem[0] == 'T':
+                rtnvalue = ht_utils.cht_utils.IsTempInRange(self, value)
+#                print("logitem:{}; value:{}; rtnvalue:{}".format(logitem,value,rtnvalue))
+        return rtnvalue
 
     def HeaterBusType(self, bustype=None):
         """
@@ -1402,6 +1537,8 @@ if __name__ == "__main__":
     #                                                                     {itemname:unit},
     #                                                                     {itemname:maxvalue},
     #                                                                     {itemname:default},
+    #                                                                     {itemname:accessname},
+    #                                                                     {itemname:minvalue},
     #                                                                     hardwaretype]}
     #
     testtype = 1
@@ -1597,3 +1734,12 @@ if __name__ == "__main__":
             print("      Result OK -> Nickname:{0}; Logitem:{1}; Itemname:{2}; Set-Parameter:{3}".format(nickname, logitem, itemname, set_parameter))
         else:
             print("      Failed    -> Nickname:{0}; Logitem:{1}; Itemname:{2}; Set-Parameter:{3}".format(nickname, logitem, itemname, set_parameter))
+
+
+        print(""" -------------------------------------------""")
+        print(""" -- Set values to defaults               ---""")
+        print("""      before update""")
+        print("{0}".format(data.getall_sorted_items_with_values("SO")))
+        data.setall_values2default()
+        print("""      after  update""")
+        print("{0}".format(data.getall_sorted_items_with_values("SO")))

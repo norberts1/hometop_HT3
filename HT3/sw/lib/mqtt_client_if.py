@@ -24,6 +24,9 @@
 #                         mqtt_init() now with client_id parameter.
 # Ver:0.4    / 2021-06-14 LWT handling corrected (see issue: #16).
 #                         device_id added for topic-names.
+# Ver:0.4.1  / 2023-09-29 __TopicValue_modify() added and used
+#                          (see issue: #21)
+#                         send only defined values to broker.
 #################################################################
 
 import xml.etree.ElementTree as ET
@@ -34,13 +37,14 @@ import queue
 import ht_utils
 import logging
 import socket
+import data
 
 import paho.mqtt.client as paho
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.4"
-__date__    = "2021-06-14"
+__version__ = "0.4.1"
+__date__    = "2023-09-29"
 
 """
 #################################################################
@@ -586,6 +590,16 @@ class cmqtt_client(cmqtt_baseclass):
             rtnvalue = False
         return rtnvalue
 
+    def __TopicValue_modify(self, tag, value):
+        """returns value converted to string if 'tag' is matching,
+            else returns origin value
+        """
+        rtnvalue = value
+        if ('errorcode' in tag) or ('displaycode' in tag):
+            if int(value) > 0:
+                rtnvalue = ht_utils.cht_utils.IntegerToString(self, value)
+        return rtnvalue
+
     def __print_header(self):
         """prints the formatted topic/value-header for debugging."""
         if self.__printheader == True:
@@ -680,6 +694,7 @@ class cmqtt_client(cmqtt_baseclass):
             debug = True
         #setup topicnames
         self._create_topicnames()
+        
         try:
             # mqtt client initialisation
             init_OK = self.mqtt_init()
@@ -699,8 +714,8 @@ class cmqtt_client(cmqtt_baseclass):
         try:
             while self.loop() and init_OK:
                 # waiting for new data from rx_queue and process it
-                (nickname, values) = self.__data_queue_rx.get()
-                if (nickname, values) == (None, None):
+                (nickname, (logitems, values)) = self.__data_queue_rx.get()
+                if (nickname, (logitems, values)) == (None, (None, None)):
                     #stop processing if both values are none
                     break
 
@@ -714,14 +729,19 @@ class cmqtt_client(cmqtt_baseclass):
                 # processing data
                 for x in range(0, len(nickname_topic_names)):
                     topic = nickname_topic_names[x]
-                    if self.__Topicrequired(topic):
-                        if self.__IsNewValue(nickname, topic, values[x]):
-                            if debug:
-                                self.__print_header()
-                            # send data to broker
-                            self.publish_data(topic, values[x])
-                            # update old value for next comparision
-                            self.__UpdateOldValue(nickname, topic, values[x])
+                    try:
+                        if self.__Topicrequired(topic):
+                            if self.__IsNewValue(nickname, topic, values[x]):
+                                if debug:
+                                    self.__print_header()
+                                if data.cdata.Is_Value_defined(self, (logitems[x], values[x])):
+                                    # send only defined values to broker
+                                    self.publish_data(topic, self.__TopicValue_modify(topic, values[x]))
+                                # update old value for next comparision
+                                self.__UpdateOldValue(nickname, topic, values[x])
+                    except Exception as e:
+                        errorstr = "mqtt_client_if();Error:{}; topic:{}; value:{}".format(e, topic, values[x])
+                        self.cfg_logging().critical(errorstr)
 
                 self.__data_queue_rx.task_done()
         except:

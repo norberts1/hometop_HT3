@@ -36,6 +36,11 @@
 #               new item 'T-Soll Hydraulische Weiche' added.
 #               solar_draw_second_field() and handling added.
 #               gain_day_draw and gain_sum_draw added.
+# Ver:0.4    / Datum 22.10.2022 Solar 'V_ch_optimize' and
+#              'V_dhw_optimize' added
+# Ver:0.4.1  / 2023.09.29 solar item-names now matching to config.
+#              spare-names replaced with new config-names.
+#              solar_draw_second_field() modified/extended.
 #################################################################
 
 #
@@ -331,7 +336,7 @@ sub heater_device_draw($$$$)
 	#	},
 	#Rev.:0.1.7 ######### new using of 'V_spare_1'.
 		draw           => {
-			dsname => 'V_spare_1',
+			dsname => 'Vch_pump_power',
 			name	=> 'Heizungspumpenleistung',
 			color	=> '008d00',
 			legend => 'Heizungspumpenleistung (%)',
@@ -421,7 +426,7 @@ sub heater_device_draw($$$$)
 			draw	=> 'brennereinheiz_last',
 		},
 		draw		=> {
-			dsname => 'V_spare_2',
+			dsname => 'T_hyd_switch',
 			name	=> 'T_hydraulic_switch',
 			color	=> 'ff8080',
 			legend => $hydraulicSwitch_legendstr,
@@ -436,6 +441,8 @@ sub heater_device_draw($$$$)
 			format	=> '%3.1lf\l',
 			draw	=> 'T_hydraulic_switch_last',
 		},
+		comment		=> '  value\:-nan => Sensor nicht vorhanden ',
+		comment		=> ' \l',
 	);
 } # heater_device_draw()
 ################################################################
@@ -464,16 +471,113 @@ sub domestic_hotwater_draw($$$)
 			back => '#aaccff',
 			canvas => '#d5e5ff',
 		},
+		# 'T_soll'
 		draw		=> {
 			dsname	=> 'T_soll',
-			legend	=> 'T-Soll\l',
-			color	=> 'ff0000'
+			legend	=> 'T-Soll',
+			color	=> 'ff0000',
+			name	=> 'WW_soll'
+		},
+		# vdef for calculating Maximum, Minimum of 'T_soll'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "WW_soll_min",
+			vdef	=> "WW_soll,MINIMUM",
 		},
 		draw		=> {
-			dsname	=> 'T_ist',
-			legend	=> 'T-Ist\l',
-			color	=> '0000ff'
+			type	=> "hidden",
+			name	=> "WW_soll_max",
+			vdef	=> "WW_soll,MAXIMUM",
 		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "WW_soll_last",
+			vdef	=> "WW_soll,LAST"
+		},
+		gprint		=> {
+			format	=> '    min\: %03.1lf',
+			draw	=> 'WW_soll_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %03.1lf',
+			draw	=> 'WW_soll_max',
+		},
+		gprint		=> {
+			format	=> 'last\: %03.1lf\l',
+			draw	=> 'WW_soll_last',
+		},
+		# 'T_ist'
+		draw		=> {
+			dsname	=> 'T_ist',
+			legend	=> 'T-Ist',
+			color	=> '0000ff',
+			name	=> 'WW_ist'
+		},
+		# vdef for calculating Maximum, Minimum of 'T_ist'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "WW_ist_min",
+			vdef	=> "WW_ist,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "WW_ist_max",
+			vdef	=> "WW_ist,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "WW_ist_last",
+			vdef	=> "WW_ist,LAST"
+		},
+		gprint		=> {
+			format	=> '     min\: %03.1lf',
+			draw	=> 'WW_ist_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %03.1lf',
+			draw	=> 'WW_ist_max',
+		},
+		gprint		=> {
+			format	=> 'last\: %03.1lf\l',
+			draw	=> 'WW_ist_last',
+		},
+		draw		=> {
+			dsname	=> 'T_speicher',
+			legend	=> 'T-Speicher',
+			name	=> 'Speicher',
+			thickness => 2,
+			color	=> '00ff00'
+		},
+		# vdef for calculating Maximum, Minimum of 'Speicher'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Speicher_min",
+			vdef	=> "Speicher,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Speicher_max",
+			vdef	=> "Speicher,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Speicher_last",
+			vdef	=> "Speicher,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\: %3.1lf',
+			draw	=> 'Speicher_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %3.1lf',
+			draw	=> 'Speicher_max',
+		},
+		gprint		=> {
+			format	=> 'last\: %3.1lf\l',
+			draw	=> 'Speicher_last',
+		},
+
+
 		draw           => {
 			dsname => 'V_WW_erzeugung',
 			type	=> "hidden",
@@ -496,42 +600,7 @@ sub domestic_hotwater_draw($$$)
 			legend  => 'Speichertemperatur OK\l',
 			cdef	=> "WW_temp_OK,5,*"
 		},
-		draw		=> {
-			dsname	=> 'T_speicher',
-			legend	=> 'T-Speicher min\:',
-			name	=> 'Speicher',
-			thickness => 2,
-			color	=> '00ff00'
-		},
-		# vdef for calculating Maximum, Minimum of 'Speicher'
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Speicher_min",
-			vdef	=> "Speicher,MINIMUM",
-		},
-		gprint		=> {
-			format	=> '%3.1lf',
-		draw	=> 'Speicher_min',
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Speicher_max",
-			vdef	=> "Speicher,MAXIMUM",
-		},
-		gprint		=> {
-			format	=> 'max\:%3.1lf',
-			draw	=> 'Speicher_max',
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Speicher_last",
-			vdef	=> "Speicher,LAST"
-		},
-		comment		=> ' last\:',
-		gprint		=> {
-			format	=> '%2.1lf\l',
-			draw	=> 'Speicher_last',
-		},
+
 		draw		=> {
 			dsname	=> 'C_betriebs_zeit',
 			name	=> 'BZeit',
@@ -543,20 +612,15 @@ sub domestic_hotwater_draw($$$)
 			vdef	=> "BZeit,LAST",
 		},
 		gprint		=> {
-			format	=> '  Betriebszeit  \:%5.1lf Stunden',
+			format	=> '  Betriebszeit  \:%5.1lf Stunden\l',
 			draw	=> 'BZeit_last',
 		},
-		comment		=> ' \s',
-		comment		=> ' \s',
-		comment		=> ' \s',
-		comment		=> ' \s',
-		comment		=> ' \s',
-		comment		=> ' \s',
-		comment		=> ' \s',
-		comment		=> ' \s',
-		comment		=> ' \s',
-		comment		=> ' \s',
-		comment		=> ' \s',
+		comment		=> ' \l',
+		comment		=> ' \l',
+		comment		=> ' \l',
+		comment		=> ' \l',
+		comment		=> '  value\:-nan => Sensor nicht vorhanden ',
+		comment		=> ' \l',
 	);
 } #domestic_hotwater_draw()
 ################################################################
@@ -600,27 +664,26 @@ sub solar_draw($$$)
 			name	=> "speiunten_min",
 			vdef	=> "speiunten,MINIMUM",
 		},
-		gprint		=> {
-			format	=> 'min\:%03.1lf',
-			draw	=> 'speiunten_min',
-		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "speiunten_max",
 			vdef	=> "speiunten,MAXIMUM",
-		},
-		gprint		=> {
-			format	=> 'max\:%03.1lf',
-			draw	=> 'speiunten_max',
 		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "speiunten_last",
 			vdef	=> "speiunten,LAST"
 		},
-		comment		=> ' last\:',
 		gprint		=> {
-			format	=> '%03.1lf\l',
+			format	=> 'min\: %03.1lf',
+			draw	=> 'speiunten_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %03.1lf',
+			draw	=> 'speiunten_max',
+		},
+		gprint		=> {
+			format	=> 'last\: %03.1lf\l',
 			draw	=> 'speiunten_last',
 		},
 		comment	=>	'\j',
@@ -644,27 +707,26 @@ sub solar_draw($$$)
 			name	=> "kollektor_min",
 			vdef	=> "kollektor,MINIMUM",
 		},
-		gprint		=> {
-			format	=> 'min\:%03.1lf',
-			draw	=> 'kollektor_min',
-		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "kollektor_max",
 			vdef	=> "kollektor,MAXIMUM",
-		},
-		gprint		=> {
-			format	=> 'max\:%03.1lf',
-			draw	=> 'kollektor_max',
 		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "kollektor_last",
 			vdef	=> "kollektor,LAST"
 		},
-		comment		=> ' last\:',
 		gprint		=> {
-			format	=> '%03.1lf\l',
+			format	=> 'min\: %03.1lf',
+			draw	=> 'kollektor_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %03.1lf',
+			draw	=> 'kollektor_max',
+		},
+		gprint		=> {
+			format	=> 'last\: %03.1lf\l',
 			draw	=> 'kollektor_last',
 		},
 		draw		=> {
@@ -672,10 +734,9 @@ sub solar_draw($$$)
 			thickness => 1,
 			color	=> '00ffcc',
 		},
-
 		##### Solarpumpe #####
 		draw		=> {
-			dsname	=> 'V_solar_pumpe',
+			dsname	=> 'V_sol_pump',
 			type	=> "hidden",
 			name	=> 'solpumpe'  # name fuer den hidden draw
 		},
@@ -683,10 +744,82 @@ sub solar_draw($$$)
 			color	=> 'ff6600',
 			legend	=> 'Solarpumpe an\l',
 			type	=> 'area',
-			cdef	=> "solpumpe,5,*"
+			cdef	=> "solpumpe,10,*"
 		},
-		comment		=> ' \s',
-		comment		=> ' \s',
+		##### Solar-optimizations #####
+		draw		=> {
+			dsname	=> 'V_ch_optimize',
+			legend	=> 'Optim.Faktor Heizung ',
+			thickness => 2,
+			color	=> '0f660f',
+			name	=> 'sol_ch_optimize',
+		},
+		# vdef for calculating Maximum, Minimum of 'ch_influence'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "sol_ch_optimize_min",
+			vdef	=> "sol_ch_optimize,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "sol_ch_optimize_max",
+			vdef	=> "sol_ch_optimize,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "sol_ch_optimize_last",
+			vdef	=> "sol_ch_optimize,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\: %2.0lf',
+			draw	=> 'sol_ch_optimize_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %2.0lf',
+			draw	=> 'sol_ch_optimize_max',
+		},
+		gprint		=> {
+			format	=> 'last\: %2.0lf\l',
+			draw	=> 'sol_ch_optimize_last',
+		},
+
+		draw		=> {
+			dsname	=> 'V_dhw_optimize',
+			legend	=> 'Optim.Faktor DHW     ',
+			thickness => 2,
+			color	=> '0f66ff',
+			name	=> 'sol_dhw_optimize',
+		},
+		# vdef for calculating Maximum, Minimum of 'dhw_optimize'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "sol_dhw_optimize_min",
+			vdef	=> "sol_dhw_optimize,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "sol_dhw_optimize_max",
+			vdef	=> "sol_dhw_optimize,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "sol_dhw_optimize_last",
+			vdef	=> "sol_dhw_optimize,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\: %2.0lf',
+			draw	=> 'sol_dhw_optimize_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %2.0lf',
+			draw	=> 'sol_dhw_optimize_max',
+		},
+		gprint		=> {
+			format	=> 'last\: %2.0lf\l',
+			draw	=> 'sol_dhw_optimize_last',
+		},
+
+		comment		=> '\l',
 	);
 } # solar_draw()
 ################################################################
@@ -794,7 +927,8 @@ sub solar_yield_draw($$$)
 			format	=> '  Laufzeit Pumpe    \:   %5.1lf Stunden',
 			draw	=> 'pumpenlauf_draw',
 		},
-		comment		=> ' \s',
+		comment		=> ' \l',
+		comment		=> ' \l',
 		comment		=> ' \s'
 	);
 } # solar_yield_draw()
@@ -808,11 +942,15 @@ sub heater_cricuit_draw($$$$$)
 	my $DB_heizkreis     = File::Spec->catfile($sourcepath, $rrdtool_filename);
 	my $heizkreis_rrdh   = RRDTool::OO->new(file => $DB_heizkreis);
 	my $ImageHK = File::Spec->catfile($targetpath, $draw_filename);
-
+	my $draw_mischer_text;
+	
 	my $draw_titel       = "Heizkreis:".$hc_nr." (ohne Mischer)";
     if ($hc_mixed > 0)
     {
         $draw_titel      = "Heizkreis:".$hc_nr." (mit Mischer)";
+        $draw_mischer_text = 'T-Mischer          ';
+    } else {
+        $draw_mischer_text = 'keine Mischer-Temp.';
     }
 
     my $str_tempniveau = 'Temperatur Niveau (3=Heizen 2=Sparen 1=Frost)\l';
@@ -837,7 +975,6 @@ sub heater_cricuit_draw($$$$$)
 			back => '#ffeeaa',
 			canvas => '#fff6d5',
 		},
-#Rev.:0.2   ######### 'Betriebsart' changed to 'TemperaturNiveau'
 		draw		=> {
 			dsname	=> 'V_tempera_niveau',
 			name	=> 'TemperaturNiveau',
@@ -850,49 +987,45 @@ sub heater_cricuit_draw($$$$$)
 			legend	=> $str_tempniveau,
 			thickness => 2,
 		},
-########### neu anfang ######################
-# T-Soll (Vorlauf)
 		draw		=> {
-			dsname	=> 'V_spare_1',
+			dsname	=> 'T_flow_desired',
 			name	=> 'TSollVorlauf_HK',
-			legend	=> 'T-Soll (Vorlauf)   min\:',
+			legend	=> 'T-Soll (Vorlauf)',
 			color	=> 'ffa000'
 		},
 			# vdef for calculating Maximum, Minimum of 'T-Soll (Vorlauf)'
-			draw		=> {
-				type	=> "hidden",
-				name	=> "TSollVorlauf_HK_min",
-				vdef	=> "TSollVorlauf_HK,MINIMUM",
-			},
-			gprint	=> {
-				format	=> '%2.1lf',
-				draw	=> 'TSollVorlauf_HK_min',
-			},
-			draw		=> {
-				type	=> "hidden",
-				name	=> "TSollVorlauf_HK_max",
-				vdef	=> "TSollVorlauf_HK,MAXIMUM",
-			},
-			comment		=> 'max\:',
-			gprint	=> {
-				format	=> '%2.1lf',
-				draw	=> 'TSollVorlauf_HK_max',
-			},
-		comment		=> 'last\:',
+		draw		=> {
+			type	=> "hidden",
+			name	=> "TSollVorlauf_HK_min",
+			vdef	=> "TSollVorlauf_HK,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "TSollVorlauf_HK_max",
+			vdef	=> "TSollVorlauf_HK,MAXIMUM",
+		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "TSollVorlauf_HK_last",
 			vdef	=> "TSollVorlauf_HK,LAST"
 		},
 		gprint	=> {
-			format	=> '%2.1lf\l',
+			format	=> '   min\: %2.1lf',
+			draw	=> 'TSollVorlauf_HK_min',
+		},
+		gprint	=> {
+			format	=> 'max\: %2.1lf',
+			draw	=> 'TSollVorlauf_HK_max',
+		},
+		gprint	=> {
+			format	=> 'last\: %2.1lf\l',
 			draw	=> 'TSollVorlauf_HK_last',
 		},
-########### neu ende #########################
+
 		draw		=> {
 			dsname	=> 'T_soll_HK',
 			name	=> 'TSoll_HK',
-			legend	=> 'T-Soll (gewünscht) min\:',
+			legend	=> 'T-Soll (gewünscht)',
 			color	=> 'ff0000'
 		},
 		# vdef for calculating Maximum, Minimum of 'T-Soll (gewünscht)'
@@ -901,40 +1034,33 @@ sub heater_cricuit_draw($$$$$)
 			name	=> "TSoll_HK_min",
 			vdef	=> "TSoll_HK,MINIMUM",
 		},
-		gprint		=> {
-			format	=> '%2.1lf',
-			draw	=> 'TSoll_HK_min',
-		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "TSoll_HK_max",
 			vdef	=> "TSoll_HK,MAXIMUM",
-		},
-		comment		=> 'max\:',
-			gprint		=> {
-			format	=> '%2.1lf',
-			draw	=> 'TSoll_HK_max',
 		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "TSoll_HK_last",
 			vdef	=> "TSoll_HK,LAST"
 		},
-		comment		=> 'last\:',
 		gprint		=> {
-			format	=> '%2.1lf\l',
+			format	=> ' min\: %2.1lf',
+			draw	=> 'TSoll_HK_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %2.1lf',
+			draw	=> 'TSoll_HK_max',
+		},
+		gprint		=> {
+			format	=> 'last\: %2.1lf\l',
 			draw	=> 'TSoll_HK_last',
 		},
 		draw		=> {
 			dsname	=> 'T_ist_HK',
 			name	=> 'TIst_HK',
-			legend	=> 'T-Ist  (Raum)      min\:',
+			legend	=> 'T-Ist  (Raum)',
 			color	=> '00ff00'
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "TIst_HK_last",
-			vdef	=> "TIst_HK,LAST"
 		},
 		# vdef for calculating Maximum, Minimum of 'T-Ist  (Raum)'
 		draw		=> {
@@ -942,23 +1068,26 @@ sub heater_cricuit_draw($$$$$)
 			name	=> "TIst_HK_HK_min",
 			vdef	=> "TIst_HK,MINIMUM",
 		},
-		gprint		=> {
-			format	=> '%2.1lf',
-			draw	=> 'TIst_HK_HK_min',
-		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "TIst_HK_max",
 			vdef	=> "TIst_HK,MAXIMUM",
 		},
-		comment		=> 'max\:',
+		draw		=> {
+			type	=> "hidden",
+			name	=> "TIst_HK_last",
+			vdef	=> "TIst_HK,LAST"
+		},
 		gprint		=> {
-			format	=> '%2.1lf',
+			format	=> '      min\: %2.1lf',
+			draw	=> 'TIst_HK_HK_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %2.1lf',
 			draw	=> 'TIst_HK_max',
 		},
-		comment		=> 'last\:',
 		gprint		=> {
-			format	=> '%2.1lf\l',
+			format	=> 'last\: %2.1lf\l',
 			draw	=> 'TIst_HK_last',
 		},
 
@@ -1007,47 +1136,46 @@ sub heater_cricuit_draw($$$$$)
 		draw		=> {
 			dsname	=> 'T_vorlauf_misch_HK',
 			name	=> 'TMischer_HK',
-			legend	=> 'T-Mischer          min\:',
+			legend	=> $draw_mischer_text, #'T-Mischer',
 			color	=> 'ffc000'
 		},
 		# vdef for calculating Maximum, Minimum of 'T-Mischer'
 		draw		=> {
-		type	=> "hidden",
-		name	=> "TMischer_HK_min",
-		vdef	=> "TMischer_HK,MINIMUM",
-		},
-		gprint		=> {
-			format	=> '%2.1lf',
-			draw	=> 'TMischer_HK_min',
+			type	=> "hidden",
+			name	=> "TMischer_HK_min",
+			vdef	=> "TMischer_HK,MINIMUM",
 		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "TMischer_HK_max",
 			vdef	=> "TMischer_HK,MAXIMUM",
 		},
-		comment		=> 'max\:',
-		gprint		=> {
-			format	=> '%2.1lf',
-			draw	=> 'TMischer_HK_max',
-		},
 		draw		=> {
 			type	=> "hidden",
 			name	=> "TMischer_HK_last",
 			vdef	=> "TMischer_HK,LAST"
 		},
-		comment		=> 'last\:',
 		gprint		=> {
-			format	=> '%2.1lf\l',
+			format	=> 'min\: %2.1lf',
+			draw	=> 'TMischer_HK_min',
+		},
+		gprint		=> {
+			format	=> 'max\: %2.1lf',
+			draw	=> 'TMischer_HK_max',
+		},
+		gprint		=> {
+			format	=> 'last\: %2.1lf\l',
 			draw	=> 'TMischer_HK_last',
 		},
 # Heizkreispumpe
 		draw		=> {
-			dsname	=> 'V_spare_2',
+			dsname	=> 'V_hk_pumpe',
 			name	=> 'HK_pumpe',
 			legend	=> 'HK-Pumpe',
 			color	=> 'fb00f0',
 			type	=> 'area',
 		},
+		comment		=> ' \l',
 	);
 }
 ###########################
@@ -1071,21 +1199,21 @@ sub solar_draw_second_field($$$)
 		end				=> $end_time,
 		width			=> $mywidth,
 		height		=> $myheight,
-		title	=> '2. Wärmequelle'.$timestring,
+		title	=> '2. Wärmequelle/Speicher'.$timestring,
 		color			=> {
 			back => '#c6e9af',
 			canvas => '#e3f4d7',
 		},
 		##### Second Kollektor #####
 		draw	=> {
-			dsname	=> 'V_spare_1',
+			dsname	=> 'T_kollektor2',
 			color	=> 'cccc00',
 #			type	=> 'area',
 			name	=> '2_kollektor'  # name fuer den hidden draw
 		},
 		draw		=> {
-			dsname	=> 'V_spare_1',
-			legend	=> '2. T-Kollektor          ',
+			dsname	=> 'T_kollektor2',
+			legend	=> 'T-Kollektor2           (TS 7)',
 			thickness => 2,
 			color	=> 'ffcc00'
 		},
@@ -1113,7 +1241,7 @@ sub solar_draw_second_field($$$)
 			name	=> "2_kollektor_last",
 			vdef	=> "2_kollektor,LAST"
 		},
-		comment		=> ' last\:',
+		comment		=> 'last\:',
 		gprint		=> {
 			format	=> '%03.1lf\l',
 			draw	=> '2_kollektor_last',
@@ -1121,18 +1249,211 @@ sub solar_draw_second_field($$$)
 
 		##### second pump #####
 		draw		=> {
-			dsname	=> 'V_spare_2',
+			dsname	=> 'Vsol_pump2',
 			type	=> "hidden",
 			name	=> '2_solpumpe'  # name fuer den hidden draw
 		},
 		draw		=> {
 			color	=> 'ff6600',
-			legend	=> '2. Pumpe an\l',
+			legend	=> 'Pumpe2 an              (PS 2)\l',
 			type	=> 'area',
 			cdef	=> "2_solpumpe,5,*"
 		},
-		comment		=> ' \s',
-		comment		=> ' \s',
+		# 'Tspeicher1_3_oben'
+		draw		=> {
+			dsname	=> 'Tsp1_3_TS10',
+			color	=> '0088aa',
+			name	=> 'Tspeicher1_3_oben',
+			legend	=> 'T-Solarspeich.1/3 oben (TS10)',
+			thickness => 2,
+		},
+		# vdef for calculating Maximum, Minimum of 'Tspeicher1_3_oben'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicher1_3_oben_min",
+			vdef	=> "Tspeicher1_3_oben,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicher1_3_oben_max",
+			vdef	=> "Tspeicher1_3_oben,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicher1_3_oben_last",
+			vdef	=> "Tspeicher1_3_oben,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\:%03.1lf',
+			draw	=> 'Tspeicher1_3_oben_min',
+		},
+		gprint		=> {
+			format	=> 'max\:%03.1lf',
+			draw	=> 'Tspeicher1_3_oben_max',
+		},
+		gprint		=> {
+			format	=> 'last\:%03.1lf\l',
+			draw	=> 'Tspeicher1_3_oben_last',
+		},
+		# 'Tspeicherx_mitte'
+		draw		=> {
+			dsname	=> 'Tspeicher_mid',
+			color	=> '00cc55',
+			name	=> 'Tspeicherx_mitte',
+			legend	=> 'T-Solarspeicherx mitte (TS 3)',
+			thickness => 5,
+		},
+		# vdef for calculating Maximum, Minimum of 'Tspeicherx_mitte'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicherx_mitte_min",
+			vdef	=> "Tspeicherx_mitte,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicherx_mitte_max",
+			vdef	=> "Tspeicherx_mitte,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicherx_mitte_last",
+			vdef	=> "Tspeicherx_mitte,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\:%03.1lf',
+			draw	=> 'Tspeicherx_mitte_min',
+		},
+		gprint		=> {
+			format	=> 'max\:%03.1lf',
+			draw	=> 'Tspeicherx_mitte_max',
+		},
+		gprint		=> {
+			format	=> 'last\:%03.1lf\l',
+			draw	=> 'Tspeicherx_mitte_last',
+		},
+		# 'Tspeicher2_unten'
+		draw		=> {
+			dsname	=> 'Tspeicher2_unten',
+			color	=> '00ff88',
+			name	=> 'Tspeicher2_unten',
+			legend	=> 'T-Solarspeicher2 unten (TS 5)',
+			type	=> 'area',
+		},
+		# vdef for calculating Maximum, Minimum of 'Tspeicher2_unten'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicher2_unten_min",
+			vdef	=> "Tspeicher2_unten,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicher2_unten_max",
+			vdef	=> "Tspeicher2_unten,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicher2_unten_last",
+			vdef	=> "Tspeicher2_unten,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\:%03.1lf',
+			draw	=> 'Tspeicher2_unten_min',
+		},
+		gprint		=> {
+			format	=> 'max\:%03.1lf',
+			draw	=> 'Tspeicher2_unten_max',
+		},
+		gprint		=> {
+			format	=> 'last\:%03.1lf\l',
+			draw	=> 'Tspeicher2_unten_last',
+		},
+		# 'Tmix_TS4'
+		draw		=> {
+			dsname	=> 'Tmix_TS4',
+			color	=> '444455',
+			name	=> 'Tmischer_TS4',
+			legend	=> 'T-Heiz Mischer         (TS 4)',
+			thickness => 2,
+		},
+		# vdef for calculating Maximum, Minimum of 'Tmix_TS4'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tmischer_TS4_min",
+			vdef	=> "Tmischer_TS4,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tmischer_TS4_max",
+			vdef	=> "Tmischer_TS4,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tmischer_TS4_last",
+			vdef	=> "Tmischer_TS4,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\:%03.1lf',
+			draw	=> 'Tmischer_TS4_min',
+		},
+		gprint		=> {
+			format	=> 'max\:%03.1lf',
+			draw	=> 'Tmischer_TS4_max',
+		},
+		gprint		=> {
+			format	=> 'last\:%03.1lf\l',
+			draw	=> 'Tmischer_TS4_last',
+		},
+		# Theat_return_TS8
+		draw		=> {
+			dsname	=> 'Theat_return_TS8',
+			color	=> '0022cc',
+			name	=> 'Theiz_return_TS8',
+			legend	=> 'T-Heiz Ret./Speich.3 (TS8/11)',
+			thickness => 1,
+		},
+		# vdef for calculating Maximum, Minimum of 'Theat_return_TS8'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Theiz_return_TS8_min",
+			vdef	=> "Theiz_return_TS8,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Theiz_return_TS8_max",
+			vdef	=> "Theiz_return_TS8,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Theiz_return_TS8_last",
+			vdef	=> "Theiz_return_TS8,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\:%03.1lf',
+			draw	=> 'Theiz_return_TS8_min',
+		},
+		gprint		=> {
+			format	=> 'max\:%03.1lf',
+			draw	=> 'Theiz_return_TS8_max',
+		},
+		gprint		=> {
+			format	=> 'last\:%03.1lf\l',
+			draw	=> 'Theiz_return_TS8_last',
+		},
+		# Vsol_pump2_reload
+		draw		=> {
+			dsname	=> 'Vsol_pump2_reload',
+			name	=> 'pumpe2_reload',
+			type	=> 'hidden',
+		},
+		draw		=> {
+			color	=> 'aa6600',
+			type	=> 'area',
+			thickness => 5,
+			legend	=> 'Pumpe Reload Speicher  (PS 7)\l',
+			cdef	=> "pumpe2_reload,5,*"
+		},
+		comment		=> '  value\:-nan => Sensor nicht vorhanden ',
+		comment		=> ' \l',
 	);
 } # solar_draw_second_field()
 ################################################################
