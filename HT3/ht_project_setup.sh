@@ -20,6 +20,7 @@
  #################################################################
  # rev.: 0.2 date: 2023-03-17
  # rev.: 0.3 date: 2023-03-22 export 'LANGUGAGE' added for perl-install.
+ # rev.: 0.4 date: 2023-10-06 scripts renamed from '__xyz' to '.xyz'.
  # 
  #################################################################
  #                                                               #
@@ -52,7 +53,7 @@ if [ ! ${LC_ALL} ]; then
 fi
 
 echo "+==== Setup OS               ====+"
- ./__pre_setup.sh
+ ./.pre_setup.sh
 if [ $? -ne 0 ]; then
   echo "!!! Error in 'pre_setup.sh' occurred, check outputs !!!"
   exit 1
@@ -71,37 +72,55 @@ if [ -d ~/.hometop/old_saved/HT3 ]; then
 fi
 
 # save current project-folder if available and update requested
-clone_ht_release=$(grep -e VERSION /tmp/hometop/HT3/sw/lib/ht_release.py) >/dev/null
+git_ht_release=$(grep -e VERSION /tmp/hometop/HT3/sw/lib/ht_release.py) >/dev/null
 if [ -d ~/HT3 ]; then
- # compare release-infos between clone and current release
- sdiff -s /tmp/hometop/HT3/sw/lib/ht_release.py ~/HT3/sw/lib/ht_release.py >/dev/null
- if [ $? -eq 0 ]; then
+ old_ht_release=$(grep -e VERSION ~/HT3/sw/lib/ht_release.py) >/dev/null
+ # compare release-infos between git- and current- release
+ if [[ "$old_ht_release" == "$git_ht_release" ]]; then
    echo
    echo "------------------------------------------------"
-   echo " Release: ${clone_ht_release} already installed."
+   echo " Release: ${git_ht_release} already installed."
    echo "  Installation anyway (y/n) ?"
    read installation_requested
    echo
    if [ "$installation_requested" = "n" ]; then
-     echo " No Installation requested, revision: ${clone_ht_release} already installed"
+     echo " No Installation requested, revision: ${git_ht_release} already installed"
      exit 0
    fi
  fi
 
+ rm -f ~/HT3/__pre_setup.sh >/dev/null
+ rm -f ~/HT3/__post_setup.sh >/dev/null
+ rm -f ~/HT3/__mqtt_setup.sh >/dev/null
  mkdir -p ~/.hometop/old_saved/HT3/sw/etc
  mkdir -p ~/.hometop/old_saved/HT3/sw/lib
  mkdir -p ~/.hometop/old_saved/HT3/sw/var/log
  mkdir -p ~/.hometop/old_saved/HT3/docu
  mkdir -p ~/.hometop/old_saved/HT3/hw
- mv ~/HT3/sw/etc ~/.hometop/old_saved/HT3/sw;
- mv ~/HT3/sw/lib ~/.hometop/old_saved/HT3/sw;
- mv ~/HT3/sw/var/log ~/.hometop/old_saved/HT3/sw/var;
- mv ~/HT3/docu ~/.hometop/old_saved/HT3;
- mv ~/HT3/hw ~/.hometop/old_saved/HT3;
+ mv ~/HT3/sw/etc ~/.hometop/old_saved/HT3/sw >/dev/null
+ mv ~/HT3/sw/lib ~/.hometop/old_saved/HT3/sw >/dev/null
+ mv ~/HT3/sw/var/log ~/.hometop/old_saved/HT3/sw/var >/dev/null
+ mv ~/HT3/docu ~/.hometop/old_saved/HT3 >/dev/null
+ mv ~/HT3/hw ~/.hometop/old_saved/HT3 >/dev/null
+
+ ht_release_db_update_required='VERSION = "0.7"'
+
+ if [[ "$old_ht_release" < "$ht_release_db_update_required" ]]; then
+    if [[ -f ~/HT3/sw/var/databases/HT3_db_rrd_heizgeraet.rrd ]]; then
+        echo "----------------------------------------------------"
+        echo "!! The database size and content has changed      !!"
+        echo "!! -> must be manually deleted or renamed      <- !!"
+        echo "!! -> step into folder: ~/HT3/sw/var/databases <- !!"
+        echo "----------------------------------------------------"
+        exit 0
+    else
+        echo ""
+    fi
+ fi
 fi
 
 echo "----------------------------------------------"
-echo " Installation of revision: ${clone_ht_release}"
+echo " Installation of revision: ${git_ht_release}"
 
 # copy it to target-folder, if already available then update it
 cp -a -u /tmp/hometop/HT3 ~/
@@ -110,13 +129,13 @@ echo -n "is mqtt-interface required (y/n) ?"
 read mqtt_required
 echo
 if [ "$mqtt_required" = "y" ]; then
- ./__mqtt_setup.sh
+ ./.mqtt_setup.sh
 fi
 
 currentuser=$(whoami)
 if expr "${currentuser}" : '^\(pi\)' >/dev/null
   then
-    ./__post_setup.sh
+    ./.post_setup.sh
   else
     echo " >--- Setup stopped, currently NOT default user:pi                                <---"
     echo " >---  Manually modification of service-scripts required for user: ${currentuser} <---"
