@@ -41,6 +41,8 @@
 # Ver:0.4.1  / 2023.09.29 solar item-names now matching to config.
 #              spare-names replaced with new config-names.
 #              solar_draw_second_field() modified/extended.
+# Ver:0.4.2  / 2023.10.23 solar_draw_second_field() drawing modified.
+# Ver:0.4.3  / 2023.10.28 '3Weg Mischer-Pos. VS3' added.
 #################################################################
 
 #
@@ -1259,78 +1261,6 @@ sub solar_draw_second_field($$$)
 			type	=> 'area',
 			cdef	=> "2_solpumpe,5,*"
 		},
-		# 'Tspeicher1_3_oben'
-		draw		=> {
-			dsname	=> 'Tsp1_3_TS10',
-			color	=> '0088aa',
-			name	=> 'Tspeicher1_3_oben',
-			legend	=> 'T-Solarspeich.1/3 oben (TS10)',
-			thickness => 2,
-		},
-		# vdef for calculating Maximum, Minimum of 'Tspeicher1_3_oben'
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Tspeicher1_3_oben_min",
-			vdef	=> "Tspeicher1_3_oben,MINIMUM",
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Tspeicher1_3_oben_max",
-			vdef	=> "Tspeicher1_3_oben,MAXIMUM",
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Tspeicher1_3_oben_last",
-			vdef	=> "Tspeicher1_3_oben,LAST"
-		},
-		gprint		=> {
-			format	=> 'min\:%03.1lf',
-			draw	=> 'Tspeicher1_3_oben_min',
-		},
-		gprint		=> {
-			format	=> 'max\:%03.1lf',
-			draw	=> 'Tspeicher1_3_oben_max',
-		},
-		gprint		=> {
-			format	=> 'last\:%03.1lf\l',
-			draw	=> 'Tspeicher1_3_oben_last',
-		},
-		# 'Tspeicherx_mitte'
-		draw		=> {
-			dsname	=> 'Tspeicher_mid',
-			color	=> '00cc55',
-			name	=> 'Tspeicherx_mitte',
-			legend	=> 'T-Solarspeicherx mitte (TS 3)',
-			thickness => 5,
-		},
-		# vdef for calculating Maximum, Minimum of 'Tspeicherx_mitte'
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Tspeicherx_mitte_min",
-			vdef	=> "Tspeicherx_mitte,MINIMUM",
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Tspeicherx_mitte_max",
-			vdef	=> "Tspeicherx_mitte,MAXIMUM",
-		},
-		draw		=> {
-			type	=> "hidden",
-			name	=> "Tspeicherx_mitte_last",
-			vdef	=> "Tspeicherx_mitte,LAST"
-		},
-		gprint		=> {
-			format	=> 'min\:%03.1lf',
-			draw	=> 'Tspeicherx_mitte_min',
-		},
-		gprint		=> {
-			format	=> 'max\:%03.1lf',
-			draw	=> 'Tspeicherx_mitte_max',
-		},
-		gprint		=> {
-			format	=> 'last\:%03.1lf\l',
-			draw	=> 'Tspeicherx_mitte_last',
-		},
 		# 'Tspeicher2_unten'
 		draw		=> {
 			dsname	=> 'Tspeicher2_unten',
@@ -1366,6 +1296,78 @@ sub solar_draw_second_field($$$)
 		gprint		=> {
 			format	=> 'last\:%03.1lf\l',
 			draw	=> 'Tspeicher2_unten_last',
+		},
+		# 'Tspeicherx_mitte'
+		draw		=> {
+			dsname	=> 'Tspeicher_mid',
+			color	=> '008000',
+			name	=> 'Tspeicherx_mitte',
+			legend	=> 'T-Solarspeicherx mitte (TS 3)',
+			thickness => 2,
+		},
+		# vdef for calculating Maximum, Minimum of 'Tspeicherx_mitte'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicherx_mitte_min",
+			vdef	=> "Tspeicherx_mitte,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicherx_mitte_max",
+			vdef	=> "Tspeicherx_mitte,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicherx_mitte_last",
+			vdef	=> "Tspeicherx_mitte,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\:%03.1lf',
+			draw	=> 'Tspeicherx_mitte_min',
+		},
+		gprint		=> {
+			format	=> 'max\:%03.1lf',
+			draw	=> 'Tspeicherx_mitte_max',
+		},
+		gprint		=> {
+			format	=> 'last\:%03.1lf\l',
+			draw	=> 'Tspeicherx_mitte_last',
+		},
+		# 'Tspeicher1_3_oben'
+		draw		=> {
+			dsname	=> 'Tsp1_3_TS10',
+			color	=> '008fff',
+			name	=> 'Tspeicher1_3_oben',
+			legend	=> 'T-Solarspeich.1/3 oben (TS10)',
+			thickness => 2,
+		},
+		# vdef for calculating Maximum, Minimum of 'Tspeicher1_3_oben'
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicher1_3_oben_min",
+			vdef	=> "Tspeicher1_3_oben,MINIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicher1_3_oben_max",
+			vdef	=> "Tspeicher1_3_oben,MAXIMUM",
+		},
+		draw		=> {
+			type	=> "hidden",
+			name	=> "Tspeicher1_3_oben_last",
+			vdef	=> "Tspeicher1_3_oben,LAST"
+		},
+		gprint		=> {
+			format	=> 'min\:%03.1lf',
+			draw	=> 'Tspeicher1_3_oben_min',
+		},
+		gprint		=> {
+			format	=> 'max\:%03.1lf',
+			draw	=> 'Tspeicher1_3_oben_max',
+		},
+		gprint		=> {
+			format	=> 'last\:%03.1lf\l',
+			draw	=> 'Tspeicher1_3_oben_last',
 		},
 		# 'Tmix_TS4'
 		draw		=> {
@@ -1451,6 +1453,13 @@ sub solar_draw_second_field($$$)
 			thickness => 5,
 			legend	=> 'Pumpe Reload Speicher  (PS 7)\l',
 			cdef	=> "pumpe2_reload,5,*"
+		},
+		# 3Weg Mischer-Pos. VS3
+		draw		=> {
+			dsname	=> 'sol_V_spare_1',
+			name	=> 'mixerposition_VS3',
+			color	=> 'ee0000',
+			legend	=> 'Mischer Position       (VS 3)\l',
 		},
 		comment		=> '  value\:-nan => Sensor nicht vorhanden ',
 		comment		=> ' \l',

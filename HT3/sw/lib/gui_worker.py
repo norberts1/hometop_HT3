@@ -80,6 +80,8 @@
 #                          pressure, V_ch_optimize, V_dhw_optimize activated.
 # Ver:0.6.1  / 2023-06-29  tempfile handling added in __init__()
 #                          __MakeDisplaycodeString() replaced with utils.IntegerToString()
+# Ver:0.6.2  / 2023-10-22  Mixerposition solar-optionG added using spare-value:sol_V_spare_1
+#                            ID:868_15_0
 #################################################################
 #
 
@@ -798,6 +800,12 @@ class gui_cworker(ht_utils.cht_utils, ht_utils.clog):
                 rightparameter_t = (nickname_SO, "V_3weg_mixer_VS2", tempvalue)
                 self.__DrawColumn(leftparameter_t, rightparameter_t)
 
+                rightparameter_t = ("", "", None)
+                ivalue = int(self.__gdata.values(nickname_SO, "sol_V_spare_1"))
+                if ivalue > 0:
+                    tempvalue = format(ivalue, "d")
+                    rightparameter_t = (nickname_SO, "sol_V_spare_1", tempvalue)
+                    self.__DrawColumn(leftparameter_t, rightparameter_t)
 
         if (self.__gdata.IsSyspartUpdate(nickname_HG) and self.__hexdump_window):
             temptext = self.__gdata.values(nickname_HG, "hexdump") + "\n"
@@ -1287,6 +1295,12 @@ class gui_cworker(ht_utils.cht_utils, ht_utils.clog):
                 tempvalue = format(int(self.__gdata.values(nickname, "V_3weg_mixer_VS2")), "d")
                 temptext = self.__DisplayColumn(nickname, "V_3weg_mixer_VS2", tempvalue)
                 if len(temptext) > 0: self.__text.insert("end", temptext)
+
+                ivalue = int(self.__gdata.values(nickname, "sol_V_spare_1"))
+                if ivalue > 0:
+                    tempvalue = format(ivalue, "d")
+                    temptext = self.__DisplayColumn(nickname, "sol_V_spare_1", tempvalue)
+                    if len(temptext) > 0: self.__text.insert("end", temptext)
 
             if (self.__gdata.IsSyspartUpdate(nickname) and self.__hexdump_window):
                 temptext=self.__gdata.values(nickname, "hexdump")

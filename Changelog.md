@@ -1,4 +1,11 @@
 ## Changelog
+## 0.7.1
+`2023-11-08` 
+- `reason`: Issue: #28; Mixposition and TS8 added.  
+- `moduls`: `lib/gui_worker.py`, `lib/ht_discode.py` and `lib/ht_release.py` are modified.  
+- `config`: `HT3_db_cfg.xml` and `HT3_db_off_cfg.xml` updated.  
+- `docu  `: `~/HT3/sw/etc/html/HT3-Bus_Telegramme.html` ID:866_22_0 assigned to TS8.  
+
 ## 0.7
 `2023-10-06` 
 - `reason`: Issues: #21, #24 and #28.  

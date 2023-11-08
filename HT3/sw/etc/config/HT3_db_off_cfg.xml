@@ -1388,8 +1388,8 @@
             <maxvalue>1</maxvalue>
             <default>255</default>
             <unit>1=Bypass</unit>
-            <displayname>3Weg Mischer VS1</displayname>
-            <accessname>sol_3waymixer_VS1</accessname>	<!-- name for data-exchange with interfaces -->
+            <displayname>3Weg Ventil VS1</displayname>
+            <accessname>sol_3wayvalve_VS1</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="V_3weg_mixer_VS2">
             <datatype>INT</datatype>
@@ -1397,8 +1397,8 @@
             <maxvalue>2</maxvalue>
             <default>255</default>
             <unit>SP-Nr</unit>
-            <displayname>3Weg Mischer VS2</displayname>
-            <accessname>sol_3waymixer_VS2</accessname>	<!-- name for data-exchange with interfaces -->
+            <displayname>3Weg Ventil VS2</displayname>
+            <accessname>sol_3wayvalve_VS2</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="Vsol_pump2">
             <datatype>INT</datatype>
@@ -1558,9 +1558,9 @@
             <datause>GAUGE</datause>
             <maxvalue>100</maxvalue>
             <default>0</default>
-            <unit></unit>
-            <displayname></displayname>
-            <accessname></accessname>	<!-- name for data-exchange with interfaces -->
+            <unit>%</unit>
+            <displayname>3Weg Mischer-Pos. VS3</displayname>
+            <accessname>sol_mixerpos_VS3</accessname>	<!-- name for data-exchange with interfaces -->
         </logitem>
         <logitem name="sol_V_spare_2">
             <datatype>INT</datatype>

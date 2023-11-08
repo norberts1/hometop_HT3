@@ -112,6 +112,7 @@
 #                               msgID_857_Solar() and msgID_862_864_865_Solar() added.
 #                               __Setheatercircuits_amount() added.
 #                               GetMessageID() modified.
+# Ver:0.6.1  / 2023-10-21       issue:#28 modified MsgID:866 (TS4->TS8)
 
 import tempfile
 import serial
@@ -1128,6 +1129,7 @@ class cht_decode(ht_utils.cht_utils):
         (msgid, offset) = msgtuple
         hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
         self.__gdata.update(nickname, "hexdump", hexstr)
+        self.__Debuglog(msgtuple, nickname, hexstr, buffer)
         values = self.__gdata.values(nickname)
         return (nickname, values)
 
@@ -2848,10 +2850,10 @@ class cht_decode(ht_utils.cht_utils):
 
                 if raw_index == 28:
                     f_speichermix = float(buffer[buffer_index] * 256 + buffer[buffer_index + 1]) / 10
-                    debugstr += ";TS4 B28/29:"
+                    debugstr += ";TS8 B28/29:"
                     if self.IsTemperaturInValidRange(f_speichermix):
                         debugstr += "{0}".format(f_speichermix)
-                        self.__gdata.update(nickname, "Tmix_TS4", self.__Check4MaxValue(nickname, "Tmix_TS4", f_speichermix))
+                        self.__gdata.update(nickname, "Theat_return_TS8", self.__Check4MaxValue(nickname, "Theat_return_TS8", f_speichermix))
                     else:
                         debugstr += "->NA"
 
@@ -3071,6 +3073,11 @@ class cht_decode(ht_utils.cht_utils):
                     # Required Reload Pump Power := 868_14_0
                     self.__gdata.update(nickname,"Vsol_pump2_power", buffer[buffer_index])
                     debugstr += ";Requ.Reload Pump Power:{}".format(buffer[buffer_index])
+
+                if raw_index == 21:
+                    # Mixer Position := 868_15_0
+                    self.__gdata.update(nickname,"sol_V_spare_1", buffer[buffer_index])
+                    debugstr += ";MixerPosition VS3:{}%".format(buffer[buffer_index])
 
                 raw_index += 1
             hexstr = self.__CreateHexdump(msgtuple, nickname, buffer, length)
