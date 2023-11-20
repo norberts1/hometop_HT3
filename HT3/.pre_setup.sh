@@ -18,8 +18,8 @@
  # along with this program. If not, see <http://www.gnu.org/licenses/>.
  #
  #################################################################
- # date: 2023-03-17
- # rev.: 0.2
+ # rev.: 0.2  date: 2023-03-17
+ # rev.: 0.3  date: 2023-11-20 pip3 not used anymore.
  #################################################################
  #                                                               #
  # prepare os-parts and configuration for ht-project             #
@@ -39,41 +39,21 @@ sudo apt-get update
 sudo apt-get -y upgrade
 echo "check and install required packages"
 echo "----------------------------------"
-echo "  >------- pip3 ---------------<  "
-which pip3 >/dev/null
-if [ $? -eq 0 ]; then
- echo " -> pip3 available";
-else
- echo "pip3 NOT available -> installation started";
- sudo apt-get -y install pip3;
-fi
-echo "----------------------------------"
 echo "  >------- python3 --- --------<  "
 which python3 >/dev/null
 if [ $? -eq 0 ]; then
  echo " -> python3 available";
 else
  echo "python3 NOT available -> installation started";
- sudo pip3 python3;
+ sudo apt-get -y install python3;
 fi
 echo "----------------------------------"
 echo "  >------- python3-serial -----<  "
-pip3 show pyserial >/dev/null
-if [ $? -eq 0 ]; then
- echo " -> python3-serial available";
-else
- echo "python3-serial NOT available -> installation started";
- sudo apt-get -y install python3-serial;
-fi
+sudo apt-get -y install python3-serial;
+
 echo "----------------------------------"
 echo "  >------- python3-setuptools -<  "
-pip3 show setuptools >/dev/null
-if [ $? -eq 0 ]; then
- echo " -> python3-setuptools available";
-else
- echo "python3-setuptools NOT available -> installation started";
- sudo apt-get -y install python3-setuptools;
-fi
+sudo apt-get -y install python3-setuptools;
 
 echo "----------------------------------"
 echo "  >------- python3-tk ---------<  "

@@ -23,6 +23,7 @@
 # Ver:0.3    / Datum 03.12.2019 Issue:'Deprecated property InterCharTimeout #7'
 #                                port.setInterCharTimeout() removed
 # Ver:0.4    / 2023-10-06  logitems matching with the values now exported.
+# Ver:0.4.1  / 2023-11-20  Exception logging modified.
 #################################################################
 
 import sys
@@ -43,8 +44,8 @@ import ht_const
 
 __author__  = "junky-zs"
 __status__  = "draft"
-__version__ = "0.3"
-__date__    = "03.12.2019"
+__version__ = "0.4.1"
+__date__    = "2023-11-20"
 
 """
 #################################################################
@@ -255,8 +256,8 @@ class cht_if_tx_data(threading.Thread):
             try:
                 # wait for queue-message
                 (access_name, value) = self.__tx_queue.get()
-            except:
-                errorstr = "cht_if_tx_data.run();Error; on ht_if.__tx_queue.get()"
+            except Exception as e:
+                errorstr = "cht_if_tx_data.run();ht_if.__tx_queue.get(); Error:{}".format(e)
                 self.__logging.critical(errorstr)
                 raise
 
@@ -429,7 +430,7 @@ class cht_if_worker(threading.Thread):
                 loggertag="ht_if_worker"
                 self._logging = self._data.create_logfile(abs_logfilepath, self._loglevel, loggertag)
             except(EnvironmentError, TypeError) as e:
-                errorstr = "cht_if_worker();Error; could not create logfile:{0};{1}".format(abs_logfilepath, e.args[0])
+                errorstr = "cht_if_worker();Error; could not create logfile:{};{}".format(abs_logfilepath, e.args[0])
                 print(errorstr)
                 raise e
 
@@ -468,18 +469,18 @@ class cht_if_worker(threading.Thread):
             try:
                 client_cfg_file =os.path.normcase(os.path.abspath(self._data.client_cfg_file()))
                 if not os.path.exists(client_cfg_file):
-                    errorstr="cht_if_worker();Error;couldn't find file:{0}".format(client_cfg_file)
+                    errorstr="cht_if_worker();Error;couldn't find file:{}".format(client_cfg_file)
                     self._logging.critical(errorstr)
                     raise EnvironmentError(errorstr)
-            except:
-                errorstr="cht_if_worker();Error;couldn't find file:{0}".format(client_cfg_file)
+            except Exception as e:
+                errorstr="cht_if_worker();couldn't find file:{}; Error:{}".format(client_cfg_file, e)
                 self._logging.critical(errorstr)
                 raise EnvironmentError(errorstr)
 
             try:
                 self.__port = ht_proxy_client(client_cfg_file, loglevel=self._loglevel)
-            except:
-                errorstr="cht_if_worker();Error;couldn't open requested socket; cfg-file:{0}".format(client_cfg_file)
+            except Exception as e:
+                errorstr="cht_if_worker();couldn't open requested socket; cfg-file:{}; Error:{}".format(client_cfg_file, e)
                 self._logging.critical(errorstr)
                 raise
         else:
@@ -488,8 +489,8 @@ class cht_if_worker(threading.Thread):
             try:
                 self.__port = serial.Serial(self.__serialdevice, self.__baudrate )
                 self.__data_input_mode="ASYNC"
-            except:
-                errorstr="cht_if_worker();Error;couldn't open requested device:{0}".format(self.__serialdevice)
+            except Exception as e:
+                errorstr="cht_if_worker();couldn't open requested device:{}; Error:{}".format(self.__serialdevice, e)
                 self._logging.critical(errorstr)
                 raise EnvironmentError(errorstr)
 
@@ -558,8 +559,8 @@ class cht_if_worker(threading.Thread):
                                                   self._loglevel)
             # start tx_data thread
             self.__ht_if_tx_data.start()
-        except:
-            errorstr="cht_if_worker();Error;couldn't start 'cht_if_tx_data' thread"
+        except Exception as e:
+            errorstr="cht_if_worker();couldn't start 'cht_if_tx_data' thread; Error:{}".format(e)
             self._logging.critical(errorstr)
             self.__thread_run = False
             self.__port.close()
@@ -569,8 +570,8 @@ class cht_if_worker(threading.Thread):
         debug = 0
         try:
             decoded_data = ht_discode.cht_discode(self.__port, self._data, debug, self.__filehandle, logger=self._logging)
-        except:
-            errorstr="cht_if_worker();Error;couldn't start 'ht_discode' thread"
+        except Exception as e:
+            errorstr="cht_if_worker();couldn't start 'ht_discode' thread; Error:{}".format(e)
             self._logging.critical(errorstr)
             self.__thread_run = False
             self.__port.close()
@@ -598,8 +599,8 @@ class cht_if_worker(threading.Thread):
                     if self.__putdata_flag:
                         self.decoded_data_queue().put((nickname, (logitems, values)))
 
-        except:
-            errorstr="cht_if_worker();Error; 'discoder()' thread terminated"
+        except Exception as e:
+            errorstr="cht_if_worker(); 'discoder()' thread terminated; Error:{}".format(e)
             self._logging.critical(errorstr)
             self.__thread_run = False
             self.__port.close()
@@ -640,7 +641,7 @@ class ccollgate_cfg():
         try:
             self.__root = self.__tree.getroot()
         except (NameError,EnvironmentError,IOError) as e:
-            errorstr = "ccollgate_cfg().read_collgate_config();Error;{0} on file:'{1}'".format(e, self.__configfilename)
+            errorstr = "ccollgate_cfg().read_collgate_config();Error;{} on file:'{}'".format(e, self.__configfilename)
             if self._logger != None:
                 self._logger.critical(errorstr)
             print(errorstr)
@@ -672,8 +673,8 @@ class ccollgate_cfg():
                         enable_flag = False
                     cfg_file = param.find('cfg_file').text
                     self.__interfaces_cfg.update({ccollgate_cfg.IF_sps:(enable_flag, cfg_file)})
-        except:
-            errorstr = "cSPS_cfg().read_SPS_config();Error;could not read configuration from file:{0}".format(self.__configfilename)
+        except Exception as e:
+            errorstr = "cSPS_cfg().read_SPS_config();could not read configuration from file:{}; Error:{}".format(self.__configfilename, e)
             if self._logger != None:
                 self._logger.critical(errorstr)
             print(errorstr)
@@ -746,7 +747,7 @@ class cstore2db(threading.Thread):
                     debugstr = "sqlite-db autoerasing finished; time:{0}".format(int(time.time()))
                     self._logging.info(debugstr)
                 except (sqlite3.OperationalError, ValueError) as e:
-                    errorstr = "cstore2db.__Autoerasing_sqlitedb();Error; {0}".format(e)
+                    errorstr = "cstore2db.__Autoerasing_sqlitedb(); Error:{}".format(e)
                     self._logging.critical(errorstr)
 
             # setup next check-time
@@ -769,7 +770,7 @@ class cstore2db(threading.Thread):
                     rtnvalue = int(valuetmp[0:1][0])
                     break
         except (sqlite3.OperationalError, ValueError) as e:
-            errorstr = "cstore2db.__GetOldestEntry();Error; {0}".format(e)
+            errorstr = "cstore2db.__GetOldestEntry(); Error:{}".format(e)
             self._logging.critical(errorstr)
             rtnvalue = None
         return rtnvalue
@@ -799,8 +800,8 @@ class cstore2db(threading.Thread):
                 rrdtooldb.createdb_rrdtool()
                 # setup the first 'nextTimeStep' to 3 times stepseconds waiting for valid data
                 nextTimeStep = time.time() + int(self._ht_if.ht_if_data().db_rrdtool_stepseconds()) * 3
-            except:
-                errorstr = "cstore2db.run();Error; could not init rrdtool-db"
+            except Exception as e:
+                errorstr = "cstore2db.run(); could not init rrdtool-db; Error:{}".format(e)
                 self._logging.critical(errorstr)
                 self._logging.info("cstore2db.run(); End   ----------------------")
                 quit()
@@ -865,8 +866,8 @@ class cstore2db(threading.Thread):
 
                 # clear last queue-entry with task_done()
                 self._ht_if.decoded_data_4_DBs().task_done()
-            except:
-                errorstr = "cstore2db.run();Error; on ht_if.decoded_data_4_DBs().get()"
+            except Exception as e:
+                errorstr = "cstore2db.run(); on ht_if.decoded_data_4_DBs().get(); Error:{}".format(e)
                 self._logging.critical(errorstr)
                 self.stop()
                 raise
@@ -903,8 +904,8 @@ class ccollgate(threading.Thread, ccollgate_cfg, ht_utils.clog):
         try:
             # read collgate - configuration
             self.read_collgate_config(collgate_cfgfilename)
-        except:
-            errorstr = "ccollgate().__init__();Error;could not get configurationfile-infos from file:'{0}'".format(self.__configfilename)
+        except Exception as e:
+            errorstr = "ccollgate().__init__();could not get configurationfile-infos from file:'{}'; Error:{}".format(self.__configfilename, e)
             self._logger.critical(errorstr)
             print(errorstr)
             raise
@@ -940,7 +941,7 @@ class ccollgate(threading.Thread, ccollgate_cfg, ht_utils.clog):
                                                     logfilepath=absfilepath,
                                                     loggertag=tag)
         except:
-            errorstr = "ccollgate.create_logger();could not create logger-file:{0}; logger-tag:{1}".format(filepath, tag)
+            errorstr = "ccollgate.create_logger();could not create logger-file:{}; logger-tag:{}".format(filepath, tag)
             raise EnvironmentError(errorstr)
         return rtnvalue
 
@@ -963,8 +964,8 @@ class ccollgate(threading.Thread, ccollgate_cfg, ht_utils.clog):
                 self._ht_if.setDaemon(True)
                 self._ht_if.start()
                 accessnames = self._ht_if.get_accessnames()
-            except:
-                errorstr = "ccollgate().run();Error;could not start 'ht-interface' with file:'{0}'".format(ht_cfg_filename)
+            except Exception as e:
+                errorstr = "ccollgate().run();could not start 'ht-interface'; file:'{}'; Error:{}".format(ht_cfg_filename, e)
                 self._logger.critical(errorstr)
                 self.stop()
                 raise SystemExit
@@ -975,8 +976,8 @@ class ccollgate(threading.Thread, ccollgate_cfg, ht_utils.clog):
                 self._store2db = cstore2db(cfg_file, self._ht_if, logging=self._logger)
                 self._store2db.setDaemon(True)
                 self._store2db.start()
-            except:
-                errorstr = "ccollgate().run();Error;could not start 'sqlite / rrdtool-DBinterface''"
+            except Exception as e:
+                errorstr = "ccollgate().run();could not start 'sqlite/rrdtool-DBinterface''; Error:{}".format(e)
                 self._logger.critical(errorstr)
                 self.stop()
                 raise SystemExit
@@ -991,8 +992,8 @@ class ccollgate(threading.Thread, ccollgate_cfg, ht_utils.clog):
                     self._mqtt_pub_client.set_dataqueues(dataqueues_rx_tx=dataqueues)
                     self._mqtt_pub_client.setDaemon(True)
                     self._mqtt_pub_client.start()
-                except:
-                    errorstr = "ccollgate().run();Error;could not start 'mqtt-interface' with file:'{0}'".format(cfg_file)
+                except Exception as e:
+                    errorstr = "ccollgate().run();Error;could not start 'mqtt-interface';file:'{}'; Error:{}".format(cfg_file, e)
                     self._logger.critical(errorstr)
                     print(errorstr)
                     self.stop()
@@ -1006,8 +1007,8 @@ class ccollgate(threading.Thread, ccollgate_cfg, ht_utils.clog):
                     self._sps_if = SPS_if.cSPS_if(cfg_file, heater_data_obj=self._ht_if.ht_if_data())
                     self._sps_if.setDaemon(True)
                     self._sps_if.start()
-                except:
-                    errorstr = "ccollgate().run();Error;could not start 'sps-interface' with file:'{0}'".format(cfg_file)
+                except Exception as e:
+                    errorstr = "ccollgate().run();Error;could not start 'sps-interface';file:'{}'; Error:{}".format(cfg_file, e)
                     self._logger.critical(errorstr)
                     print(errorstr)
                     self.stop()
@@ -1037,9 +1038,9 @@ class ccollgate(threading.Thread, ccollgate_cfg, ht_utils.clog):
                         errorstr = "ccollgate().run();Error;SPS_if-thread terminated."
                         self._logger.critical(errorstr)
                         raise
-        except:
+        except Exception as e:
             self.stop()
-            errorstr = "ccollgate().run();Error; terminated"
+            errorstr = "ccollgate().run() terminated; Error:{}".format(e)
             self._logger.critical(errorstr)
             print(errorstr)
             raise SystemExit

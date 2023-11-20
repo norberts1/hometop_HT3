@@ -1,4 +1,10 @@
 ## Changelog
+## 0.7.2
+`2023-11-20` 
+- `reason`: Issue: #29; failed 'paho-mqtt' installation.  
+- `moduls`: `lib/Ccollgate.py` and `lib/ht_release.py` are modified.  
+- `script`: `.pre_setup.sh` and `.mqtt_setup.sh` updated.  
+
 ## 0.7.1
 `2023-11-08` 
 - `reason`: Issue: #28; Mixposition and TS8 added.  

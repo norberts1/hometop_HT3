@@ -18,9 +18,9 @@
  # along with this program. If not, see <http://www.gnu.org/licenses/>.
  #
  #################################################################
- # date: 2023-03-11
- # rev.: 0.1
- #################################################################
+ # rev.: 0.1  date: 2023-03-11 first release.
+ # rev.: 0.2  date: 2023-11-20 pip3 not used anymore.
+######################
  #                                                               #
  # mqtt-setup for ht-project                                     #
  #                                                               #
@@ -37,13 +37,8 @@ fi
 echo "  >------- update os ----------<  "
 sudo apt-get update
 echo "  >------- mosquitto ----------<  "
-sudo systemctl --quiet is-enabled mosquitto
-if [ $? -ne 0 ]; then
- echo "mosquitto NOT active -> installation started";
- sudo apt-get -y install mosquitto mosquitto-clients
-else
- echo " -> mosquitto available";
-fi
+sudo apt-get -y install mosquitto mosquitto-clients
+
 echo "  >------- mqtt-config enable -<  "
 grep -e 'On' ~/HT3/sw/etc/config/collgate_cfg.xml
 if [ $? -ne 0 ]; then
@@ -60,12 +55,6 @@ if [ $? -ne 0 ]; then
    sed --in-place -zE 's/(<MQTT_client_if>\s*<enable>)Off(<\/enable>)/\1On\2/gm' ~/HT3/sw/etc/config/collgate_cfg.xml
  fi
 fi
-echo "  >------- python3 paho-mqtt --<  "
-pip3 show paho-mqtt
-if [ $? -eq 0 ]; then
- echo " -> python3 paho-mqtt available";
-else
- echo "python3 paho-mqtt NOT available -> installation started";
- sudo pip3 install paho-mqtt;
-fi
+echo "  >------- python3-paho-mqtt --<  "
+sudo apt -y install python3-paho-mqtt;
 echo "----- mqtt-setup done ------------"
