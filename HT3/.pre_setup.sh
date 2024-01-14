@@ -20,6 +20,9 @@
  #################################################################
  # rev.: 0.2  date: 2023-03-17
  # rev.: 0.3  date: 2023-11-20 pip3 not used anymore.
+ # rev.: 0.4  date: 2024-01-12 RPI.GPIO installation removed, 
+ #                              see issues:#30 and #31
+ #                             error-handling added.
  #################################################################
  #                                                               #
  # prepare os-parts and configuration for ht-project             #
@@ -50,23 +53,38 @@ fi
 echo "----------------------------------"
 echo "  >------- python3-serial -----<  "
 sudo apt-get -y install python3-serial;
-
+if [ $? -ne 0 ]; then
+ echo "   !! 'python3-serial' installation failed !!"
+ exit 1
+fi
 echo "----------------------------------"
 echo "  >------- python3-setuptools -<  "
 sudo apt-get -y install python3-setuptools;
-
+if [ $? -ne 0 ]; then
+ echo "   !! 'python3-setuptools' installation failed !!"
+ exit 1
+fi
 echo "----------------------------------"
 echo "  >------- python3-tk ---------<  "
 sudo apt-get -y install python3-tk;
+if [ $? -ne 0 ]; then
+ echo "   !! 'python3-tk' installation failed !!"
+ exit 1
+fi
 echo "----------------------------------"
 echo "  >------- librrdtool-oo-perl--<  "
 sudo apt-get -y install librrdtool-oo-perl;
+if [ $? -ne 0 ]; then
+ echo "   !! 'librrdtool-oo-perl' installation failed !!"
+ exit 1
+fi
 echo "----------------------------------"
 echo "  >------- rrdtool ------------<  "
 sudo apt-get -y install rrdtool;
-echo "----------------------------------"
-echo "  >------- RPI.GPIO -----------<  "
-sudo apt-get -y install RPI.GPIO;
+if [ $? -ne 0 ]; then
+ echo "   !! 'rrdtool' installation failed !!"
+ exit 1
+fi
 echo "----------------------------------"
 currentuser=$(whoami)
 echo "  >------- set user:${currentuser} dialout <  "

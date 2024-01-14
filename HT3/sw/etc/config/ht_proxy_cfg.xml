@@ -22,6 +22,8 @@
  # Ver:0.1.7  / Datum 25.02.2015 first release
  # Ver:0.1.8    2021-02-19 Portnumber changed to 48088
  # Ver:0.2      2022-01-19  /dev/ttyAMA0 replaced with /dev/serial0
+ # Ver:0.3      2024-01-12  comment added for RPi5 using /dev/ttyAMA0
+ #                           see issue:#30
  ################################################################
  #
  #  Configuration-file for 'ht_proxy'-daemon and attached clients.
@@ -39,26 +41,34 @@
  #
  ##
  #  Importend:
- #   If you are using the ht_proxy - Server, then the interface has
- #   has to be set to: SOCKET
+ #   If you are using the ht_proxy - Server, then the interface
+ #   has to be set to: SOCKET (it's default set)
  #    see config-file: HT3_db_cfg.xml 
  #     and paramter  :<comm_type>SOCKET</comm_type>
  #
  #  required comport-configurations for 'proxy-server'
- #   1. If you use a 'ht_transceiver'-board (ht_piduino or ht_pitiny)
- #      you have to configure: 
- #        <baudrate>19200</baudrate>
- #        <serialdevice>/dev/serial0</serialdevice>   (for RaspberryPi UART)
+ #   +==================+==========+
+ #   |    Board-type    | Baudrate |
+ #   +==================+==========+
+ #   | ht_transceiver   |   19200  |
+ #   | - ht_piduino or  |          |
+ #   | - ht_pitiny      |          |
+ #   +==================+==========+
+ #   | HT3_miniAdapter  |    9600  |
+ #   +==================+==========+
+ #   | HT3_microAdapter |    9600  |
+ #   +==================+==========+
  #
- #   2. If you use a 'HT3_miniAdapter'-board
- #      you have to configure: 
- #        <baudrate>9600</baudrate>
- #        <serialdevice>/dev/serial0</serialdevice>   (for RaspberryPi UART)
- #
- #   3. If you use a 'HT3_microAdapter'-board with USB<->UART interface
- #      you have to configure: 
- #        <baudrate>9600</baudrate>
- #        <serialdevice>/dev/ttyUSBx</serialdevice>   (for any USB-Port x)
+ #   +==================+==========+
+ #   |  serial-device   | Hardware |
+ #   |                  | /revision|
+ #   +==================+==========+
+ #   | dev:/dev/serial0 | RPi < 5  |
+ #   +==================+==========+
+ #   | dev:/dev/ttyAMA0 | RPi = 5  |
+ #   +==================+==========+
+ #   | dev:/dev/ttyUSBx | any      |
+ #   +==================+==========+
  #
 -->
 
@@ -100,8 +110,7 @@
    #   parallel at the same time and has to wait for the end
    #   of any other transmission.
    #   anyway type 'RX' can be used x-times as client, this is only
-   #   limited by the used hardware (RaspberryPi). In this case only
-   #   2 Clients shoud be connected simultaneously (performance-reason).
+   #   limited by the used hardware (RaspberryPi).
   -->
   <proxy_client devicename="RX">      
     <serveraddress>localhost</serveraddress>

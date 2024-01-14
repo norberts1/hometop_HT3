@@ -1,4 +1,12 @@
 ## Changelog
+## 0.8
+`2024-01-14` 
+- `reason`: Issues: #30 and #31.  
+- `config`: `ht_proxy_cfg.xml` and `lib/ht_release.py` are modified.  
+- `script`: `ht_project_setup.sh`, `.pre_setup.sh` and `.post_setup.sh` updated.  
+- `script`: `ht_2hass.service`, `ht_collgate.service`, `ht_proxy.service` and `httpd.service` added.  
+- `script`: `spi_clk_off.py` and `spi_clk_on.py` removed.  
+
 ## 0.7.2
 `2023-11-20` 
 - `reason`: Issue: #29; failed 'paho-mqtt' installation.  

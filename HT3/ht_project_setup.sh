@@ -21,6 +21,7 @@
  # rev.: 0.2 date: 2023-03-17
  # rev.: 0.3 date: 2023-03-22 export 'LANGUGAGE' added for perl-install.
  # rev.: 0.4 date: 2023-10-06 scripts renamed from '__xyz' to '.xyz'.
+ # rev.: 0.5 date: 2024-01-12 minor text modification.
  # 
  #################################################################
  #                                                               #
@@ -55,7 +56,7 @@ fi
 echo "+==== Setup OS               ====+"
  ./.pre_setup.sh
 if [ $? -ne 0 ]; then
-  echo "!!! Error in 'pre_setup.sh' occurred, check outputs !!!"
+  echo "!!! Error in '.pre_setup.sh' occurred, check outputs !!!"
   exit 1
 fi
  
@@ -139,7 +140,7 @@ if expr "${currentuser}" : '^\(pi\)' >/dev/null
   else
     echo " >--- Setup stopped, currently NOT default user:pi                                <---"
     echo " >---  Manually modification of service-scripts required for user: ${currentuser} <---"
-    echo " <---  after modification call script: './__post_setup.sh' and reboot system      <---"
+    echo " <---  after modification call script: './.post_setup.sh' and reboot system      <---"
     exit 1
 fi
 echo "---- ht_project setup done -------"

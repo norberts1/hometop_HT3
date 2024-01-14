@@ -21,6 +21,8 @@
  # rev.: 0.1 date: 2023-03-11
  # rev.: 0.2 date: 2023-03-20 database creation only on request.
  #                             issue: #25
+ # rev.: 0.3 date: 2024-01-12 sysv startup scripts now systemd-services.
+ #                             issue: #31
  # 
  #################################################################
  #                                                               #
@@ -51,11 +53,12 @@ install_service()
  # stop and disable current version of service if available
  sudo systemctl --quiet stop $1  >/dev/null
  sudo systemctl --quiet disable $1  >/dev/null
- # install and enable the latest version
- chmod + $2
+ sudo systemctl daemon-reload  >/dev/null
+ # remove old sysv-scipts if available
  sudo rm -f /etc/init.d/$3  >/dev/null
- sudo cp -a $2 /etc/init.d  >/dev/null
- sudo systemctl --quiet enable $3
+ # install and enable the latest version
+ sudo cp -a $2 /etc/systemd/system/ >/dev/null
+ sudo systemctl --quiet enable $1
  if [ $? -ne 0 ]; then
   echo "    ! failed to enable: $1 !"
   exit 1
@@ -72,10 +75,10 @@ sudo apt-get -y autoremove
 
 # installation of systemd startup-scripts
 echo "  >-- enable startup-scripts --<  "
-install_service ht_proxy.service ~/HT3/sw/etc/sysconfig/ht_proxy ht_proxy
-install_service ht_collgate.service ~/HT3/sw/etc/sysconfig/ht_collgate ht_collgate
-install_service httpd.service ~/HT3/sw/etc/sysconfig/httpd httpd
-install_service ht_2hass.service ~/HT3/sw/etc/sysconfig/ht_2hass ht_2hass
+install_service ht_proxy.service ~/HT3/sw/etc/sysconfig/ht_proxy.service ht_proxy
+install_service ht_collgate.service ~/HT3/sw/etc/sysconfig/ht_collgate.service ht_collgate
+install_service httpd.service ~/HT3/sw/etc/sysconfig/httpd.service httpd
+install_service ht_2hass.service ~/HT3/sw/etc/sysconfig/ht_2hass.service ht_2hass
 
 echo
 echo "----------------------------------"
@@ -101,7 +104,19 @@ if [ "$creation_required" = "y" ]; then
 else
   echo " No database-creation required"
 fi
-
+echo "----------------------------------"
+echo "  >-- check serial port (UART) configuration --<"
+echo "   --  configured is: --"
+grep -e '<serialdevice>' ~/HT3/sw/etc/config/ht_proxy_cfg.xml
+echo "   --  required   is: --"
+grep -e 'serial-device' ~/HT3/sw/etc/config/ht_proxy_cfg.xml
+grep -e 'dev:' ~/HT3/sw/etc/config/ht_proxy_cfg.xml
+echo "   -- modify file: ~/HT3/sw/etc/config/ht_proxy_cfg.xml if required"
+echo ""
+echo "   -- details see URL:"
+echo "   -- https://www.raspberrypi.com/documentation/computers/configuration.html#configuring-uarts"
+echo ""
+echo "----------------------------------"
 echo "----- post_setup done ------------"
 
 

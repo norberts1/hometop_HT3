@@ -1,7 +1,5 @@
-#! /usr/bin/python3
-#
 #################################################################
-## Copyright (c) 2013 Norbert S. <junky-zs@gmx.de>
+## Copyright (c) 2024 Norbert S. <junky-zs at gmx dot de>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,22 +15,36 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
-#  script sets GPIO11 (rapsi-header Pin23) to output
-#
-#   please install at first the python3 setuptools with command:
-#        sudo apt-get install python3-setuptools
-#
-#  you must be user: root to execute this script
-#
+# Ver:0.1 / 2024-01-12  first release
 #################################################################
-# Ver:0.1.7.1/ Datum 02.03.2015 Text modified to 'python3-setuptools'
 #
-import RPi.GPIO as GPIO
+# This systemd service.file is used for starting the:
+#  daemon for mqtt data transfer hometop->homeassistant 
+#
+[Unit]
+Description=daemon for mqtt data transfer hometop->homeassistant 
+SourcePath=/etc/systemd/system/ht_2hass.service
+Before=multi-user.target
+Before=graphical.target
+After=remote-fs.target
+After=mosquitto.service
+After=ht_collgate.service
+ConditionDirectoryNotEmpty=/home/pi/HT3/sw/
 
-def setup_gpio():
-    GPIO.setwarnings(False)
-    GPIO.setmode(GPIO.BCM)
-    # setup Header Pin23 for output
-    GPIO.setup (11, GPIO.OUT)
+[Service]
+Type=exec
+KillMode=process
+Restart=no
+NoNewPrivileges=yes
+# starting as user:pi
+User=pi
+WorkingDirectory=/home/pi/HT3/sw/
+ExecStart=/home/pi/HT3/sw/ht_2hassio.py
+#
+IgnoreSIGPIPE=no
+RemainAfterExit=yes
+SuccessExitStatus=5 6
+TimeoutSec=5min
 
-setup_gpio()
+[Install]
+WantedBy=multi-user.target

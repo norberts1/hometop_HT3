@@ -17,6 +17,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 #################################################################
+# Ver:0.8    / 2024-01-14  Issues #30 and #31.
 # Ver:0.7.2  / 2023-11-20  Issues #29 'failed 'paho-mqtt' installation'.
 # Ver:0.7.1  / 2023-11-08  Issues #28 solar-details for TS8 modified and
 #                           ID:868_15_0 mixerposition added.
@@ -38,4 +39,4 @@
 # Ver:0.4    / 2021-02-25
 #################################################################
 
-VERSION = "0.7.2"
+VERSION = "0.8"
