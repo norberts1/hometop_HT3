@@ -1,4 +1,13 @@
 ## Changelog
+## 0.9.1
+`2026-11-17` 
+- `reason`: Issue: #34 and #35.  
+- `config`: nothing changed.  
+- `script`: `.pre_setup.sh` updated.  
+- `moduls`: `lib/mqtt_client_if.py` modified.  
+- `docu  `: nothing changed.  
+- `important note`: it's NOT required to recreate new databases if already available.  
+
 ## 0.9
 `2026-03-27` 
 - `reason`: Issue: #33 DHW handling added.  

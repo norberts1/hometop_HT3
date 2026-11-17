@@ -23,6 +23,7 @@
  # rev.: 0.4  date: 2024-01-12 RPI.GPIO installation removed, 
  #                              see issues:#30 and #31
  #                             error-handling added.
+ # rev.: 0.5  date: 2026-09-17 adduser to 'plugdev' added.
  #################################################################
  #                                                               #
  # prepare os-parts and configuration for ht-project             #
@@ -79,6 +80,12 @@ if [ $? -ne 0 ]; then
  exit 1
 fi
 echo "----------------------------------"
+echo "  >------- python3-rrdtool ----<  "
+sudo apt-get -y install python3-rrdtool;
+if [ $? -ne 0 ]; then
+ echo "   !! 'python3-rrdtool' installation failed !!"
+ exit 1
+fi
 echo "  >------- rrdtool ------------<  "
 sudo apt-get -y install rrdtool;
 if [ $? -ne 0 ]; then
@@ -89,6 +96,7 @@ echo "----------------------------------"
 currentuser=$(whoami)
 echo "  >------- set user:${currentuser} dialout <  "
 sudo adduser ${currentuser} dialout
+sudo adduser ${currentuser} plugdev
 echo "  >------- git ----------------<  "
 which git >/dev/null
 if [ $? -eq 0 ]; then

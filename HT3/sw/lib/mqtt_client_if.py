@@ -28,7 +28,7 @@
 #                          (see issue: #21)
 #                         send only defined values to broker.
 # Ver:0.5    / 2026-03-04 setDaemon() call deprecated,
-#                          set Thread-flag 'daemon' to 'True' instead.
+#                          set Thread-flag 'daemon' to 'False'.
 #################################################################
 
 import xml.etree.ElementTree as ET
@@ -329,7 +329,7 @@ class cmqtt_baseclass(threading.Thread, cmqtt_cfg):
     """
     def __init__(self, cfg_filename):
         """class constructor."""
-        threading.Thread.__init__(self, daemon=True)
+        threading.Thread.__init__(self, daemon=False)
         cmqtt_cfg.__init__(self, cfg_filename)
 
         self.__thread_run = True

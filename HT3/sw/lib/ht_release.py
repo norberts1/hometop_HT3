@@ -38,6 +38,9 @@
 #               Issue: #14
 # Ver:0.4    / 2021-02-25
 # Ver:0.5    / 2026-03-09 DHW modifications.
+# Ver:0.6    / 2026-11-17 mqtt_client_if.py; set flag 'daemon' to 'False'.
+#                         .pre_setup.sh; install python3-rrdtool and
+#                           adduser ${currentuser} plugdev added.
 #################################################################
 
-VERSION = "0.9"
+VERSION = "0.9.1"
